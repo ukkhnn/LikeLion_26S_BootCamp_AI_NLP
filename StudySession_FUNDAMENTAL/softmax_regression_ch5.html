@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>5장 · 소프트맥스 회귀</title>
+
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+
+<style>
+  :root{
+    --paper:#EEF0F5;
+    --sheet:#FFFFFF;
+    --ink:#191C2C;
+    --ink-soft:#565B72;
+    --ink-faint:#8A8FA4;
+    --line:#E7E9F1;
+    --line-soft:#F0F2F7;
+    --accent:#5B5BD6;
+    --accent-deep:#3F3FB0;
+    --c1:#5B5BD6;
+    --c2:#11A793;
+    --c3:#E0982E;
+    --warn-ink:#B05616;
+    --warn-bg:#FCF4EA;
+    --warn-line:#F0DCC0;
+    --key-bg:#F1F1FC;
+    --key-line:#D9D9F6;
+    --code-bg:#1b1f2e;
+    --code-head:#14172300;
+    --radius:14px;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Pretendard Variable",Pretendard,-apple-system,sans-serif;
+    font-size:17px;
+    line-height:1.85;
+    -webkit-font-smoothing:antialiased;
+    letter-spacing:-0.003em;
+  }
+
+  /* reading progress */
+  #progress{
+    position:fixed; top:0; left:0; height:3px; width:0%;
+    background:linear-gradient(90deg,var(--c1) 0%,var(--c1) 40%,var(--c2) 70%,var(--c3) 100%);
+    z-index:50;
+  }
+
+  .sheet{
+    max-width:880px;
+    margin:34px auto;
+    background:var(--sheet);
+    border-radius:20px;
+    box-shadow:0 1px 2px rgba(25,28,44,.04),0 18px 50px -28px rgba(25,28,44,.22);
+    overflow:hidden;
+  }
+  .wrap{ padding:0 clamp(22px,6vw,72px); }
+
+  /* ===== hero ===== */
+  .hero{ padding:clamp(46px,8vw,82px) clamp(22px,6vw,72px) 40px; border-bottom:1px solid var(--line); }
+  .eyebrow{
+    font-family:"JetBrains Mono",monospace; font-size:12.5px; font-weight:600;
+    letter-spacing:.14em; text-transform:uppercase; color:var(--accent);
+    display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow::before{ content:""; width:26px; height:2px; background:var(--accent); display:inline-block; }
+  .hero h1{
+    font-size:clamp(2.5rem,7vw,3.6rem); line-height:1.04; font-weight:800;
+    margin:.42em 0 .28em; letter-spacing:-0.03em;
+  }
+  .hero h1 .en{ display:block; font-size:.34em; font-weight:600; color:var(--ink-faint); letter-spacing:.02em; margin-top:.5em; }
+  .hero .lede{ font-size:1.12rem; color:var(--ink-soft); max-width:46ch; margin:.2em 0 0; }
+
+  .signature{ margin-top:38px; }
+  .signature .sig-label{ font-size:13px; color:var(--ink-faint); margin-bottom:11px; display:flex; justify-content:space-between; align-items:baseline; }
+  .signature .sig-sum{ font-family:"JetBrains Mono",monospace; font-size:12.5px; color:var(--ink-soft); }
+  .probbar{ display:flex; height:34px; border-radius:9px; overflow:hidden; box-shadow:inset 0 0 0 1px rgba(0,0,0,.04); }
+  .probbar > span{ display:flex; align-items:center; justify-content:flex-end; padding-right:10px; color:#fff; font-size:13px; font-weight:600; font-family:"JetBrains Mono",monospace; transition:width 1.2s cubic-bezier(.22,1,.36,1); white-space:nowrap; overflow:hidden; }
+  .legend{ display:flex; flex-wrap:wrap; gap:18px; margin-top:13px; }
+  .legend span{ display:flex; align-items:center; gap:7px; font-size:13.5px; color:var(--ink-soft); }
+  .legend i{ width:11px; height:11px; border-radius:3px; display:inline-block; }
+
+  /* ===== toc ===== */
+  .toc{ padding:30px clamp(22px,6vw,72px); background:#FAFBFD; border-bottom:1px solid var(--line); }
+  .toc h2{ font-size:12.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-faint); margin:0 0 16px; font-weight:700; font-family:"JetBrains Mono",monospace; }
+  .toc ol{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:3px 26px; }
+  .toc li a{ display:flex; gap:13px; align-items:baseline; padding:8px 6px; border-radius:8px; text-decoration:none; color:var(--ink); transition:background .15s; }
+  .toc li a:hover{ background:var(--line-soft); }
+  .toc .n{ font-family:"JetBrains Mono",monospace; font-size:12.5px; font-weight:600; color:var(--accent); min-width:30px; }
+
+  /* ===== sections ===== */
+  section{ padding:54px 0; border-bottom:1px solid var(--line-soft); }
+  section:last-of-type{ border-bottom:none; }
+  .sec-head{ display:flex; align-items:center; gap:16px; margin:0 0 8px; }
+  .chip{
+    font-family:"JetBrains Mono",monospace; font-size:14px; font-weight:600;
+    color:#fff; background:var(--accent); padding:5px 11px; border-radius:9px; letter-spacing:.01em; flex:none;
+  }
+  .chip.muted{ background:var(--ink); }
+  h2.title{ font-size:clamp(1.7rem,4.5vw,2.15rem); font-weight:780; margin:0; letter-spacing:-0.02em; line-height:1.15; }
+  h3{ font-size:1.32rem; font-weight:720; margin:42px 0 12px; letter-spacing:-0.01em; }
+  h4{ font-size:1.05rem; font-weight:680; margin:30px 0 10px; color:var(--ink); }
+
+  p{ margin:14px 0; }
+  strong{ font-weight:680; color:var(--ink); }
+  .em-accent{ color:var(--accent-deep); font-weight:680; }
+  a{ color:var(--accent-deep); }
+  ul{ margin:14px 0; padding-left:1.25em; }
+  li{ margin:7px 0; }
+  code:not(.hljs){
+    font-family:"JetBrains Mono",monospace; font-size:.86em;
+    background:#EEF0F7; color:#3F3F8F; padding:2px 6px; border-radius:6px; letter-spacing:0;
+    word-break:break-word;
+  }
+
+  /* preview blockquote */
+  .preview{
+    margin:22px 0; padding:18px 22px; background:linear-gradient(180deg,#FBFBFE,#F7F8FD);
+    border-left:3px solid var(--accent); border-radius:0 12px 12px 0;
+  }
+  .preview p{ margin:6px 0; color:var(--ink-soft); font-size:.98rem; }
+  .preview p strong{ color:var(--ink); }
+  .preview .pv-label{ font-family:"JetBrains Mono",monospace; font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent); font-weight:600; }
+
+  /* callouts */
+  .callout{ margin:24px 0; padding:18px 22px; border-radius:12px; border:1px solid; }
+  .callout .ca-tag{ font-size:13px; font-weight:700; display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .callout p{ margin:6px 0; font-size:.97rem; }
+  .callout-key{ background:var(--key-bg); border-color:var(--key-line); }
+  .callout-key .ca-tag{ color:var(--accent-deep); }
+  .callout-warn{ background:var(--warn-bg); border-color:var(--warn-line); }
+  .callout-warn .ca-tag{ color:var(--warn-ink); }
+  .callout-warn p strong{ color:var(--warn-ink); }
+  .ca-tag .dot{ width:8px; height:8px; border-radius:50%; }
+
+  /* tables */
+  .tbl-wrap{ overflow-x:auto; margin:24px 0; border:1px solid var(--line); border-radius:12px; }
+  table{ width:100%; border-collapse:collapse; font-size:.95rem; min-width:480px; }
+  th,td{ text-align:left; padding:13px 16px; border-bottom:1px solid var(--line-soft); }
+  thead th{ background:#FAFBFD; font-weight:680; font-size:.86rem; color:var(--ink-soft); letter-spacing:.01em; }
+  tbody tr:last-child td{ border-bottom:none; }
+  td .mono{ font-family:"JetBrains Mono",monospace; font-size:.88em; }
+  .row-head{ font-weight:680; color:var(--ink); }
+  .badge{ font-size:.78rem; font-weight:600; padding:2px 9px; border-radius:20px; font-family:"JetBrains Mono",monospace; }
+  .b1{ background:#ECECFB; color:#4040AE; }
+  .b2{ background:#E1F4F0; color:#0C7A6B; }
+  .b3{ background:#FBF0DC; color:#A66E1B; }
+
+  /* code */
+  .codeblock{ margin:22px 0; border-radius:var(--radius); overflow:hidden; background:var(--code-bg); border:1px solid #2a2f44; }
+  .code-head{ display:flex; align-items:center; justify-content:space-between; padding:9px 15px; background:#161A28; border-bottom:1px solid #2a2f44; }
+  .code-head .ct{ font-family:"JetBrains Mono",monospace; font-size:12px; color:#8b91ab; display:flex; align-items:center; gap:8px; }
+  .code-head .ct .dotrow{ display:flex; gap:5px; }
+  .code-head .ct .dotrow i{ width:9px; height:9px; border-radius:50%; display:block; }
+  .copybtn{ font-family:"JetBrains Mono",monospace; font-size:11.5px; color:#9aa0bd; background:#222740; border:1px solid #343a55; padding:4px 10px; border-radius:7px; cursor:pointer; transition:.15s; }
+  .copybtn:hover{ background:#2c3252; color:#cdd2ec; }
+  .copybtn.ok{ color:#6fd6b8; border-color:#2c5046; }
+  .codeblock pre{ margin:0; padding:17px 19px; overflow-x:auto; }
+  .codeblock pre code.hljs{ background:transparent; padding:0; font-family:"JetBrains Mono",monospace; font-size:13.5px; line-height:1.7; }
+
+  /* figures */
+  figure{ margin:30px 0; }
+  figure svg{ display:block; width:100%; height:auto; }
+  .fig-card{ background:#FBFBFD; border:1px solid var(--line); border-radius:var(--radius); padding:26px 22px 18px; }
+  figcaption{ font-size:13.5px; color:var(--ink-faint); text-align:center; margin-top:14px; line-height:1.6; }
+  figcaption b{ color:var(--ink-soft); font-weight:600; }
+
+  /* abstraction ladder */
+  .ladder{ display:flex; flex-direction:column; gap:0; margin:24px 0; }
+  .rung{ display:flex; align-items:center; gap:16px; padding:15px 18px; border:1px solid var(--line); background:#fff; position:relative; }
+  .rung:first-child{ border-radius:12px 12px 0 0; }
+  .rung:last-child{ border-radius:0 0 12px 12px; }
+  .rung + .rung{ border-top:none; }
+  .rung .lv{ font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:600; color:#fff; background:var(--ink); width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center; flex:none; }
+  .rung .lv.acc{ background:var(--accent); }
+  .rung .rc{ font-family:"JetBrains Mono",monospace; font-size:13px; color:var(--ink); }
+  .rung .rd{ font-size:13px; color:var(--ink-soft); margin-left:auto; text-align:right; }
+  .rung-eq{ height:24px; display:flex; align-items:center; justify-content:center; color:var(--ink-faint); font-size:18px; }
+
+  /* footer */
+  footer{ padding:46px clamp(22px,6vw,72px) 54px; background:#13162300; border-top:1px solid var(--line); }
+  footer .recap{ background:#FAFBFD; border:1px solid var(--line); border-radius:var(--radius); padding:24px 26px; }
+  footer h3{ margin:0 0 14px; font-size:1.15rem; }
+  .checklist{ list-style:none; margin:0; padding:0; }
+  .checklist li{ padding-left:30px; position:relative; margin:11px 0; font-size:.97rem; color:var(--ink-soft); }
+  .checklist li strong{ color:var(--ink); }
+  .checklist li::before{ content:"✓"; position:absolute; left:0; top:0; color:var(--c2); font-weight:700; }
+  .src{ font-size:12.5px; color:var(--ink-faint); margin-top:24px; text-align:center; }
+  .flow{ font-family:"JetBrains Mono",monospace; font-size:13px; color:var(--ink-soft); background:#F4F5FA; border-radius:10px; padding:14px 16px; margin:18px 0; line-height:2; word-break:break-word; }
+  .flow b{ color:var(--accent-deep); }
+
+  @media (max-width:560px){
+    body{ font-size:16px; }
+    .sheet{ margin:0; border-radius:0; }
+    .rung .rd{ display:none; }
+    .toc ol{ grid-template-columns:1fr; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    html{ scroll-behavior:auto; }
+    .probbar > span{ transition:none; }
+  }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<div class="sheet">
+
+  <!-- ============ HERO ============ -->
+  <header class="hero">
+    <div class="eyebrow">딥러닝 입문 · Chapter 05</div>
+    <h1>소프트맥스 회귀<span class="en">Softmax Regression — 다중 클래스 분류</span></h1>
+    <p class="lede">3개 이상의 선택지 중 하나를 고르는 문제. 선형 회귀·로지스틱 회귀와 똑같은 골격 위에서, 가설과 비용 함수만 갈아 끼운다.</p>
+
+    <div class="signature">
+      <div class="sig-label"><span>softmax 출력 — 각 클래스가 정답일 확률</span><span class="sig-sum">합 = 1.00</span></div>
+      <div class="probbar" id="heroBar">
+        <span style="width:33.3%;background:var(--c1)" data-w="24">setosa</span>
+        <span style="width:33.3%;background:var(--c2)" data-w="72">versicolor</span>
+        <span style="width:33.4%;background:var(--c3)" data-w="4"></span>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--c1)"></i>setosa · 0.24</span>
+        <span><i style="background:var(--c2)"></i>versicolor · 0.72</span>
+        <span><i style="background:var(--c3)"></i>virginica · 0.04</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ TOC ============ -->
+  <nav class="toc">
+    <h2>목차</h2>
+    <ol>
+      <li><a href="#big"><span class="n">0</span><span>큰 그림 — 머신러닝 3종 세트</span></a></li>
+      <li><a href="#onehot"><span class="n">5-1</span><span>원-핫 인코딩</span></a></li>
+      <li><a href="#softmax"><span class="n">5-2</span><span>소프트맥스 함수와 비용 함수</span></a></li>
+      <li><a href="#impl"><span class="n">5-3</span><span>파이토치로 구현하기</span></a></li>
+      <li><a href="#mnist"><span class="n">5-4</span><span>MNIST 손글씨 분류</span></a></li>
+    </ol>
+  </nav>
+
+  <div class="wrap">
+
+  <!-- ============ 0. BIG PICTURE ============ -->
+  <section id="big">
+    <div class="sec-head"><span class="chip muted">0</span><h2 class="title">큰 그림 — 머신러닝 3종 세트</h2></div>
+
+    <p>모든 모델은 세 가지로 이루어진다. <strong>가설(Hypothesis)</strong>은 예측하는 식, <strong>비용 함수(Cost)</strong>는 예측이 얼마나 틀렸는지 재는 자, <strong>옵티마이저(Optimizer)</strong>는 비용을 줄여 나가는 방법이다.</p>
+
+    <p>이 장의 핵심 통찰은 단순하다. <span class="em-accent">선형 회귀(3장) → 로지스틱 회귀(4장) → 소프트맥스 회귀(5장)는 이 셋 중 앞의 둘만 갈아 끼운 것</span>이다. 옵티마이저(경사 하강법)와 학습 루프는 끝까지 변하지 않는다.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>장</th><th>문제</th><th>가설</th><th>비용 함수</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge b1">ch3</span></td><td>회귀 (연속값)</td><td><span class="mono">Wx + b</span></td><td>MSE</td></tr>
+          <tr><td><span class="badge b2">ch4</span></td><td>이진 분류</td><td><span class="mono">sigmoid(Wx + b)</span></td><td>BCE</td></tr>
+          <tr><td><span class="badge b3">ch5</span></td><td>다중 분류</td><td><span class="mono">softmax(WX + B)</span></td><td>Cross Entropy</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>옵티마이저는 셋 모두 <strong>경사 하강법</strong>이고, 파이토치 학습 루프도 항상 같은 3박자다.</p>
+
+    <div class="codeblock">
+      <div class="code-head"><span class="ct"><span class="dotrow"><i style="background:#e06c61"></i><i style="background:#e0b341"></i><i style="background:#5fb878"></i></span>학습 루프 — ch3·4·5 공통</span><button class="copybtn">복사</button></div>
+      <pre><code class="language-python">optimizer.zero_grad()   # 이전 기울기 초기화
+cost.backward()         # 비용을 미분해 기울기 계산
+optimizer.step()        # W, b 업데이트</code></pre>
+    </div>
+
+    <div class="callout callout-key">
+      <div class="ca-tag"><span class="dot" style="background:var(--accent)"></span>핵심</div>
+      <p>5장 내내 머릿속에 둘 한 줄: <strong>“가설과 비용만 바뀐다.”</strong> 새 개념처럼 보이는 softmax·크로스 엔트로피도, 사실 4장에서 배운 것을 클래스 개수만큼 확장한 것뿐이다.</p>
+    </div>
+  </section>
+
+  <!-- ============ 5-1 ONE-HOT ============ -->
+  <section id="onehot">
+    <div class="sec-head"><span class="chip">5-1</span><h2 class="title">원-핫 인코딩</h2></div>
+
+    <div class="preview">
+      <p class="pv-label">미리보기</p>
+      <p>다중 분류의 <strong>정답 라벨을 어떻게 적을 것인가</strong>의 문제다. 정수로 적으면 클래스 사이에 가짜 거리·순서가 생긴다. 그래서 정답 칸만 1, 나머지는 0인 <strong>원-핫 벡터</strong>로 표현한다.</p>
+    </div>
+
+    <h3>정수 인코딩의 함정</h3>
+    <p>제일 단순한 방법은 클래스마다 정수를 매기는 것이다. 예를 들어 <span class="mono">Banana=1, Tomato=2, Apple=3</span>. 그런데 여기에 선형 회귀의 <strong>MSE(제곱 오차)</strong>를 적용하면 문제가 드러난다.</p>
+
+    <p>실제값이 Tomato인데 Banana로 예측한 경우와, 실제값이 Apple인데 Banana로 예측한 경우의 제곱 오차를 비교해 보자.</p>
+
+    <div style="margin:18px 0;">
+      $$ (2 - 1)^2 = 1 \qquad\qquad (3 - 1)^2 = 4 $$
+    </div>
+
+    <p>즉 기계에게 <strong>“Banana는 Apple보다 Tomato에 더 가깝다”</strong>는 엉뚱한 정보를 주는 꼴이 된다. 세 과일은 그냥 서로 다른 범주일 뿐, 순서나 거리 관계가 없는데도 말이다.</p>
+
+    <h3>원-핫 인코딩 — 모두를 균등하게</h3>
+    <p>그래서 <strong>원-핫 인코딩</strong>을 쓴다. 클래스 개수만큼 차원을 만들고, 정답 인덱스 칸만 1, 나머지는 0으로 둔다.</p>
+
+    <div class="codeblock">
+      <div class="code-head"><span class="ct">원-핫 벡터 — 클래스 3개</span><button class="copybtn">복사</button></div>
+      <pre><code class="language-python">강아지 = [1, 0, 0]
+고양이 = [0, 1, 0]
+냉장고 = [0, 0, 1]</code></pre>
+    </div>
+
+    <p>이렇게 하면 <span class="em-accent">어떤 두 클래스를 골라도 제곱 오차가 똑같이 2</span>가 된다 (유클리드 거리 $\sqrt{2}$). 클래스 간 관계가 균등해지는 것이다 — “모두 똑같이 남남”이라는 사실을 올바로 표현한다.</p>
+
+    <figure>
+      <div class="fig-card">
+        <svg viewBox="0 0 560 215" role="img" aria-label="정수 인코딩은 클래스 사이 거리가 불균등하고, 원-핫 인코딩은 모든 거리가 균등하다">
+          <text x="20" y="26" font-family="JetBrains Mono,monospace" font-size="13" font-weight="600" fill="#565B72">정수 인코딩 — 거리가 생긴다</text>
+          <line x1="40" y1="92" x2="270" y2="92" stroke="#D4D8E6" stroke-width="2"/>
+          <g font-family="Pretendard" font-size="12.5">
+            <circle cx="60" cy="92" r="7" fill="#5B5BD6"/><text x="60" y="118" text-anchor="middle" fill="#565B72">Banana</text><text x="60" y="78" text-anchor="middle" fill="#8A8FA4" font-size="11">1</text>
+            <circle cx="155" cy="92" r="7" fill="#11A793"/><text x="155" y="118" text-anchor="middle" fill="#565B72">Tomato</text><text x="155" y="78" text-anchor="middle" fill="#8A8FA4" font-size="11">2</text>
+            <circle cx="250" cy="92" r="7" fill="#E0982E"/><text x="250" y="118" text-anchor="middle" fill="#565B72">Apple</text><text x="250" y="78" text-anchor="middle" fill="#8A8FA4" font-size="11">3</text>
+          </g>
+          <path d="M60 150 Q107 168 155 150" fill="none" stroke="#B6BBD0" stroke-width="1.3"/>
+          <text x="107" y="166" text-anchor="middle" font-size="11.5" fill="#8A8FA4" font-family="JetBrains Mono,monospace">오차 1</text>
+          <path d="M60 178 Q155 205 250 178" fill="none" stroke="#D98A4A" stroke-width="1.3"/>
+          <text x="155" y="200" text-anchor="middle" font-size="11.5" fill="#B05616" font-family="JetBrains Mono,monospace">오차 4 — 더 멀다?!</text>
+
+          <line x1="330" y1="40" x2="330" y2="190" stroke="#E7E9F1" stroke-width="1"/>
+
+          <text x="360" y="26" font-family="JetBrains Mono,monospace" font-size="13" font-weight="600" fill="#565B72">원-핫 — 모두 균등</text>
+          <g>
+            <circle cx="455" cy="62" r="7" fill="#5B5BD6"/>
+            <circle cx="400" cy="150" r="7" fill="#11A793"/>
+            <circle cx="510" cy="150" r="7" fill="#E0982E"/>
+            <line x1="455" y1="62" x2="400" y2="150" stroke="#B6BBD0" stroke-width="1.3"/>
+            <line x1="455" y1="62" x2="510" y2="150" stroke="#B6BBD0" stroke-width="1.3"/>
+            <line x1="400" y1="150" x2="510" y2="150" stroke="#B6BBD0" stroke-width="1.3"/>
+            <g font-family="JetBrains Mono,monospace" font-size="11" fill="#8A8FA4">
+              <text x="412" y="100" text-anchor="middle">√2</text>
+              <text x="498" y="100" text-anchor="middle">√2</text>
+              <text x="455" y="167" text-anchor="middle">√2</text>
+            </g>
+            <g font-family="Pretendard" font-size="11.5" fill="#565B72">
+              <text x="455" y="50" text-anchor="middle">[1,0,0]</text>
+              <text x="385" y="172" text-anchor="middle">[0,1,0]</text>
+              <text x="525" y="172" text-anchor="middle">[0,0,1]</text>
+            </g>
+          </g>
+        </svg>
+        <figcaption>정수 인코딩은 <b>1↔2(=1)</b> 와 <b>1↔3(=4)</b> 의 오차가 다르다. 원-핫은 모든 쌍의 거리가 <b>√2</b> 로 동일하다.</figcaption>
+      </div>
+    </figure>
+
+    <div class="callout callout-key">
+      <div class="ca-tag"><span class="dot" style="background:var(--accent)"></span>예외 — 순서가 있을 때</div>
+      <p>클래스에 순서가 있으면 정수 인코딩이 오히려 맞다. <span class="mono">{baby, child, adult}</span> 나 <span class="mono">{1층, 2층, 3층}</span> 처럼 순서 정보가 의미 있는 경우다. <strong>순서 없는 일반 분류만 원-핫</strong>을 쓴다.</p>
+    </div>
+
+    <p>이 원-핫 라벨이 5-2에서 소프트맥스 출력 <span class="mono">[0.24, 0.72, 0.04]</span>(예측)과 정답 <span class="mono">[0,1,0]</span>(원-핫)을 비교하는 토대가 된다.</p>
+  </section>
+
+  <!-- ============ 5-2 SOFTMAX ============ -->
+  <section id="softmax">
+    <div class="sec-head"><span class="chip">5-2</span><h2 class="title">소프트맥스 함수와 비용 함수</h2></div>
+
+    <div class="preview">
+      <p class="pv-label">미리보기</p>
+      <p>가설은 <strong>H(X) = softmax(WX + B)</strong>. 모델이 뱉은 점수를 확률로 바꾸고, 비용 함수로 <strong>크로스 엔트로피</strong>를 써서 정답(원-핫)과의 차이를 잰다. 그리고 이 크로스 엔트로피는 4장의 BCE와 본질적으로 같은 식이다.</p>
+    </div>
+
+    <h3>① 가설 — 점수를 확률로</h3>
+    <p>붓꽃 문제는 특성 4개(꽃받침·꽃잎의 길이·너비)로 품종 3개(setosa·versicolor·virginica) 중 하나를 맞힌다. 문제가 하나 있다. <strong>입력은 4차원인데 출력은 클래스 개수만큼 3차원</strong>이어야 한다. 그래서 가중치 곱으로 4→3 차원을 변환하고, 그 결과를 $z = [z_1, z_2, z_3]$ 라 부른다.</p>
+
+    <p>그런데 이 $z$ 는 아직 그냥 점수(실수)다. 합이 1도 아니고 음수도 가능하다. 이걸 <strong>확률</strong>로 바꾸는 함수가 소프트맥스다.</p>
+
+    <div style="margin:20px 0;">
+      $$ p_i = \frac{e^{z_i}}{\sum_{j=1}^{k} e^{z_j}} \qquad (i = 1, 2, \dots, k) $$
+    </div>
+
+    <p>식은 복잡해 보여도 하는 일은 두 단계다. <span class="em-accent">지수 $e^x$ 를 씌워 전부 양수로 만들고 → 전체 합으로 나눠 비율로 만든다.</span> 끝이다. 결과는 0~1 사이이면서 합이 1인 확률 벡터가 된다.</p>
+
+    <figure>
+      <div class="fig-card">
+        <svg viewBox="0 0 580 200" role="img" aria-label="점수 벡터 z가 소프트맥스 함수를 지나 합이 1인 확률 벡터로 변환된다">
+          <text x="60" y="26" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11.5" fill="#8A8FA4">z (원점수)</text>
+          <g font-family="JetBrains Mono,monospace" font-size="13" fill="#565B72">
+            <rect x="30" y="40" width="62" height="34" rx="5" fill="#fff" stroke="#D4D8E6"/><text x="61" y="62" text-anchor="middle">1.3</text>
+            <rect x="30" y="78" width="62" height="34" rx="5" fill="#fff" stroke="#D4D8E6"/><text x="61" y="100" text-anchor="middle">2.4</text>
+            <rect x="30" y="116" width="62" height="34" rx="5" fill="#fff" stroke="#D4D8E6"/><text x="61" y="138" text-anchor="middle">−0.5</text>
+          </g>
+
+          <path d="M100 95 L150 95" stroke="#B6BBD0" stroke-width="1.5" marker-end="url(#ah)"/>
+          <rect x="156" y="72" width="92" height="46" rx="23" fill="#5B5BD6"/>
+          <text x="202" y="100" text-anchor="middle" font-family="Pretendard" font-size="14" font-weight="600" fill="#fff">softmax</text>
+          <path d="M256 95 L306 95" stroke="#B6BBD0" stroke-width="1.5" marker-end="url(#ah)"/>
+
+          <text x="345" y="26" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11.5" fill="#8A8FA4">p (확률)</text>
+          <g font-family="JetBrains Mono,monospace" font-size="13">
+            <rect x="314" y="40" width="62" height="34" rx="5" fill="#ECECFB" stroke="#C9C9F2"/><text x="345" y="62" text-anchor="middle" fill="#4040AE">0.24</text>
+            <rect x="314" y="78" width="62" height="34" rx="5" fill="#E1F4F0" stroke="#A9E0D4"/><text x="345" y="100" text-anchor="middle" fill="#0C7A6B">0.72</text>
+            <rect x="314" y="116" width="62" height="34" rx="5" fill="#FBF0DC" stroke="#EDD3A6"/><text x="345" y="138" text-anchor="middle" fill="#A66E1B">0.04</text>
+          </g>
+          <text x="345" y="172" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#8A8FA4">합 = 1.00</text>
+
+          <g font-family="Pretendard" font-size="12.5" fill="#565B72">
+            <line x1="392" y1="57" x2="420" y2="57" stroke="#E7E9F1"/><text x="426" y="61">setosa</text>
+            <line x1="392" y1="95" x2="420" y2="95" stroke="#E7E9F1"/><text x="426" y="99">versicolor</text>
+            <line x1="392" y1="133" x2="420" y2="133" stroke="#E7E9F1"/><text x="426" y="137">virginica</text>
+          </g>
+          <defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1 L8 5 L2 9" fill="none" stroke="#B6BBD0" stroke-width="1.4" stroke-linecap="round"/></marker></defs>
+        </svg>
+        <figcaption>지수로 모두 양수가 되고, 합으로 나눠 비율이 된다. 가장 큰 점수였던 <b>versicolor</b> 가 가장 높은 확률 0.72 를 가져간다.</figcaption>
+      </div>
+    </figure>
+
+    <h3>② 행렬 연산 — 크기만 맞추면 끝</h3>
+    <p>샘플 여러 개를 한 번에 처리할 때는 차원을 맞추는 게 전부다. 특성 $f$ 개, 클래스 $c$ 개일 때 가설을 행렬로 쓰면 다음과 같다.</p>
+
+    <div style="margin:18px 0;">$$ \hat{Y} = \text{softmax}(XW + B) $$</div>
+
+    <ul>
+      <li><span class="mono">X</span> : (샘플수 × $f$) — 입력 데이터</li>
+      <li><span class="mono">W</span> : ($f$ × $c$) — <strong>학습 대상. 붓꽃은 4×3</strong></li>
+      <li><span class="mono">B</span> : (샘플수 × $c$) — 편향</li>
+      <li><span class="mono">Ŷ</span> : (샘플수 × $c$) — 각 행이 한 샘플의 확률 벡터</li>
+    </ul>
+
+    <figure>
+      <div class="fig-card">
+        <svg viewBox="0 0 600 130" role="img" aria-label="X(5x4) 곱하기 W(4x3) 더하기 B(5x3)를 소프트맥스에 통과시켜 Y hat (5x3)을 얻는다">
+          <text x="34" y="68" font-family="Pretendard" font-size="15" font-weight="600" fill="#565B72">softmax(</text>
+          <g font-family="JetBrains Mono,monospace" font-size="12" text-anchor="middle">
+            <rect x="108" y="38" width="50" height="56" rx="6" fill="#fff" stroke="#5B5BD6" stroke-width="1.3"/><text x="133" y="64" fill="#4040AE" font-weight="600">X</text><text x="133" y="80" fill="#8A8FA4" font-size="10.5">5×4</text>
+            <text x="170" y="70" fill="#8A8FA4" font-size="15">·</text>
+            <rect x="186" y="38" width="50" height="56" rx="6" fill="#fff" stroke="#11A793" stroke-width="1.3"/><text x="211" y="64" fill="#0C7A6B" font-weight="600">W</text><text x="211" y="80" fill="#8A8FA4" font-size="10.5">4×3</text>
+            <text x="248" y="70" fill="#8A8FA4" font-size="15">+</text>
+            <rect x="264" y="38" width="50" height="56" rx="6" fill="#fff" stroke="#D4D8E6"/><text x="289" y="64" fill="#565B72" font-weight="600">B</text><text x="289" y="80" fill="#8A8FA4" font-size="10.5">5×3</text>
+          </g>
+          <text x="330" y="68" font-family="Pretendard" font-size="15" font-weight="600" fill="#565B72">)</text>
+          <text x="352" y="68" font-family="Pretendard" font-size="15" fill="#8A8FA4">=</text>
+          <g font-family="JetBrains Mono,monospace" font-size="12" text-anchor="middle">
+            <rect x="378" y="38" width="56" height="56" rx="6" fill="#F1F1FC" stroke="#C9C9F2" stroke-width="1.3"/><text x="406" y="62" fill="#4040AE" font-weight="600">Ŷ</text><text x="406" y="79" fill="#8A8FA4" font-size="10.5">5×3</text>
+          </g>
+          <text x="470" y="58" font-family="Pretendard" font-size="12.5" fill="#8A8FA4">각 행 =</text>
+          <text x="470" y="76" font-family="Pretendard" font-size="12.5" fill="#8A8FA4">한 샘플의</text>
+          <text x="470" y="94" font-family="Pretendard" font-size="12.5" fill="#8A8FA4">확률 벡터</text>
+        </svg>
+        <figcaption>안쪽 차원(4)이 맞물려 사라지고 (5×4)·(4×3)→(5×3) 이 된다. <b>W의 크기 4×3만 기억하면</b> 나머지는 자동으로 따라온다.</figcaption>
+      </div>
+    </figure>
+
+    <h3>③ 비용 함수 — 크로스 엔트로피</h3>
+    <p>한 샘플의 비용은 다음과 같다.</p>
+    <div style="margin:18px 0;">$$ \text{cost} = -\sum_{j=1}^{k} y_j \log(p_j) $$</div>
+
+    <p>여기서 $y_j$ 는 원-핫 라벨(정답 칸만 1), $p_j$ 는 소프트맥스 확률이다. 그런데 <span class="em-accent">$y$ 가 원-핫이라 마법이 일어난다.</span> 정답이 아닌 칸은 $y_j = 0$ 이라 통째로 사라지고, 정답 칸($y_j = 1$) 하나만 살아남는다.</p>
+
+    <div style="margin:18px 0;">$$ \text{cost} = -\log(p_{\text{정답 칸}}) $$</div>
+
+    <p>즉 비용은 언제나 <strong>“정답 칸에 분배된 확률의 $-\log$”</strong> 다. 정답 칸에 확률을 많이 줬으면($p \to 1$) 비용은 0, 적게 줬으면($p \to 0$) 무한대로 폭발한다.</p>
+
+    <figure>
+      <div class="fig-card">
+        <svg viewBox="0 0 460 270" role="img" aria-label="정답 칸 확률 p에 대한 비용 곡선. p가 1이면 비용 0, p가 0으로 갈수록 무한대로 커진다">
+          <line x1="58" y1="30" x2="58" y2="210" stroke="#D4D8E6" stroke-width="1"/>
+          <line x1="58" y1="210" x2="420" y2="210" stroke="#D4D8E6" stroke-width="1"/>
+          <g font-family="JetBrains Mono,monospace" font-size="11" fill="#8A8FA4">
+            <text x="50" y="214" text-anchor="end">0</text>
+            <text x="50" y="125" text-anchor="end">1</text>
+            <text x="50" y="40" text-anchor="end">2</text>
+            <text x="44" y="28" font-size="11.5" fill="#565B72">cost</text>
+            <text x="58" y="230" text-anchor="middle">0</text>
+            <text x="420" y="230" text-anchor="middle">1</text>
+            <text x="239" y="248" text-anchor="middle" font-family="Pretendard" font-size="12" fill="#565B72">정답 칸 확률 p</text>
+          </g>
+          <polyline points="70,38 88,92 104,118 130,142 178,176 230,193 282,202 334,206 386,209 420,210"
+            fill="none" stroke="#5B5BD6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="420" cy="210" r="4.5" fill="#11A793"/>
+          <text x="404" y="200" text-anchor="end" font-family="Pretendard" font-size="11.5" fill="#0C7A6B">맞힘 → cost 0</text>
+          <text x="84" y="32" font-family="JetBrains Mono,monospace" font-size="13" fill="#5B5BD6">∞</text>
+          <text x="116" y="58" font-family="Pretendard" font-size="11.5" fill="#B05616">틀림 → 폭발</text>
+          <text x="250" y="120" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="13" fill="#565B72">cost = −log(p)</text>
+        </svg>
+        <figcaption>정답 칸 확률이 1에 가까울수록 비용은 0, 0에 가까울수록 무한대다. 이 곡선을 따라 내려가도록 학습한다.</figcaption>
+      </div>
+    </figure>
+
+    <p>전체 데이터에 대한 평균까지 씌우면 최종 비용 함수가 된다.</p>
+    <div style="margin:18px 0;">$$ \text{cost}(W) = -\frac{1}{n}\sum_{i=1}^{n}\sum_{j=1}^{k} y_j^{(i)} \log\!\big(p_j^{(i)}\big) $$</div>
+
+    <h3>④ 크로스 엔트로피 = BCE의 일반화</h3>
+    <p>이 식은 4장에서 배운 이진 크로스 엔트로피(BCE)와 본질적으로 같다. BCE에서 출발해 보자.</p>
+    <div style="margin:16px 0;">$$ \text{cost} = -\big[\, y\log H(X) + (1-y)\log(1-H(X)) \,\big] $$</div>
+
+    <p>클래스가 2개이므로 치환만 한다. $y \to y_1$, $\,1-y \to y_2$, $\,H(X) \to p_1$, $\,1-H(X) \to p_2$.</p>
+    <div style="margin:16px 0;">$$ = -\big(y_1\log p_1 + y_2\log p_2\big) = -\sum_{i=1}^{2} y_i \log p_i $$</div>
+
+    <p>이제 합의 위끝 $2$ 를 $k$ 로 풀어 주면 소프트맥스의 크로스 엔트로피와 완전히 동일해진다.</p>
+    <div style="margin:16px 0;">$$ = -\sum_{i=1}^{k} y_i \log p_i $$</div>
+
+    <div class="callout callout-key">
+      <div class="ca-tag"><span class="dot" style="background:var(--accent)"></span>한 바퀴가 닫힌다</div>
+      <p><strong>이진 분류는 소프트맥스의 $k=2$ 특수 케이스다.</strong> 거꾸로 소프트맥스 CE에 $k=2$ 를 넣으면 BCE가 튀어나온다. 3장→4장→5장이 “가설·비용만 갈아 끼운 같은 구조”라는 그림이 여기서 완성된다.</p>
+    </div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th></th><th>가설</th><th>비용 함수</th></tr></thead>
+        <tbody>
+          <tr><td class="row-head"><span class="badge b1">ch3 선형</span></td><td class="mono">Wx + b</td><td>MSE</td></tr>
+          <tr><td class="row-head"><span class="badge b2">ch4 로지스틱</span></td><td class="mono">sigmoid(Wx + b)</td><td>BCE (= CE, k=2)</td></tr>
+          <tr><td class="row-head"><span class="badge b3">ch5 소프트맥스</span></td><td class="mono">softmax(WX + B)</td><td>CE (k ≥ 2)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ 5-3 IMPLEMENTATION ============ -->
+  <section id="impl">
+    <div class="sec-head"><span class="chip">5-3</span><h2 class="title">파이토치로 구현하기</h2></div>
+
+    <div class="preview">
+      <p class="pv-label">미리보기</p>
+      <p>비용 함수를 <strong>로우 레벨(식 그대로) → 점점 한 줄로</strong> 줄여 나간다. 신기하게 모든 방식이 같은 값을 낸다. 그리고 모델도 직접 만든 W·b 에서 <span class="mono">nn.Linear</span>, 클래스로 추상화된다.</p>
+    </div>
+
+    <p>먼저 도구상자 별명부터. 코드 맨 위의 이 한 줄이 핵심이다.</p>
+    <div class="codeblock">
+      <div class="code-head"><span class="ct">import</span><button class="copybtn">복사</button></div>
+      <pre><code class="language-python">import torch
+import torch.nn as nn               # 클래스 버전 도구상자 (nn.Linear, nn.CrossEntropyLoss)
+import torch.nn.functional as F     # 함수 버전 도구상자 (F.softmax, F.cross_entropy)</code></pre>
+    </div>
+    <p><span class="mono">F</span> 는 <span class="mono">torch.nn.functional</span> 의 별명이다. <span class="mono">softmax</span>, <span class="mono">log_softmax</span>, <span class="mono">cross_entropy</span> 같은 딥러닝 <strong>함수</strong>가 모여 있는 상자다. <span class="mono">nn</span> 은 같은 기능의 <strong>클래스</strong> 버전이다.</p>
+
+    <h3>비용 함수를 점점 줄이기</h3>
+    <p>아래 네 가지는 전부 같은 값을 낸다. 전제는 모델 출력 점수 <span class="mono">z</span> (3×5) 와 정수 라벨 <span class="mono">y = [0, 2, 1]</span> 이다.</p>
+
+    <div class="codeblock">
+      <div class="code-head"><span class="ct">① low-level — 식을 손으로</span><button class="copybtn">복사</button></div>
+      <pre><code class="language-python">hypothesis = F.softmax(z, dim=1)          # 점수 → 확률 (dim=1: 행마다 합이 1)
+
+y_one_hot = torch.zeros_like(hypothesis)  # 같은 크기의 0 텐서
+y_one_hot.scatter_(1, y.unsqueeze(1), 1)  # 정수 라벨 → 원-핫 (정답 칸에 1)
+
+cost = (y_one_hot * -torch.log(hypothesis)).sum(dim=1).mean()</code></pre>
+    </div>
+
+    <p>마지막 줄이 식 $-\sum y_j \log p_j$ 의 평균을 그대로 옮긴 것이다. 안에서 밖으로 읽으면: <span class="mono">-torch.log(...)</span> 로 확률에 $-\log$ → 원-핫과 칸별 곱으로 <strong>정답 칸만 남기고</strong> → <span class="mono">.sum(dim=1)</span> 으로 $\sum$ → <span class="mono">.mean()</span> 으로 $\frac{1}{n}\sum$.</p>
+
+    <div class="callout callout-key">
+      <div class="ca-tag"><span class="dot" style="background:var(--accent)"></span>낯선 두 줄 풀이</div>
+      <p><strong>dim=1</strong> — “행 방향(가로, 클래스끼리)으로 합이 1 되게 하라”. 각 샘플 안에서 확률을 분배한다는 뜻이다. dim=0 이면 샘플끼리 합쳐져 의미가 망가진다.</p>
+      <p><strong>scatter_</strong> — <span class="mono">y.unsqueeze(1)</span> 로 모양을 (3×1)로 바꾼 뒤, 각 행의 그 위치에 1을 꽂는다. 끝의 <span class="mono">_</span> 는 원본을 직접 덮어쓴다는 표시(in-place)다.</p>
+    </div>
+
+    <div class="codeblock">
+      <div class="code-head"><span class="ct">② log + softmax 합치기 → log_softmax</span><button class="copybtn">복사</button></div>
+      <pre><code class="language-python">torch.log(F.softmax(z, dim=1))  ==  F.log_softmax(z, dim=1)   # 완전히 동일</code></pre>
+    </div>
+
+    <div class="codeblock">
+      <div class="code-head"><span class="ct">③ 나머지까지 합치기 → nll_loss (원-핫 불필요!)</span><button class="copybtn">복사</button></div>
+      <pre><code class="language-python">F.nll_loss(F.log_softmax(z, dim=1), y)   # 정수 라벨 y를 바로 받는다</code></pre>
+    </div>
+    <p><span class="mono">nll_loss</span> (Negative Log Likelihood)는 <strong>원-핫이 필요 없다.</strong> 정수 라벨에서 “정답 칸만 골라 $-$값, 평균”을 알아서 해 준다.</p>
+
+    <div class="codeblock">
+      <div class="code-head"><span class="ct">④ 전부 합치기 → cross_entropy</span><button class="copybtn">복사</button></div>
+      <pre><code class="language-python">F.cross_entropy(z, y)   # = log_softmax + nll_loss</code></pre>
+    </div>
+
+    <div class="ladder">
+      <div class="rung"><span class="lv">①</span><span class="rc">softmax → log → one_hot 곱 → sum → mean</span><span class="rd">식을 직접</span></div>
+      <div class="rung-eq">↓</div>
+      <div class="rung"><span class="lv">②</span><span class="rc">F.log_softmax → one_hot 곱 → sum → mean</span><span class="rd">log+softmax 결합</span></div>
+      <div class="rung-eq">↓</div>
+      <div class="rung"><span class="lv">③</span><span class="rc">F.nll_loss(F.log_softmax, y)</span><span class="rd">원-핫 사라짐</span></div>
+      <div class="rung-eq">↓</div>
+      <div class="rung"><span class="lv acc">④</span><span class="rc">F.cross_entropy(z, y)</span><span class="rd">한 줄</span></div>
+    </div>
+
+    <h3>모델 4종 — 직접 하던 걸 위임</h3>
+    <p>학습 루프 뼈대는 ch3부터 똑같다. 바뀌는 건 가설·비용을 계산하는 윗부분뿐이다. 데이터는 붓꽃류 <span class="mono">x_train</span>(8×4), <span class="mono">y_train</span>(클래스 3개)이다.</p>
+
+    <div class="codeblock">
+      <div class="code-head"><span class="ct">① low-level — W·b 직접</span><button class="copybtn">복사</button></div>
+      <pre><code class="language-python">W = torch.zeros((4, 3), requires_grad=True)   # 4→3 변환, 그래서 4×3
+b = torch.zeros((1, 3), requires_grad=True)
+optimizer = optim.SGD([W, b], lr=0.1)
+
+for epoch in range(1001):
+    hypothesis = F.softmax(x_train.matmul(W) + b, dim=1)
+    cost = (y_one_hot * -torch.log(hypothesis)).sum(dim=1).mean()
+
+    optimizer.zero_grad()
+    cost.backward()
+    optimizer.step()</code></pre>
+    </div>
+
+    <div class="codeblock">
+      <div class="code-head"><span class="ct">② high-level — cross_entropy 로 두 줄 교체</span><button class="copybtn">복사</button></div>
+      <pre><code class="language-python">z = x_train.matmul(W) + b           # softmax 안 씌움! 날것 점수(logits)
+cost = F.cross_entropy(z, y_train)  # 내부에 softmax 포함 + 정수 라벨 그대로</code></pre>
+    </div>
+
+    <div class="codeblock">
+      <div class="code-head"><span class="ct">③ nn.Module — nn.Linear 에 위임</span><button class="copybtn">복사</button></div>
+      <pre><code class="language-python">model = nn.Linear(4, 3)   # 입력 4 → 출력 3 (출력 = 클래스 개수!)
+optimizer = optim.SGD(model.parameters(), lr=0.1)
+
+for epoch in range(1001):
+    prediction = model(x_train)               # = XW + b (아직 logits)
+    cost = F.cross_entropy(prediction, y_train)
+    optimizer.zero_grad(); cost.backward(); optimizer.step()</code></pre>
+    </div>
+    <p>ch3 선형 회귀 때는 출력이 1이었는데, 이제 <strong>출력 = 클래스 개수(3)</strong> 인 게 유일한 차이다.</p>
+
+    <div class="codeblock">
+      <div class="code-head"><span class="ct">④ class — nn.Module 상속</span><button class="copybtn">복사</button></div>
+      <pre><code class="language-python">class SoftmaxClassifierModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.linear = nn.Linear(4, 3)   # Output 3!
+
+    def forward(self, x):
+        return self.linear(x)
+
+model = SoftmaxClassifierModel()</code></pre>
+    </div>
+    <p>③과 기능이 완전히 같다. 모델을 클래스로 감쌌을 뿐이다. 모델이 커지면(층 여러 개) 이 구조가 관리하기 편해서 표준처럼 쓴다.</p>
+
+    <div class="callout callout-warn">
+      <div class="ca-tag"><span class="dot" style="background:var(--warn-ink)"></span>⚠ 가장 흔한 함정</div>
+      <p><span class="mono">F.cross_entropy</span> 와 <span class="mono">nn.CrossEntropyLoss</span> 는 <strong>내부에 softmax가 이미 들어 있다.</strong> 그래서 이걸 쓸 땐 <strong>가설에서 softmax를 또 씌우면 안 된다.</strong> 날것 점수(logits)를 그대로 넘겨야 한다. 두 번 씌우면 확률을 또 뭉개 학습이 망가진다.</p>
+      <p>또한 라벨은 <strong>원-핫이 아니라 정수 그대로</strong> 넘긴다. 다음 MNIST에서 <span class="mono">Y</span> 를 0~9 정수로 바로 넘기는 이유다.</p>
+    </div>
+  </section>
+
+  <!-- ============ 5-4 MNIST ============ -->
+  <section id="mnist">
+    <div class="sec-head"><span class="chip">5-4</span><h2 class="title">MNIST 손글씨 분류</h2></div>
+
+    <div class="preview">
+      <p class="pv-label">미리보기</p>
+      <p>지금까지 한 걸 진짜 손글씨 숫자에 적용한다. 이번엔 <strong>클래스 10개(0~9)</strong>. 28×28 픽셀 이미지를 784차원 벡터로 펴서 <span class="mono">nn.Linear(784, 10)</span> 으로 분류한다. 학습 루프는 여전히 그 3박자다.</p>
+    </div>
+
+    <h3>① 데이터 모양</h3>
+    <p>이미지 한 장은 <strong>28×28 픽셀</strong>이다. 모델은 벡터를 받으므로 일렬로 펴서 <strong>784차원 벡터</strong>로 만든다. 그래서 <span class="mono">X.view(-1, 28*28)</span> — “배치는 그대로, 픽셀은 784로 펴라”. 입력 784, 클래스 10.</p>
+
+    <h3>② 셋업 — torchvision · DataLoader</h3>
+    <div class="codeblock">
+      <div class="code-head"><span class="ct">데이터 로드</span><button class="copybtn">복사</button></div>
+      <pre><code class="language-python">mnist_train = dsets.MNIST(root='MNIST_data/', train=True,
+                          transform=transforms.ToTensor(), download=True)
+
+data_loader = DataLoader(mnist_train, batch_size=100,
+                         shuffle=True, drop_last=True)</code></pre>
+    </div>
+    <p><span class="mono">drop_last=True</span> 는 개수가 모자란 마지막 자투리 배치를 버린다 — 그 배치가 경사 하강법에서 상대적으로 과대평가되는 것을 막는다.</p>
+
+    <h3>③ 모델 · 비용 · 옵티마이저</h3>
+    <div class="codeblock">
+      <div class="code-head"><span class="ct">설계 — 입출력만 784→10</span><button class="copybtn">복사</button></div>
+      <pre><code class="language-python">linear = nn.Linear(784, 10, bias=True).to(device)   # 입력 784 → 출력 10
+criterion = nn.CrossEntropyLoss().to(device)        # 내부에 softmax 포함!
+optimizer = torch.optim.SGD(linear.parameters(), lr=0.1)</code></pre>
+    </div>
+    <p>5-3에서 쓴 <span class="mono">nn.Linear</span>·<span class="mono">CrossEntropyLoss</span> 그대로다. 입출력 숫자만 바뀌었다. <span class="mono">.to(device)</span> 는 GPU를 쓸 때 그 메모리로 보내는 것이다(CPU면 무시).</p>
+
+    <h3>④ 학습 루프 — 또 그 3박자</h3>
+    <div class="codeblock">
+      <div class="code-head"><span class="ct">training loop</span><button class="copybtn">복사</button></div>
+      <pre><code class="language-python">for epoch in range(training_epochs):
+    for X, Y in data_loader:
+        X = X.view(-1, 28*28).to(device)   # (100, 784)로 펴기
+        Y = Y.to(device)                   # 라벨은 0~9 정수 (원-핫 아님)
+
+        optimizer.zero_grad()
+        hypothesis = linear(X)             # logits — softmax 안 씌움
+        cost = criterion(hypothesis, Y)
+        cost.backward()
+        optimizer.step()</code></pre>
+    </div>
+    <p><span class="mono">Y</span> 가 <strong>정수 그대로</strong> 인 점에 주목하자 — <span class="mono">CrossEntropyLoss</span> 가 알아서 처리한다. 돌리면 비용이 약 0.53 → 0.27 로 떨어지고, 정확도는 약 88% 가 나온다.</p>
+
+    <div class="callout callout-warn">
+      <div class="ca-tag"><span class="dot" style="background:var(--warn-ink)"></span>⚠ deprecated API — 갈아 끼울 것</div>
+      <p>테스트 코드의 <span class="mono">.test_data</span> / <span class="mono">.test_labels</span> 는 <strong>deprecated</strong> 다. 요즘 torchvision에선 경고가 뜨거나 동작하지 않는다. <span class="mono">.data</span> / <span class="mono">.targets</span> 로 바꾼다.</p>
+    </div>
+
+    <div class="codeblock">
+      <div class="code-head"><span class="ct">수정 — .data / .targets</span><button class="copybtn">복사</button></div>
+      <pre><code class="language-python"># 옛날: mnist_test.test_data / mnist_test.test_labels  ← 동작 X
+X_test = mnist_test.data.view(-1, 28*28).float().to(device)
+Y_test = mnist_test.targets.to(device)
+
+prediction = linear(X_test)
+correct = torch.argmax(prediction, 1) == Y_test   # 가장 큰 확률 칸 = 예측한 숫자
+accuracy = correct.float().mean()</code></pre>
+    </div>
+    <p>분류의 최종 판정은 늘 <span class="mono">argmax</span> 다. 10개 확률 중 <strong>가장 큰 칸의 인덱스</strong>가 모델이 고른 숫자이고, 그게 정답과 같으면 맞힌 것이다.</p>
+  </section>
+
+  </div><!-- /wrap -->
+
+  <!-- ============ FOOTER ============ -->
+  <footer>
+    <div class="recap">
+      <h3>5장 한 바퀴</h3>
+      <div class="flow"><b>원-핫(5-1)</b> &nbsp;→&nbsp; <b>softmax 가설 + 크로스 엔트로피(5-2)</b> &nbsp;→&nbsp; <b>4가지 구현으로 추상화(5-3)</b> &nbsp;→&nbsp; <b>MNIST 실전(5-4)</b></div>
+      <ul class="checklist">
+        <li>다중 분류 라벨은 <strong>원-핫</strong>으로 — 정수 인코딩은 가짜 거리를 만든다.</li>
+        <li>가설 <strong>softmax(WX+B)</strong> 는 점수를 합이 1인 확률로 바꾼다 (지수 → 합으로 나눔).</li>
+        <li>비용은 <strong>정답 칸 확률의 −log</strong> — 크로스 엔트로피는 4장 BCE의 k≥2 일반화다.</li>
+        <li><strong>cross_entropy 에 softmax 내장</strong> — 가설에서 또 씌우지 말 것. 라벨은 정수.</li>
+        <li>MNIST는 <strong>784→10</strong>, 판정은 <strong>argmax</strong>, <span class="mono" style="font-size:.82em">.data</span>/<span class="mono" style="font-size:.82em">.targets</span> 로 수정.</li>
+        <li>ch3·4·5 전부 <strong>가설·비용만 갈아 끼운 같은 3박자</strong> 루프.</li>
+      </ul>
+    </div>
+    <p class="src">출처: 「딥 러닝 파이토치 교과서 — 입문부터 LLM 파인튜닝까지」 05장 (wikidocs.net/59425)</p>
+  </footer>
+
+</div><!-- /sheet -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script>
+  // syntax highlight
+  document.addEventListener('DOMContentLoaded', function(){
+    if(window.hljs){ document.querySelectorAll('pre code').forEach(function(b){ hljs.highlightElement(b); }); }
+  });
+
+  // KaTeX
+  window.addEventListener('load', function(){
+    if(window.renderMathInElement){
+      renderMathInElement(document.body, {
+        delimiters:[ {left:"$$",right:"$$",display:true}, {left:"$",right:"$",display:false} ],
+        throwOnError:false
+      });
+    }
+  });
+
+  // reading progress
+  var prog = document.getElementById('progress');
+  function onScroll(){
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    prog.style.width = (max>0 ? (h.scrollTop/max*100) : 0) + '%';
+  }
+  document.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+
+  // hero probability bar — settle animation (softmax redistributing mass)
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function settleBar(){
+    document.querySelectorAll('#heroBar > span').forEach(function(s){
+      s.style.width = s.getAttribute('data-w') + '%';
+    });
+  }
+  if(reduce){ settleBar(); }
+  else { setTimeout(settleBar, 350); }
+
+  // copy buttons
+  document.querySelectorAll('.codeblock').forEach(function(block){
+    var btn = block.querySelector('.copybtn');
+    if(!btn) return;
+    btn.addEventListener('click', function(){
+      var code = block.querySelector('code').innerText;
+      navigator.clipboard.writeText(code).then(function(){
+        btn.textContent = '복사됨'; btn.classList.add('ok');
+        setTimeout(function(){ btn.textContent='복사'; btn.classList.remove('ok'); }, 1400);
+      });
+    });
+  });
+</script>
+</body>
+</html>
