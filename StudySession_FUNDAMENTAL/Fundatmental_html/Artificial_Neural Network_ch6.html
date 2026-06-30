@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 06 · 인공 신경망 — 딥러닝 파이토치 학습 노트</title>
+
+<!-- Pretendard (Korean web font) with system fallback -->
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<!-- KaTeX -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<!-- highlight.js -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+<style>
+:root{
+  --ink:#16161a;
+  --ink-soft:#52525e;
+  --ink-faint:#8a8a96;
+  --paper:#fafafb;
+  --surface:#ffffff;
+  --line:#e6e6ee;
+  --line-soft:#f0f0f5;
+  --flame:#ee4c2c;
+  --flame-deep:#c2371b;
+  --flame-tint:#fff2ee;
+  --blue:#2f6fed;
+  --blue-tint:#eef3fe;
+  --amber:#b5740a;
+  --amber-tint:#fdf5e6;
+  --green:#1f8a52;
+  --green-tint:#ecf7f0;
+  --code-bg:#f7f7fa;
+  --shadow:0 1px 2px rgba(20,20,30,.04), 0 8px 24px rgba(20,20,30,.05);
+  --mono:'JetBrains Mono','SFMono-Regular',ui-monospace,Menlo,Consolas,'Liberation Mono',monospace;
+  --sans:'Pretendard','Pretendard Variable',-apple-system,BlinkMacSystemFont,system-ui,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  --sidebar-w:296px;
+  --measure:740px;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  font-family:var(--sans);
+  color:var(--ink);
+  background:var(--paper);
+  font-size:16.5px;
+  line-height:1.78;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  letter-spacing:-0.003em;
+}
+
+/* ---------- progress bar ---------- */
+#progress{
+  position:fixed;top:0;left:0;height:3px;width:0%;
+  background:linear-gradient(90deg,var(--flame),var(--flame-deep));
+  z-index:100;transition:width .08s linear;
+}
+
+/* ---------- layout ---------- */
+.shell{display:flex;align-items:flex-start;}
+
+/* ---------- sidebar ---------- */
+.sidebar{
+  position:sticky;top:0;height:100vh;width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+  border-right:1px solid var(--line);background:var(--surface);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.brand{padding:26px 26px 18px;border-bottom:1px solid var(--line-soft);}
+.brand .kicker{
+  font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--flame);
+}
+.brand h1{
+  margin:6px 0 2px;font-size:21px;font-weight:800;letter-spacing:-0.02em;line-height:1.25;
+}
+.brand .sub{font-size:12.5px;color:var(--ink-faint);font-weight:500;}
+
+.toc{padding:14px 14px 28px;overflow-y:auto;flex:1;}
+.toc::-webkit-scrollbar{width:8px;}
+.toc::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px;}
+.toc a{
+  display:flex;align-items:baseline;gap:11px;
+  padding:8px 12px;border-radius:9px;text-decoration:none;color:var(--ink-soft);
+  font-size:14px;font-weight:600;line-height:1.35;transition:background .12s,color .12s;
+}
+.toc a .num{
+  font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--ink-faint);
+  min-width:34px;letter-spacing:-.02em;flex:0 0 auto;
+}
+.toc a:hover{background:var(--line-soft);color:var(--ink);}
+.toc a.active{background:var(--flame-tint);color:var(--flame-deep);}
+.toc a.active .num{color:var(--flame);}
+.toc .sep{
+  margin:14px 12px 8px;font-size:10.5px;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-faint);
+}
+
+/* ---------- main ---------- */
+.main{flex:1;min-width:0;}
+.wrap{max-width:calc(var(--measure) + 96px);margin:0 auto;padding:0 48px 140px;}
+
+/* hero */
+.hero{padding:84px 0 48px;border-bottom:1px solid var(--line);margin-bottom:8px;}
+.hero .eyebrow{
+  font-family:var(--mono);font-size:13px;font-weight:700;color:var(--flame);
+  letter-spacing:.04em;margin-bottom:14px;
+}
+.hero h2{
+  font-size:clamp(34px,5vw,52px);font-weight:800;letter-spacing:-0.035em;
+  line-height:1.06;margin:0 0 22px;
+}
+.hero .lede{font-size:18.5px;line-height:1.7;color:var(--ink-soft);max-width:660px;font-weight:450;}
+.hero .lede strong{color:var(--ink);font-weight:700;}
+.arc{
+  display:flex;flex-wrap:wrap;gap:8px;margin-top:30px;
+}
+.arc span{
+  font-size:12.5px;font-weight:600;color:var(--ink-soft);
+  background:var(--surface);border:1px solid var(--line);border-radius:999px;
+  padding:5px 13px;
+}
+.arc span b{color:var(--flame-deep);font-weight:700;}
+
+/* chapter blocks */
+.chapter{padding:62px 0 8px;scroll-margin-top:24px;max-width:var(--measure);}
+.chapter > .head{display:flex;align-items:flex-end;gap:18px;margin-bottom:30px;}
+.chapter > .head .big{
+  font-family:var(--mono);font-size:15px;font-weight:700;color:var(--flame);
+  letter-spacing:0;line-height:1;padding-bottom:6px;white-space:nowrap;
+}
+.chapter > .head h3{
+  font-size:29px;font-weight:800;letter-spacing:-0.025em;line-height:1.18;margin:0;
+}
+
+/* typography in content */
+.chapter h4{
+  font-size:20px;font-weight:750;letter-spacing:-0.018em;margin:42px 0 14px;
+  padding-top:6px;
+}
+.chapter h5{
+  font-size:16px;font-weight:700;color:var(--ink);margin:28px 0 10px;
+  display:flex;align-items:center;gap:9px;
+}
+.chapter h5::before{
+  content:"";width:6px;height:6px;border-radius:2px;background:var(--flame);flex:0 0 auto;
+}
+.chapter p{margin:0 0 16px;}
+.chapter p.first{margin-top:0;}
+.chapter strong{font-weight:700;color:var(--ink);}
+.chapter em{font-style:normal;background:var(--flame-tint);color:var(--flame-deep);
+  padding:1px 5px;border-radius:5px;font-weight:600;font-size:.96em;}
+.muted{color:var(--ink-soft);font-size:14.5px;}
+
+.chapter ul,.chapter ol{margin:4px 0 18px;padding-left:4px;}
+.chapter li{margin:0 0 8px;padding-left:26px;position:relative;list-style:none;}
+.chapter ol{counter-reset:li;}
+.chapter ul li::before{
+  content:"";position:absolute;left:7px;top:.72em;width:6px;height:6px;border-radius:50%;
+  background:var(--line);border:1.5px solid var(--ink-faint);
+}
+.chapter ol li::before{
+  counter-increment:li;content:counter(li);position:absolute;left:0;top:.05em;
+  font-family:var(--mono);font-size:12px;font-weight:700;color:var(--flame);
+  width:18px;text-align:center;
+}
+.chapter li strong{font-weight:700;}
+
+/* callouts */
+.note{
+  border:1px solid var(--line);border-left:3px solid var(--c,var(--blue));
+  background:var(--bg,var(--blue-tint));border-radius:10px;
+  padding:15px 18px;margin:20px 0;font-size:15px;line-height:1.66;
+}
+.note .label{
+  font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--c,var(--blue));display:block;margin-bottom:5px;
+}
+.note p{margin:0 0 8px;}
+.note p:last-child{margin:0;}
+.note.tip{--c:var(--blue);--bg:var(--blue-tint);}
+.note.warn{--c:var(--amber);--bg:var(--amber-tint);}
+.note.key{--c:var(--flame);--bg:var(--flame-tint);}
+.note.def{--c:var(--green);--bg:var(--green-tint);}
+.note code{background:rgba(0,0,0,.05);}
+
+/* blockquote-style key insight (from textbook callouts) */
+.insight{
+  margin:18px 0;padding:2px 0 2px 20px;border-left:3px solid var(--line);
+  color:var(--ink-soft);font-size:15px;
+}
+.insight strong{color:var(--ink);}
+
+/* code */
+pre{
+  margin:18px 0;background:var(--code-bg);border:1px solid var(--line);
+  border-radius:12px;overflow:hidden;
+}
+pre .bar{
+  display:flex;align-items:center;gap:7px;padding:9px 14px;
+  border-bottom:1px solid var(--line);background:var(--surface);
+}
+pre .bar .dot{width:10px;height:10px;border-radius:50%;background:var(--line);}
+pre .bar .fn{margin-left:6px;font-family:var(--mono);font-size:11.5px;font-weight:600;color:var(--ink-faint);}
+pre code{
+  display:block;padding:16px 18px;font-family:var(--mono);font-size:13.3px;
+  line-height:1.7;overflow-x:auto;background:transparent !important;color:#2a2a32;
+  letter-spacing:0;
+}
+:not(pre) > code{
+  font-family:var(--mono);font-size:.88em;background:var(--code-bg);
+  padding:2px 6px;border-radius:6px;border:1px solid var(--line);color:var(--flame-deep);
+  font-weight:600;
+}
+.hljs{background:transparent;}
+
+/* output block */
+.out{
+  margin:-8px 0 18px;background:#1c1c22;border-radius:0 0 12px 12px;border:1px solid #1c1c22;
+  border-top:1px solid #313139;
+}
+.out .lbl{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.1em;
+  color:#7d7d8c;padding:8px 16px 0;text-transform:uppercase;}
+.out pre{margin:0;background:transparent;border:none;border-radius:0;}
+.out pre code{color:#d4d4dc;padding:6px 16px 14px;font-size:12.7px;}
+
+/* tables */
+.tbl-wrap{margin:20px 0;overflow-x:auto;border:1px solid var(--line);border-radius:12px;}
+table{border-collapse:collapse;width:100%;font-size:14.5px;}
+thead th{
+  background:var(--surface);text-align:left;font-weight:700;font-size:13px;
+  padding:12px 16px;border-bottom:2px solid var(--line);color:var(--ink);
+  letter-spacing:-.01em;
+}
+tbody td{padding:11px 16px;border-bottom:1px solid var(--line-soft);vertical-align:top;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:var(--paper);}
+table code{font-size:12.5px;}
+table .acc{color:var(--flame-deep);font-weight:700;}
+
+/* math display spacing */
+.katex-display{margin:18px 0;overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+.katex{font-size:1.04em;}
+
+/* small truth-table grid */
+.gates{display:flex;flex-wrap:wrap;gap:14px;margin:18px 0;}
+.gate{border:1px solid var(--line);border-radius:10px;overflow:hidden;min-width:128px;flex:1;}
+.gate .gt{font-family:var(--mono);font-size:12px;font-weight:700;text-align:center;
+  padding:7px;background:var(--surface);border-bottom:1px solid var(--line);color:var(--flame-deep);}
+.gate table{font-size:13px;}
+.gate td{padding:5px 0;text-align:center;border-bottom:1px solid var(--line-soft);font-family:var(--mono);}
+.gate td:last-child{font-weight:700;}
+
+/* cheatsheet */
+.cheat{padding:62px 0 8px;scroll-margin-top:24px;}
+.cheat .head{display:flex;align-items:flex-end;gap:18px;margin-bottom:26px;}
+.cheat .head .big{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--flame);padding-bottom:6px;}
+.cheat .head h3{font-size:29px;font-weight:800;letter-spacing:-0.025em;margin:0;}
+.card{
+  border:1px solid var(--line);border-radius:14px;background:var(--surface);
+  padding:22px 24px;margin:18px 0;box-shadow:var(--shadow);max-width:var(--measure);
+}
+.card h4{margin:0 0 6px;font-size:17px;font-weight:750;}
+.card > p.cap{margin:0 0 14px;font-size:13.5px;color:var(--ink-faint);}
+
+/* footer */
+.foot{margin-top:80px;padding-top:28px;border-top:1px solid var(--line);
+  font-size:13px;color:var(--ink-faint);max-width:var(--measure);}
+.foot a{color:var(--flame-deep);text-decoration:none;font-weight:600;}
+
+/* mobile nav */
+.navtoggle{
+  display:none;position:fixed;top:14px;left:14px;z-index:101;
+  width:44px;height:44px;border-radius:11px;border:1px solid var(--line);
+  background:var(--surface);box-shadow:var(--shadow);cursor:pointer;
+  align-items:center;justify-content:center;
+}
+.navtoggle span,.navtoggle span::before,.navtoggle span::after{
+  content:"";display:block;width:18px;height:2px;background:var(--ink);border-radius:2px;position:relative;
+}
+.navtoggle span::before{position:absolute;top:-6px;}
+.navtoggle span::after{position:absolute;top:6px;}
+.scrim{display:none;}
+
+@media (max-width:1080px){
+  :root{--sidebar-w:0px;}
+  .sidebar{
+    position:fixed;left:0;top:0;width:300px;flex-basis:300px;z-index:102;
+    transform:translateX(-102%);transition:transform .25s ease;box-shadow:0 0 40px rgba(0,0,0,.18);
+  }
+  body.nav-open .sidebar{transform:translateX(0);}
+  body.nav-open .scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.32);z-index:101;}
+  .navtoggle{display:flex;}
+  .wrap{padding:0 22px 120px;}
+  .hero{padding:78px 0 40px;}
+}
+@media (max-width:560px){
+  body{font-size:16px;}
+  .wrap{padding:0 16px 100px;}
+  .chapter > .head{flex-direction:column;align-items:flex-start;gap:6px;}
+  .chapter > .head h3{font-size:24px;}
+  .hero h2{font-size:32px;}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  *{transition:none !important;}
+}
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+<button class="navtoggle" id="navtoggle" aria-label="목차 열기"><span></span></button>
+<div class="scrim" id="scrim"></div>
+
+<div class="shell">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="kicker">PyTorch · Deep Learning</div>
+      <h1>Chapter 06<br>인공 신경망</h1>
+      <div class="sub">퍼셉트론부터 기울기 소실까지 · 학습 노트</div>
+    </div>
+    <nav class="toc" id="toc">
+      <a href="#intro"><span class="num">00</span><span>개요 — 이 챕터의 흐름</span></a>
+      <div class="sep">본문</div>
+      <a href="#c1"><span class="num">06·01</span><span>머신 러닝 기본 개념</span></a>
+      <a href="#c2"><span class="num">06·02</span><span>퍼셉트론</span></a>
+      <a href="#c3"><span class="num">06·03</span><span>XOR 문제 구현</span></a>
+      <a href="#c4"><span class="num">06·04</span><span>역전파</span></a>
+      <a href="#c5"><span class="num">06·05</span><span>손글씨(digits) 분류</span></a>
+      <a href="#c6"><span class="num">06·06</span><span>MNIST 분류</span></a>
+      <a href="#c7"><span class="num">06·07</span><span>과적합을 막는 방법</span></a>
+      <a href="#c8"><span class="num">06·08</span><span>기울기 소실과 폭주</span></a>
+      <div class="sep">복습</div>
+      <a href="#cheat"><span class="num">★</span><span>한 눈에 보기 — 요약</span></a>
+    </nav>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+    <div class="wrap">
+
+      <!-- HERO -->
+      <header class="hero" id="intro">
+        <div class="eyebrow">CHAPTER 06</div>
+        <h2>인공 신경망<br>(Artificial Neural Network)</h2>
+        <p class="lede">
+          하나의 인공 뉴런인 <strong>퍼셉트론</strong>에서 출발해, 층을 쌓아 비선형 문제를 푸는 <strong>다층 퍼셉트론(MLP)</strong>,
+          그 학습을 가능케 하는 <strong>역전파</strong>, 그리고 실제 데이터를 분류하며 마주치는 <strong>과적합</strong>과
+          <strong>기울기 소실</strong>까지 — 딥러닝의 토대를 한 번에 정리한다.
+        </p>
+        <div class="arc">
+          <span><b>개념</b> 평가·활성화함수</span>
+          <span>→ <b>구조</b> 퍼셉트론·MLP</span>
+          <span>→ <b>학습</b> 역전파</span>
+          <span>→ <b>실습</b> digits·MNIST</span>
+          <span>→ <b>안정화</b> 규제·정규화</span>
+        </div>
+      </header>
+
+
+      <!-- ===================== 06-01 ===================== -->
+      <section class="chapter" id="c1">
+        <div class="head"><div class="big">06·01</div><h3>머신 러닝 기본 개념 정리하기</h3></div>
+        <p class="first">딥러닝 또한 머신 러닝에 속하므로, 머신 러닝의 특징은 곧 딥러닝의 특징이기도 하다. 본격적인 신경망에 앞서 평가·분류·활성화 함수 같은 토대 개념을 정리한다.</p>
+
+        <h4>1. 머신 러닝 모델의 평가</h4>
+        <p>데이터를 <strong>훈련(Training)·검증(Validation)·테스트(Test)</strong> 세 가지로 분리하는 것이 일반적이다. 검증 데이터의 역할이 핵심인데, 검증 데이터는 성능을 <em>평가</em>하기 위한 것이 아니라 성능을 <em>조정</em>하기 위한 것이다. 즉 과적합 여부 판단과 하이퍼파라미터 튜닝에 사용된다.</p>
+        <ul>
+          <li><strong>하이퍼파라미터</strong> — 사람이 직접 정하는 값. 학습률, 은닉층 수, 뉴런 수, 드롭아웃 비율 등.</li>
+          <li><strong>매개변수</strong> — 기계가 훈련을 통해 스스로 바꾸는 값. 가중치와 편향.</li>
+        </ul>
+        <div class="insight">비유하자면 <strong>훈련 데이터는 문제지, 검증 데이터는 모의고사, 테스트 데이터는 수능</strong>이다. 검증으로 튜닝을 끝낸 모델은 검증 데이터에도 어느 정도 최적화되므로, 진짜 성능은 한 번도 보지 못한 테스트 데이터로 평가한다.</div>
+        <p class="muted">데이터가 부족해 검증·테스트를 나누기 어렵다면 <strong>k-폴드 교차 검증</strong>을 사용하기도 한다.</p>
+
+        <h4>2. 분류(Classification)와 회귀(Regression)</h4>
+        <ul>
+          <li><strong>이진 분류</strong> — 둘 중 하나를 정하는 문제. (합격/불합격, 정상메일/스팸)</li>
+          <li><strong>다중 클래스 분류</strong> — 세 개 이상의 정해진 선택지 중 하나를 정하는 문제.</li>
+          <li><strong>회귀</strong> — 분리된 값이 아닌 <strong>연속된 값</strong>을 결과로 갖는 문제. (성적·주가 예측)</li>
+        </ul>
+
+        <h4>3. 지도 학습과 비지도 학습</h4>
+        <p>머신 러닝은 지도·비지도·강화 학습으로 나뉜다. 이 책은 주로 <strong>지도 학습</strong>을 다룬다. 지도 학습은 레이블(정답, 실제값 \(y\))과 함께 학습하며, 기계는 예측값 \(\hat{y}\)과 실제값의 오차를 줄이는 방향으로 학습한다. <strong>비지도 학습</strong>은 레이블 없이 학습하며 군집(clustering)·차원 축소가 대표적이다.</p>
+
+        <h4>4. 샘플(Sample)과 특성(Feature)</h4>
+        <p>독립 변수의 개수가 \(n\)개, 데이터 개수가 \(m\)개인 행렬 \(X\)에서, <strong>하나의 행(데이터)을 샘플</strong>, <strong>종속 변수 예측에 쓰이는 각 독립 변수를 특성</strong>이라 부른다. (DB에서는 샘플을 레코드라 부른다.)</p>
+
+        <h4>5. 혼동 행렬(Confusion Matrix)</h4>
+        <p>정확도(맞춘 수 / 전체 수)만으로는 세부 내용을 알 수 없다. 양성/음성 이진 분류에서 결과를 네 가지로 나눈 것이 혼동 행렬이다. <strong>각 열은 예측값, 각 행은 실제값</strong>을 나타낸다.</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th></th><th>예측: 참(Positive)</th><th>예측: 거짓(Negative)</th></tr></thead>
+          <tbody>
+            <tr><td><strong>실제: 참</strong></td><td><span class="acc">TP</span> (양성 맞춤)</td><td>FN (음성이라 했으나 양성)</td></tr>
+            <tr><td><strong>실제: 거짓</strong></td><td>FP (양성이라 했으나 음성)</td><td><span class="acc">TN</span> (음성 맞춤)</td></tr>
+          </tbody>
+        </table></div>
+        <p>True/False는 정답을 맞췄는지, Positive/Negative는 제시한 답이다. 여기서 두 지표가 파생된다.</p>
+        <div class="katex-display">$$\text{Precision(정밀도)} = \frac{TP}{TP+FP} \qquad \text{Recall(재현률)} = \frac{TP}{TP+FN}$$</div>
+        <ul>
+          <li><strong>정밀도</strong> — 양성이라 <strong>대답한</strong> 전체 중 실제 양성의 비율.</li>
+          <li><strong>재현률</strong> — 실제 양성 데이터 중 양성으로 <strong>맞춘</strong> 비율.</li>
+        </ul>
+
+        <h4>6. 과적합(Overfitting)과 과소적합(Underfitting)</h4>
+        <p><strong>과적합</strong>은 훈련 데이터를 과하게 학습해 노이즈까지 암기한 상태다. 훈련 오차는 낮지만 테스트 오차는 높아진다. 검은 강아지만 학습한 모델이 흰 강아지를 강아지가 아니라고 판단하는 식이다. 반대로 <strong>과소적합</strong>은 훈련이 부족해 훈련 데이터에 대해서도 정확도가 낮은 상태다.</p>
+        <div class="note tip">
+          <span class="label">학습 곡선의 신호</span>
+          <p>에포크(epoch, 전체 훈련 데이터에 대한 훈련 횟수)가 늘면 훈련 오차는 계속 감소하지만, 어느 시점부터 <strong>테스트 오차는 다시 증가</strong>한다. 테스트 오차가 증가하기 직전에 훈련을 멈추는 것(조기 종료)이 바람직하다.</p>
+        </div>
+
+        <h4>7. 비선형 활성화 함수(Activation Function)</h4>
+        <p>활성화 함수는 입력을 받아 수학적 변환을 수행해 출력을 만드는 함수다. 핵심 조건은 <strong>비선형</strong>이어야 한다는 점이다.</p>
+
+        <h5>활성화 함수가 비선형이어야 하는 이유</h5>
+        <p>선형 함수 \(f(x)=Wx\)로 은닉층을 여러 번 쌓으면 \(y(x)=f(f(f(x)))=W\cdot W\cdot W\cdot x\)가 된다. 그런데 \(W^3=k\)로 두면 \(y(x)=kx\)가 되어 <strong>층을 한 번 쌓은 것과 차이가 없다</strong>. 즉 선형 함수로는 깊이를 쌓는 의미가 사라진다.</p>
+        <p class="muted">단, 선형층(linear/projection layer)이 무의미한 것은 아니다. 학습 가능한 가중치가 생긴다는 점에서 의미가 있으며, 활성화 함수를 쓰는 일반 은닉층(비선형층)과 구분하는 표현일 뿐이다.</p>
+
+        <h5>시그모이드(Sigmoid)와 기울기 소실</h5>
+        <p>수식은 \(\sigma(x)=\dfrac{1}{1+e^{-x}}\). 출력이 0 또는 1에 가까워지면 그래프 기울기가 완만해진다. 이 구간에서 미분값은 0에 가까워지고, 역전파에서 0에 가까운 기울기가 계속 곱해지면 앞단(입력층 방향)으로 갈수록 기울기가 거의 전달되지 않는다. 이를 <strong>기울기 소실(Vanishing Gradient)</strong>이라 한다.</p>
+        <div class="note warn">
+          <span class="label">은닉층에서 시그모이드 지양</span>
+          <p>시그모이드는 또한 출력이 항상 양수라 원점 중심이 아니다(Not zero-centered). 이로 인한 <strong>편향 이동(bias shift)</strong>으로 층을 지날수록 분산이 커져 기울기 소실을 악화시킨다. 결론적으로 은닉층 활성화 함수로 시그모이드는 지양된다.</p>
+        </div>
+
+        <h5>하이퍼볼릭탄젠트(tanh)</h5>
+        <p>입력을 \(-1\)과 \(1\) 사이로 변환한다. 시그모이드와 같은 포화 문제는 있지만 <strong>원점 중심(zero-centered)</strong>이라 반환값 변화폭이 커, 시그모이드보다 기울기 소실이 덜하다. 그래서 은닉층에서 시그모이드보다 많이 쓰인다.</p>
+
+        <h5>ReLU와 죽은 ReLU</h5>
+        <p>수식은 \(f(x)=\max(0,x)\)로 매우 간단하다. 음수면 0, 양수면 입력 그대로 반환한다. 특정 양수값에 수렴하지 않아 깊은 신경망에서 시그모이드보다 훨씬 잘 작동하고, 단순 임계값이라 연산 속도도 빠르다. 단점은 입력이 음수면 기울기가 0이 되어 그 뉴런이 회생하기 어려운 <strong>죽은 ReLU(dying ReLU)</strong> 문제다.</p>
+
+        <h5>Leaky ReLU</h5>
+        <p>죽은 ReLU를 보완한다. 수식은 \(f(x)=\max(ax,x)\). 음수 입력에서도 0이 아닌 작은 기울기 \(a\)(보통 0.01)를 주어 뉴런이 죽지 않게 한다.</p>
+
+        <h5>소프트맥스(Softmax)</h5>
+        <p>\(\dfrac{e^{x_i}}{\sum_j e^{x_j}}\). 시그모이드처럼 주로 <strong>출력층</strong>에서 쓰이며, 시그모이드가 이진 분류용이라면 소프트맥스는 상호 배타적인 <strong>다중 클래스 분류</strong>용이다.</p>
+
+        <h5>출력층 활성화 함수와 손실 함수의 관계</h5>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>문제</th><th>출력층 활성화 함수</th><th>비용 함수</th></tr></thead>
+          <tbody>
+            <tr><td>이진 분류</td><td>시그모이드</td><td><code>nn.BCELoss()</code></td></tr>
+            <tr><td>다중 클래스 분류</td><td>소프트맥스</td><td><code>nn.CrossEntropyLoss()</code></td></tr>
+            <tr><td>회귀</td><td>없음</td><td>MSE</td></tr>
+          </tbody>
+        </table></div>
+        <div class="note key">
+          <span class="label">자주 하는 실수</span>
+          <p><code>nn.CrossEntropyLoss()</code>는 <strong>소프트맥스를 이미 포함</strong>한다. 따라서 출력층 로짓에 소프트맥스를 한 번 더 적용한 뒤 이 손실에 넘기면 안 된다. 스탠포드 cs231n도 ReLU를 먼저 쓰고, 그다음 Leaky ReLU·ELU를 시도하며, sigmoid는 쓰지 말라고 권장한다.</p>
+        </div>
+      </section>
+
+
+      <!-- ===================== 06-02 ===================== -->
+      <section class="chapter" id="c2">
+        <div class="head"><div class="big">06·02</div><h3>퍼셉트론(Perceptron)</h3></div>
+        <p class="first">퍼셉트론은 프랑크 로젠블라트가 1957년 제안한 초기 인공 신경망으로, 다수의 입력에서 하나의 결과를 내보내는 알고리즘이다. 뉴런이 일정 크기 이상의 신호를 받으면 축삭돌기로 신호를 전달하는 원리를 본떴다.</p>
+
+        <h4>1. 퍼셉트론의 동작</h4>
+        <p>입력값 \(x\)는 각각의 가중치 \(W\)와 곱해져 인공 뉴런으로 전달된다. <strong>가중치가 클수록 그 입력이 중요하다</strong>는 뜻이다. 곱의 전체 합이 임계치(threshold, \(\theta\))를 넘으면 1, 아니면 0을 출력하며 이를 <strong>계단 함수(Step function)</strong>라 한다.</p>
+        <div class="katex-display">$$\text{if } \sum_i^n W_i x_i \ge \theta \Rightarrow y=1, \qquad \text{if } \sum_i^n W_i x_i < \theta \Rightarrow y=0$$</div>
+        <p>임계치를 좌변으로 넘기면 <strong>편향 \(b\)</strong>로 표현할 수 있다. 편향은 입력값이 1로 고정된 채 곱해지는 변수로, 가중치처럼 딥러닝이 학습해야 할 값 중 하나다.</p>
+        <div class="katex-display">$$\text{if } \sum_i^n W_i x_i + b \ge 0 \Rightarrow y=1, \qquad \text{if } \sum_i^n W_i x_i + b < 0 \Rightarrow y=0$$</div>
+        <div class="insight">로지스틱 회귀를 퍼셉트론보다 먼저 배운 이유가 여기 있다. 퍼셉트론의 활성화 함수를 계단 함수에서 시그모이드로 바꾸면 곧 <strong>이진 분류를 수행하는 로지스틱 회귀와 동일</strong>해진다. 즉 로지스틱 회귀 모델은 하나의 인공 뉴런으로 볼 수 있고, 둘의 차이는 오직 활성화 함수다.</div>
+
+        <h4>2. 단층 퍼셉트론(Single-Layer Perceptron)</h4>
+        <p>값을 보내는 <strong>입력층</strong>과 값을 받아 출력하는 <strong>출력층</strong>, 두 층으로만 이루어진다. 단층 퍼셉트론으로 AND·NAND·OR 게이트는 쉽게 구현할 수 있다. 예컨대 AND는 \([w_1,w_2,b]=[0.5,0.5,-0.7]\) 등으로 만족한다.</p>
+
+        <pre><div class="bar"><span class="dot"></span><span class="fn">gates.py — AND / NAND / OR</span></div><code class="language-python">def AND_gate(x1, x2):
+    w1, w2, b = 0.5, 0.5, -0.7
+    result = x1*w1 + x2*w2 + b
+    return 0 if result <= 0 else 1
+
+def NAND_gate(x1, x2):           # AND의 가중치·편향에 부호만 반전
+    w1, w2, b = -0.5, -0.5, 0.7
+    result = x1*w1 + x2*w2 + b
+    return 0 if result <= 0 else 1
+
+def OR_gate(x1, x2):
+    w1, w2, b = 0.6, 0.6, -0.5
+    result = x1*w1 + x2*w2 + b
+    return 0 if result <= 0 else 1</code></pre>
+        <div class="out"><div class="lbl">출력</div><pre><code>AND : (0, 0, 0, 1)
+NAND: (1, 1, 1, 0)
+OR  : (0, 1, 1, 1)</code></pre></div>
+
+        <div class="gates">
+          <div class="gate"><div class="gt">AND</div><table>
+            <tr><td>0</td><td>0</td><td>0</td></tr><tr><td>0</td><td>1</td><td>0</td></tr>
+            <tr><td>1</td><td>0</td><td>0</td></tr><tr><td>1</td><td>1</td><td>1</td></tr></table></div>
+          <div class="gate"><div class="gt">NAND</div><table>
+            <tr><td>0</td><td>0</td><td>1</td></tr><tr><td>0</td><td>1</td><td>1</td></tr>
+            <tr><td>1</td><td>0</td><td>1</td></tr><tr><td>1</td><td>1</td><td>0</td></tr></table></div>
+          <div class="gate"><div class="gt">OR</div><table>
+            <tr><td>0</td><td>0</td><td>0</td></tr><tr><td>0</td><td>1</td><td>1</td></tr>
+            <tr><td>1</td><td>0</td><td>1</td></tr><tr><td>1</td><td>1</td><td>1</td></tr></table></div>
+          <div class="gate"><div class="gt">XOR ✗</div><table>
+            <tr><td>0</td><td>0</td><td>0</td></tr><tr><td>0</td><td>1</td><td>1</td></tr>
+            <tr><td>1</td><td>0</td><td>1</td></tr><tr><td>1</td><td>1</td><td>0</td></tr></table></div>
+        </div>
+
+        <div class="note warn">
+          <span class="label">단층 퍼셉트론의 한계 — XOR</span>
+          <p>입력이 서로 다를 때만 1을 내는 <strong>XOR 게이트는 단층 퍼셉트론으로 구현할 수 없다</strong>. 단층 퍼셉트론은 <strong>직선 하나로 두 영역을 나눌 수 있는(선형 분리 가능한) 문제</strong>만 풀 수 있기 때문이다. AND·NAND·OR은 직선으로 0과 1을 나눌 수 있지만, XOR은 불가능하다. (곡선, 즉 비선형 영역으로는 분리가 가능하다.)</p>
+        </div>
+
+        <h4>3. 다층 퍼셉트론(MLP)</h4>
+        <p>XOR은 AND·NAND·OR을 조합하면 만들 수 있다. 퍼셉트론 관점에서는 <strong>층을 더 쌓으면</strong> 된다. 입력층과 출력층 사이에 추가된 층을 <strong>은닉층(hidden layer)</strong>이라 하고, 은닉층을 가진 퍼셉트론을 <strong>다층 퍼셉트론(MLP)</strong>이라 한다.</p>
+        <ul>
+          <li>은닉층이 <strong>2개 이상</strong>인 신경망을 <strong>심층 신경망(Deep Neural Network, DNN)</strong>이라 한다.</li>
+          <li>지금까지는 가중치를 수동으로 찾았지만, 이제는 <strong>손실 함수와 옵티마이저</strong>로 기계가 스스로 찾게 한다 — 이것이 학습(training)이다.</li>
+          <li>심층 신경망을 학습시키는 것을 <strong>딥러닝(Deep Learning)</strong>이라 한다.</li>
+        </ul>
+      </section>
+
+
+      <!-- ===================== 06-03 ===================== -->
+      <section class="chapter" id="c3">
+        <div class="head"><div class="big">06·03</div><h3>XOR 문제 구현하기</h3></div>
+        <p class="first">앞 장의 이론을 파이토치로 확인한다. 단층 퍼셉트론은 XOR에서 실패하고, 다층 퍼셉트론은 성공함을 코드로 보인다. 0/1 이진 분류이므로 비용 함수는 <code>nn.BCELoss()</code>를 쓴다.</p>
+
+        <h4>1. 단층 퍼셉트론으로 XOR 풀기 (실패)</h4>
+        <pre><div class="bar"><span class="dot"></span><span class="fn">xor_single.py</span></div><code class="language-python">import torch
+import torch.nn as nn
+
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+torch.manual_seed(777)
+
+X = torch.FloatTensor([[0,0],[0,1],[1,0],[1,1]]).to(device)
+Y = torch.FloatTensor([[0],[1],[1],[0]]).to(device)
+
+linear  = nn.Linear(2, 1, bias=True)
+sigmoid = nn.Sigmoid()
+model   = nn.Sequential(linear, sigmoid).to(device)
+
+criterion = torch.nn.BCELoss().to(device)
+optimizer = torch.optim.SGD(model.parameters(), lr=1)
+
+for step in range(10001):
+    optimizer.zero_grad()
+    hypothesis = model(X)
+    cost = criterion(hypothesis, Y)
+    cost.backward()
+    optimizer.step()
+    if step % 100 == 0:
+        print(step, cost.item())</code></pre>
+        <div class="out"><div class="lbl">출력 — 비용이 줄지 않는다</div><pre><code>0     0.7273974418640137
+100   0.6931476593017578
+200   0.6931471824645996   ← 이후 10000까지 그대로
+...
+정확도(Accuracy): 0.5   (예측: 0,0,0,0)</code></pre></div>
+        <p>200 에포크 이후 비용이 \(0.6931\)에서 더 줄지 않는다. 단층 퍼셉트론은 XOR을 풀 수 없기 때문이다.</p>
+
+        <h4>2. 다층 퍼셉트론으로 XOR 풀기 (성공)</h4>
+        <p>은닉층 3개를 쌓은 신경망이다. 입력층(2) → 은닉층1·2·3(각 10) → 출력층(1) 구조다.</p>
+        <pre><div class="bar"><span class="dot"></span><span class="fn">xor_mlp.py</span></div><code class="language-python">model = nn.Sequential(
+    nn.Linear(2, 10, bias=True),   # 입력층 2 → 은닉층1 10
+    nn.Sigmoid(),
+    nn.Linear(10, 10, bias=True),  # 은닉층1 10 → 은닉층2 10
+    nn.Sigmoid(),
+    nn.Linear(10, 10, bias=True),  # 은닉층2 10 → 은닉층3 10
+    nn.Sigmoid(),
+    nn.Linear(10, 1, bias=True),   # 은닉층3 10 → 출력층 1
+    nn.Sigmoid()
+).to(device)
+
+criterion = torch.nn.BCELoss().to(device)
+optimizer = torch.optim.SGD(model.parameters(), lr=1)
+
+for epoch in range(10001):
+    optimizer.zero_grad()
+    hypothesis = model(X)
+    cost = criterion(hypothesis, Y)
+    cost.backward()
+    optimizer.step()
+    if epoch % 100 == 0:
+        print(epoch, cost.item())</code></pre>
+        <div class="out"><div class="lbl">출력 — 비용이 0에 수렴, 정확도 100%</div><pre><code>0     0.6948983669281006
+...
+5400  0.009766248054802418
+
+모델의 예측값(Predicted): [[0.] [1.] [1.] [0.]]
+실제값(Y):              [[0.] [1.] [1.] [0.]]
+정확도(Accuracy): 1.0</code></pre></div>
+        <div class="note tip">
+          <span class="label">평가 시 no_grad</span>
+          <p>평가 단계는 학습이 아니므로 <code>with torch.no_grad():</code> 블록에서 기울기 계산을 끄면 연산이 빨라지고 메모리를 아낀다. <code>(hypothesis &gt; 0.5).float()</code>로 0.5를 기준 삼아 이진 레이블을 만든다.</p>
+        </div>
+      </section>
+
+
+      <!-- ===================== 06-04 ===================== -->
+      <section class="chapter" id="c4">
+        <div class="head"><div class="big">06·04</div><h3>역전파(BackPropagation)</h3></div>
+        <p class="first">순전파로 오차를 구한 뒤, 경사 하강법으로 가중치를 어떻게 업데이트하는지 직접 손계산으로 이해한다. 입력 2 · 은닉 2 · 출력 2의 신경망이며, 은닉·출력층 모두 시그모이드를 쓰고 편향은 고려하지 않는다. 학습률 \(\alpha=0.5\).</p>
+
+        <h4>1. 순전파(Forward Propagation)</h4>
+        <p>가중합 \(z\)는 활성화 함수 이전 값, \(h\)·\(o\)는 시그모이드 통과 후 값이다. (초기값: \(W_1{=}.3, W_2{=}.25, W_3{=}.4, W_4{=}.35, W_5{=}.45, W_6{=}.4, W_7{=}.7, W_8{=}.6\), 입력 \(x_1{=}.1, x_2{=}.2\), 실제값 \(.4, .6\))</p>
+        <div class="katex-display">$$z_1 = W_1x_1 + W_2x_2 = 0.08, \qquad z_2 = W_3x_1 + W_4x_2 = 0.11$$</div>
+        <div class="katex-display">$$h_1 = \sigma(z_1) = 0.51998934, \qquad h_2 = \sigma(z_2) = 0.52747230$$</div>
+        <div class="katex-display">$$z_3 = W_5h_1 + W_6h_2 = 0.44498412, \qquad z_4 = W_7h_1 + W_8h_2 = 0.68047592$$</div>
+        <div class="katex-display">$$o_1 = \sigma(z_3) = 0.60944600, \qquad o_2 = \sigma(z_4) = 0.66384491$$</div>
+        <p>손실 함수로 MSE를 쓰고 각 오차를 더해 전체 오차 \(E_{total}\)을 구한다.</p>
+        <div class="katex-display">$$E_{o1}=\tfrac12(target_{o1}-output_{o1})^2=0.02193381,\quad E_{o2}=0.00203809$$</div>
+        <div class="katex-display">$$E_{total}=E_{o1}+E_{o2}=0.02397190$$</div>
+
+        <h4>2. 역전파 1단계 — 출력층과 가까운 가중치</h4>
+        <p>출력층과 은닉층 사이의 \(W_5,W_6,W_7,W_8\)을 업데이트한다. \(W_5\)를 예로, 연쇄 법칙으로 \(\dfrac{\partial E_{total}}{\partial W_5}\)을 분해한다.</p>
+        <div class="katex-display">$$\frac{\partial E_{total}}{\partial W_5} = \frac{\partial E_{total}}{\partial o_1}\times\frac{\partial o_1}{\partial z_3}\times\frac{\partial z_3}{\partial W_5}$$</div>
+        <p>세 항을 순서대로 계산한다. (시그모이드 미분은 \(f(x)(1-f(x))\)임을 기억한다.)</p>
+        <div class="katex-display">$$\frac{\partial E_{total}}{\partial o_1}=-(target_{o1}-output_{o1})=0.20944600$$</div>
+        <div class="katex-display">$$\frac{\partial o_1}{\partial z_3}=o_1(1-o_1)=0.23802157, \qquad \frac{\partial z_3}{\partial W_5}=h_1=0.51998934$$</div>
+        <div class="katex-display">$$\frac{\partial E_{total}}{\partial W_5}=0.20944600\times0.23802157\times0.51998934=0.02592286$$</div>
+        <p>경사 하강법으로 업데이트한다.</p>
+        <div class="katex-display">$$W_5^{+}=W_5-\alpha\frac{\partial E_{total}}{\partial W_5}=0.45-0.5\times0.02592286=0.43703857$$</div>
+        <p class="muted">같은 원리로 \(W_6^{+}=0.38685205,\ W_7^{+}=0.69629578,\ W_8^{+}=0.59624247\).</p>
+
+        <h4>3. 역전파 2단계 — 입력층과 가까운 가중치</h4>
+        <p>이제 \(W_1,W_2,W_3,W_4\)를 업데이트한다. \(W_1\)의 첫 항 \(\dfrac{\partial E_{total}}{\partial h_1}\)은 두 출력 경로의 오차가 모두 \(h_1\)을 거치므로 둘을 더해 구한다.</p>
+        <div class="katex-display">$$\frac{\partial E_{total}}{\partial h_1}=\frac{\partial E_{o1}}{\partial h_1}+\frac{\partial E_{o2}}{\partial h_1}=0.02243370+0.00997311=0.03240681$$</div>
+        <div class="katex-display">$$\frac{\partial h_1}{\partial z_1}=h_1(1-h_1)=0.24960043, \qquad \frac{\partial z_1}{\partial W_1}=x_1=0.1$$</div>
+        <div class="katex-display">$$\frac{\partial E_{total}}{\partial W_1}=0.03240681\times0.24960043\times0.1=0.00080888$$</div>
+        <div class="katex-display">$$W_1^{+}=0.1-0.5\times0.00080888=0.29959556$$</div>
+
+        <h4>4. 결과 확인</h4>
+        <p>업데이트된 가중치로 다시 순전파하면 전체 오차가 줄어든다.</p>
+        <div class="note key">
+          <span class="label">단 1회 역전파의 효과</span>
+          <p>\(E_{total}\)이 <strong>0.02397190 → 0.02323634</strong>로 감소했다. 인공 신경망의 학습은 이렇게 오차를 최소화하는 가중치를 찾기 위해 <strong>순전파와 역전파를 반복</strong>하는 과정이다.</p>
+        </div>
+      </section>
+
+
+      <!-- ===================== 06-05 ===================== -->
+      <section class="chapter" id="c5">
+        <div class="head"><div class="big">06·05</div><h3>다층 퍼셉트론으로 손글씨 분류하기</h3></div>
+        <p class="first">사이킷런이 제공하는 <code>load_digits()</code> 데이터로 MLP 분류기를 만든다. 각 이미지는 0~15 명암의 \(8\times8=64\)픽셀 흑백 이미지이며, 총 1,797개다. (MNIST와는 다른 데이터다.)</p>
+
+        <h4>1. 데이터 소개</h4>
+        <p><code>digits.images</code>는 각 샘플을 \(8\times8\) 행렬로, <code>digits.data</code>는 이를 64차원 벡터로 펼쳐 저장한다. 신경망 입력에는 <strong><code>digits.data</code>(64차원 벡터)</strong>를 쓰는 것이 낫다.</p>
+
+        <h4>2. MLP 분류기 만들기</h4>
+        <p>입력 64 → 은닉 32 → 은닉 16 → 출력 10(클래스 수) 구조다. 다중 클래스 분류이므로 손실은 소프트맥스를 포함한 <code>CrossEntropyLoss</code>를 쓴다.</p>
+        <pre><div class="bar"><span class="dot"></span><span class="fn">digits_mlp.py</span></div><code class="language-python">import torch
+import torch.nn as nn
+from torch import optim
+from sklearn.datasets import load_digits
+
+digits = load_digits()
+X = digits.data        # (1797, 64) 특성 행렬
+Y = digits.target      # 각 이미지의 레이블
+
+model = nn.Sequential(
+    nn.Linear(64, 32),   # 입력층 64 → 은닉층 32
+    nn.ReLU(),
+    nn.Linear(32, 16),   # 은닉층 32 → 은닉층 16
+    nn.ReLU(),
+    nn.Linear(16, 10)    # 은닉층 16 → 출력층 10 (클래스 수)
+)
+
+X = torch.tensor(X, dtype=torch.float32)
+Y = torch.tensor(Y, dtype=torch.int64)
+
+loss_fn   = nn.CrossEntropyLoss()   # 소프트맥스를 이미 포함
+optimizer = optim.Adam(model.parameters())
+
+losses = []
+for epoch in range(100):
+    optimizer.zero_grad()
+    y_pred = model(X)               # 순전파
+    loss   = loss_fn(y_pred, Y)     # 비용 계산
+    loss.backward()                 # 역전파로 기울기 계산
+    optimizer.step()                # 파라미터 업데이트
+    if epoch % 10 == 0:
+        print('Epoch {:4d}/{} Cost: {:.6f}'.format(epoch, 100, loss.item()))
+    losses.append(loss.item())</code></pre>
+        <div class="out"><div class="lbl">출력 — 비용이 꾸준히 감소</div><pre><code>Epoch    0/100 Cost: 2.380815
+Epoch   10/100 Cost: 2.059323
+...
+Epoch   90/100 Cost: 0.205398</code></pre></div>
+        <div class="note tip">
+          <span class="label">학습 루프의 4단계</span>
+          <p><code>zero_grad()</code> 기울기 초기화 → <code>model(X)</code> 순전파 예측 → <code>loss.backward()</code> 기울기 계산 → <code>optimizer.step()</code> 파라미터 업데이트. 이 네 줄이 모든 학습 루프의 뼈대다.</p>
+        </div>
+      </section>
+
+
+      <!-- ===================== 06-06 ===================== -->
+      <section class="chapter" id="c6">
+        <div class="head"><div class="big">06·06</div><h3>다층 퍼셉트론으로 MNIST 분류하기</h3></div>
+        <p class="first">소프트맥스 회귀(단층)로 풀던 MNIST를, 이번엔 은닉층을 추가한 다층 퍼셉트론으로 분류한다. 입력 784(28×28) → 은닉 100 → 은닉 100 → 출력 10 구조다.</p>
+
+        <h4>1. 데이터 로드와 전처리</h4>
+        <p><code>fetch_openml</code>로 불러온 뒤, 레이블을 정수형으로 바꾸고 <strong>모든 픽셀을 0–255에서 0–1로 정규화</strong>한다. 정규화는 학습 효율을 높인다.</p>
+        <pre><div class="bar"><span class="dot"></span><span class="fn">mnist_load.py</span></div><code class="language-python">import numpy as np
+from sklearn.datasets import fetch_openml
+
+mnist = fetch_openml('mnist_784', version=1, cache=True, as_frame=False)
+mnist.target = mnist.target.astype(np.int8)
+
+X = mnist.data / 255    # 0-255 → [0,1] 정규화
+y = mnist.target</code></pre>
+
+        <h4>2. 훈련/테스트 분리와 DataLoader</h4>
+        <p>텐서로 변환 후 <code>TensorDataset</code>으로 묶고 <code>DataLoader</code>에 넣으면 미니배치 학습이 편해진다.</p>
+        <pre><div class="bar"><span class="dot"></span><span class="fn">mnist_loader.py</span></div><code class="language-python">import torch
+from torch.utils.data import TensorDataset, DataLoader
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1/7, random_state=0)
+
+X_train = torch.Tensor(X_train); X_test = torch.Tensor(X_test)
+y_train = torch.LongTensor(y_train); y_test = torch.LongTensor(y_test)
+
+ds_train = TensorDataset(X_train, y_train)
+ds_test  = TensorDataset(X_test,  y_test)
+
+loader_train = DataLoader(ds_train, batch_size=64, shuffle=True)
+loader_test  = DataLoader(ds_test,  batch_size=64, shuffle=False)</code></pre>
+
+        <h4>3. 모델 정의와 학습</h4>
+        <pre><div class="bar"><span class="dot"></span><span class="fn">mnist_train.py</span></div><code class="language-python">from torch import nn, optim
+
+model = nn.Sequential()
+model.add_module('fc1',   nn.Linear(28*28*1, 100))
+model.add_module('relu1', nn.ReLU())
+model.add_module('fc2',   nn.Linear(100, 100))
+model.add_module('relu2', nn.ReLU())
+model.add_module('fc3',   nn.Linear(100, 10))
+
+loss_fn   = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=0.01)
+
+epochs = 3
+for epoch in range(epochs):
+    for data, targets in loader_train:
+        optimizer.zero_grad()
+        y_pred = model(data)
+        loss = loss_fn(y_pred, targets)
+        loss.backward()
+        optimizer.step()
+    print('Epoch {:4d}/{} Cost: {:.6f}'.format(epoch+1, 3, loss.item()))</code></pre>
+
+        <h4>4. 평가</h4>
+        <p><code>model.eval()</code>로 추론 모드 전환 후 <code>torch.no_grad()</code> 안에서 평가한다. <code>torch.max(outputs.data, 1)</code>은 각 예측에서 가장 확률 높은 클래스를 찾아준다.</p>
+        <pre><div class="bar"><span class="dot"></span><span class="fn">mnist_eval.py</span></div><code class="language-python">model.eval()                       # 추론 모드 (학습/추론 시 다르게 동작하는 계층 대비)
+correct = 0
+with torch.no_grad():              # 추론에는 미분 불필요
+    for data, targets in loader_test:
+        outputs = model(data)
+        _, predicted = torch.max(outputs.data, 1)   # 최고 확률 레이블
+        correct += predicted.eq(targets.data.view_as(predicted)).sum()
+
+data_num = len(loader_test.dataset)
+print('정확도: {}/{} ({:.0f}%)'.format(correct, data_num, 100.*correct/data_num))</code></pre>
+        <div class="out"><div class="lbl">출력</div><pre><code>테스트 데이터에서 예측 정확도: 9566/10000 (96%)</code></pre></div>
+        <div class="note warn">
+          <span class="label">torchvision 사용 시 주의 (참고)</span>
+          <p>구버전 torchvision API인 <code>.test_data</code> / <code>.test_labels</code>는 deprecated 되었으므로 <code>.data</code> / <code>.targets</code>를 쓴다.</p>
+        </div>
+      </section>
+
+
+      <!-- ===================== 06-07 ===================== -->
+      <section class="chapter" id="c7">
+        <div class="head"><div class="big">06·07</div><h3>과적합(Overfitting)을 막는 방법들</h3></div>
+        <p class="first">과적합은 훈련 데이터를 불필요할 정도로 암기해 노이즈까지 학습한 상태로, 검증·테스트 데이터에서 성능을 떨어뜨린다. 신경망의 과적합을 막는 네 가지 방법을 정리한다.</p>
+
+        <h4>1. 데이터의 양 늘리기</h4>
+        <p>데이터가 적으면 특정 패턴·노이즈까지 쉽게 암기한다. 데이터를 늘리면 일반적인 패턴을 학습해 과적합을 방지한다. 양이 부족하면 기존 데이터를 조금씩 변형·추가하는 <strong>데이터 증강(Data Augmentation)</strong>을 쓴다. 이미지의 경우 회전·노이즈 추가·일부 수정 등이 흔하다.</p>
+
+        <h4>2. 모델의 복잡도 줄이기</h4>
+        <p>신경망의 복잡도는 은닉층 수나 매개변수 수로 결정된다. 과적합이 보이면 층이나 매개변수를 줄인다. 매개변수 수를 <strong>모델의 수용력(capacity)</strong>이라 부르기도 한다.</p>
+        <pre><div class="bar"><span class="dot"></span><span class="fn">reduce_capacity.py — 3층을 2층으로</span></div><code class="language-python">class Architecture1(nn.Module):
+    def __init__(self, input_size, hidden_size, num_classes):
+        super().__init__()
+        self.fc1  = nn.Linear(input_size, hidden_size)
+        self.relu = nn.ReLU()
+        self.fc2  = nn.Linear(hidden_size, num_classes)   # 은닉층 하나 제거
+
+    def forward(self, x):
+        out = self.fc1(x)
+        out = self.relu(out)
+        out = self.fc2(out)
+        return out</code></pre>
+
+        <h4>3. 가중치 규제(Regularization)</h4>
+        <p>복잡한 모델일수록 과적합 가능성이 높다. 비용 함수에 가중치 항을 더해 가중치를 작게 유지하도록 강제한다.</p>
+        <div class="katex-display">$$\text{L1: } \text{cost} + \lambda\sum_w |w| \qquad\qquad \text{L2: } \text{cost} + \tfrac12\lambda\sum_w w^2$$</div>
+        <ul>
+          <li><strong>L1 규제</strong> — 가중치 절대값 합을 추가. \(w\)가 0 또는 0에 가까워져 일부 특성이 거의 안 쓰이게 된다. 어떤 특성이 모델에 영향을 주는지 판단할 때 유용하다.</li>
+          <li><strong>L2 규제</strong> — 가중치 제곱합을 추가. \(w\)가 완전히 0이 되기보다 0에 가까워진다. 특별한 판단이 필요 없다면 경험적으로 더 잘 동작하므로 <strong>L2를 권장</strong>한다.</li>
+        </ul>
+        <p>\(\lambda\)는 규제 강도를 정하는 하이퍼파라미터다. 신경망에서 L2 규제는 <strong>가중치 감쇠(weight decay)</strong>라고도 부르며, 파이토치에서는 옵티마이저의 <code>weight_decay</code> 인자로 적용한다(기본값 0).</p>
+        <pre><div class="bar"><span class="dot"></span><span class="fn">weight_decay.py</span></div><code class="language-python">model = Architecture1(10, 20, 2)
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-5)</code></pre>
+        <div class="note tip">
+          <span class="label">용어 혼동 주의</span>
+          <p>Regularization을 '정규화'로 옮기기도 하지만 Normalization(정규화)과 혼동되므로 <strong>규제 또는 정형화</strong>로 부르는 것이 바람직하다. 신경망에서 Normalization 계열로는 배치 정규화·층 정규화가 있다(다음 장).</p>
+        </div>
+
+        <h4>4. 드롭아웃(Dropout)</h4>
+        <p>학습 과정에서 신경망의 일부를 사용하지 않는 방법이다. 비율을 0.5로 하면 학습마다 무작위로 절반의 뉴런만 사용한다.</p>
+        <div class="insight">드롭아웃은 <strong>학습 시에만</strong> 쓰고 예측 시에는 쓰지 않는 것이 일반적이다. 특정 뉴런·조합에 과하게 의존하는 것을 막고, 매번 다른 뉴런 조합을 쓰므로 <strong>서로 다른 신경망을 앙상블</strong>하는 효과를 내어 과적합을 방지한다.</div>
+      </section>
+
+
+      <!-- ===================== 06-08 ===================== -->
+      <section class="chapter" id="c8">
+        <div class="head"><div class="big">06·08</div><h3>기울기 소실(Vanishing)과 폭주(Exploding)</h3></div>
+        <p class="first">깊은 신경망에서 역전파 시 입력층으로 갈수록 기울기가 작아져 가중치가 갱신되지 않는 것이 <strong>기울기 소실</strong>, 반대로 기울기가 비정상적으로 커져 발산하는 것이 <strong>기울기 폭주</strong>다(주로 RNN에서 발생). 이를 막는 방법들을 다룬다.</p>
+
+        <h4>1. ReLU와 ReLU의 변형들</h4>
+        <p>시그모이드는 입력 절대값이 크면 출력이 0/1에 수렴해 기울기가 0에 가까워지고, 역전파에서 전파할 기울기가 사라진다.</p>
+        <div class="note key">
+          <span class="label">은닉층 활성화 함수 원칙</span>
+          <p>은닉층에서 <strong>시그모이드·tanh 대신 ReLU나 Leaky ReLU</strong>를 쓴다. Leaky ReLU는 모든 입력에서 기울기가 0에 수렴하지 않아 <strong>죽은 ReLU 문제</strong>까지 해결한다. 한 마디로: <em>은닉층에서는 시그모이드를 쓰지 말 것.</em></p>
+        </div>
+
+        <h4>2. 가중치 초기화(Weight Initialization)</h4>
+        <p>같은 모델이라도 초기 가중치에 따라 결과가 달라진다. 초기화만 적절히 해도 기울기 소실을 완화할 수 있다. 이전 층 뉴런 수 \(n_{in}\), 다음 층 뉴런 수 \(n_{out}\)로 식을 세운다.</p>
+
+        <h5>세이비어 초기화(Xavier / Glorot, 2010)</h5>
+        <p>균등 분포와 정규 분포 두 경우로 나뉘며, <strong>이전 층과 다음 층 뉴런 수를 모두</strong> 반영한다.</p>
+        <div class="katex-display">$$W \sim Uniform\!\left(-\sqrt{\frac{6}{n_{in}+n_{out}}},\ +\sqrt{\frac{6}{n_{in}+n_{out}}}\right) \qquad \sigma=\sqrt{\frac{2}{n_{in}+n_{out}}}$$</div>
+        <p>여러 층의 기울기 분산 사이에 균형을 맞춰준다. 단, <strong>S자형(시그모이드·tanh)에는 잘 맞지만 ReLU와는 성능이 좋지 않다</strong>.</p>
+
+        <h5>He 초기화(He, 2015)</h5>
+        <p>세이비어와 유사하나 <strong>다음 층 뉴런 수를 반영하지 않고 \(n_{in}\)만</strong> 사용한다.</p>
+        <div class="katex-display">$$W \sim Uniform\!\left(-\sqrt{\frac{6}{n_{in}}},\ +\sqrt{\frac{6}{n_{in}}}\right) \qquad \sigma=\sqrt{\frac{2}{n_{in}}}$$</div>
+        <div class="note def">
+          <span class="label">선택 기준</span>
+          <p>시그모이드·tanh → <strong>세이비어 초기화</strong>가 효율적. ReLU 계열 → <strong>He 초기화</strong>가 효율적. 실무에서는 <strong>ReLU + He 초기화</strong> 조합이 더 보편적이다.</p>
+        </div>
+
+        <h4>3. 배치 정규화(Batch Normalization)</h4>
+        <p>ReLU와 He 초기화로도 훈련 중 기울기 소실/폭주가 다시 생길 수 있다. 배치 정규화는 각 층 입력을 평균·분산으로 정규화해 학습을 안정시킨다.</p>
+
+        <h5>내부 공변량 변화(Internal Covariate Shift)</h5>
+        <ul>
+          <li><strong>공변량 변화</strong> — 훈련 데이터 분포와 테스트 데이터 분포가 다른 경우.</li>
+          <li><strong>내부 공변량 변화</strong> — 학습 중 <strong>층 사이</strong>에서 입력 데이터 분포가 달라지는 현상. 이전 층의 가중치가 바뀌면 현재 층에 오는 입력 분포가 달라진다.</li>
+        </ul>
+
+        <h5>수식</h5>
+        <p>배치 단위로 정규화하며, <strong>활성화 함수를 통과하기 전</strong>에 수행한다. 정규화 후 스케일 \(\gamma\)와 시프트 \(\beta\)(둘 다 학습 대상)를 적용한다.</p>
+        <div class="katex-display">$$\mu_B \leftarrow \frac{1}{m}\sum_{i=1}^{m}x^{(i)} \qquad \sigma_B^2 \leftarrow \frac{1}{m}\sum_{i=1}^{m}(x^{(i)}-\mu_B)^2$$</div>
+        <div class="katex-display">$$\hat{x}^{(i)} \leftarrow \frac{x^{(i)}-\mu_B}{\sqrt{\sigma_B^2+\varepsilon}} \qquad y^{(i)} \leftarrow \gamma\,\hat{x}^{(i)}+\beta = BN_{\gamma,\beta}(x^{(i)})$$</div>
+        <p class="muted">\(\varepsilon\)은 분모가 0이 되는 것을 막는 작은 수(보통 \(10^{-5}\)). 학습 시 배치별 평균·분산으로 이동 평균/분산을 저장해두었다가, 테스트 시엔 저장해둔 값으로 정규화한다.</p>
+        <div class="note tip">
+          <span class="label">배치 정규화의 장점</span>
+          <p>시그모이드·tanh를 써도 기울기 소실이 크게 개선되고, 가중치 초기화에 훨씬 덜 민감해진다. 더 큰 학습률을 쓸 수 있어 학습 속도가 빨라지고, 미니배치마다 잡음을 넣는 부수 효과로 과적합도 일부 방지한다(드롭아웃과 함께 쓰는 게 좋다).</p>
+        </div>
+        <div class="note warn">
+          <span class="label">배치 정규화의 한계</span>
+          <p><strong>① 미니배치 크기에 의존적</strong> — 배치가 너무 작으면(특히 1이면 분산이 0) 잘 동작하지 않는다. <strong>② RNN에 적용하기 어렵다</strong> — RNN은 시점마다 통계치가 달라 적용이 까다롭다. 그 대안이 층 정규화다.</p>
+        </div>
+
+        <h4>4. 층 정규화(Layer Normalization)</h4>
+        <p>배치 정규화는 <strong>같은 특성끼리(열 방향)</strong> 여러 샘플에 걸쳐 평균·분산을 구한다. 반면 층 정규화는 <strong>각 샘플 안에서(행 방향)</strong> 모든 특성에 걸쳐 평균·분산을 구한다. 그래서 배치 크기에 의존하지 않고 RNN에도 적용하기 수월하다.</p>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>구분</th><th>정규화 방향</th><th>배치 크기 의존</th><th>RNN 적용</th></tr></thead>
+          <tbody>
+            <tr><td><strong>배치 정규화</strong></td><td>특성별(열) · 샘플들에 걸쳐</td><td>의존적</td><td>어려움</td></tr>
+            <tr><td><strong>층 정규화</strong></td><td>샘플별(행) · 특성들에 걸쳐</td><td>독립적</td><td>수월함</td></tr>
+          </tbody>
+        </table></div>
+        <div class="insight">다음 장은 <strong>07. 순환 신경망(RNN)</strong>이다. RNN은 시점마다 통계가 다르고 기울기 폭주가 일어날 수 있어, 여기서 배운 <strong>층 정규화</strong>가 자연스럽게 이어진다.</div>
+      </section>
+
+
+      <!-- ===================== CHEAT SHEET ===================== -->
+      <section class="cheat" id="cheat">
+        <div class="head"><div class="big">★</div><h3>한 눈에 보기 — 복습 요약</h3></div>
+        <p class="muted" style="max-width:var(--measure);margin-bottom:8px;">시험·실습 직전에 빠르게 훑는 핵심 정리다.</p>
+
+        <div class="card">
+          <h4>활성화 함수 비교</h4>
+          <p class="cap">은닉층은 ReLU 계열, 출력층은 문제에 맞춰 선택한다.</p>
+          <div class="tbl-wrap" style="margin:0;border:none;"><table>
+            <thead><tr><th>함수</th><th>수식</th><th>주 용도</th><th>특징 / 문제점</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Sigmoid</strong></td><td>\(\frac{1}{1+e^{-x}}\)</td><td>출력층(이진)</td><td>기울기 소실, not zero-centered. 은닉층 지양</td></tr>
+              <tr><td><strong>tanh</strong></td><td>\(\tanh(x)\)</td><td>은닉층</td><td>zero-centered, 시그모이드보다 소실 덜함</td></tr>
+              <tr><td><strong>ReLU</strong></td><td>\(\max(0,x)\)</td><td>은닉층 <span class="acc">기본</span></td><td>빠르고 잘 작동. 음수서 죽은 ReLU</td></tr>
+              <tr><td><strong>Leaky ReLU</strong></td><td>\(\max(ax,x)\)</td><td>은닉층</td><td>죽은 ReLU 보완(\(a\approx0.01\))</td></tr>
+              <tr><td><strong>Softmax</strong></td><td>\(\frac{e^{x_i}}{\sum e^{x_j}}\)</td><td>출력층(다중)</td><td>상호 배타적 다중 클래스</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+
+        <div class="card">
+          <h4>출력층 활성화 함수 ↔ 손실 함수</h4>
+          <p class="cap"><code>CrossEntropyLoss</code>·<code>BCEWithLogitsLoss</code>는 활성화 함수를 내장한다는 점에 주의.</p>
+          <div class="tbl-wrap" style="margin:0;border:none;"><table>
+            <thead><tr><th>문제</th><th>출력층 활성화</th><th>손실 함수</th></tr></thead>
+            <tbody>
+              <tr><td>이진 분류</td><td>시그모이드</td><td><code>nn.BCELoss()</code></td></tr>
+              <tr><td>다중 클래스 분류</td><td>소프트맥스</td><td><code>nn.CrossEntropyLoss()</code> <span class="acc">← 소프트맥스 포함</span></td></tr>
+              <tr><td>회귀</td><td>없음</td><td>MSE</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+
+        <div class="card">
+          <h4>과적합을 막는 4가지 방법</h4>
+          <ol style="margin-bottom:0;">
+            <li><strong>데이터 양 늘리기</strong> — 부족하면 데이터 증강(Augmentation).</li>
+            <li><strong>모델 복잡도 줄이기</strong> — 은닉층·매개변수(수용력) 축소.</li>
+            <li><strong>가중치 규제</strong> — L1(절대값 합) / L2(제곱합, =weight decay, 권장).</li>
+            <li><strong>드롭아웃</strong> — 학습 시에만 일부 뉴런 무작위 제외, 앙상블 효과.</li>
+          </ol>
+        </div>
+
+        <div class="card">
+          <h4>기울기 소실 / 폭주 해결법</h4>
+          <ol style="margin-bottom:0;">
+            <li><strong>ReLU 계열 활성화 함수</strong> — 은닉층에 ReLU·Leaky ReLU.</li>
+            <li><strong>가중치 초기화</strong> — 시그모이드/tanh엔 Xavier, ReLU엔 He.</li>
+            <li><strong>배치 정규화</strong> — 활성화 함수 전, 배치 단위 정규화(+\(\gamma,\beta\)).</li>
+            <li><strong>층 정규화</strong> — 샘플 내 정규화, 배치 크기 무관·RNN 친화.</li>
+          </ol>
+        </div>
+
+        <div class="card">
+          <h4>가중치 초기화 공식 (정규 분포 기준)</h4>
+          <p class="cap">균등 분포는 분모를 그대로 두고 \(\sqrt{6/\cdot}\) 범위의 \(Uniform\)을 쓴다.</p>
+          <div class="tbl-wrap" style="margin:0;border:none;"><table>
+            <thead><tr><th>방법</th><th>표준편차 \(\sigma\)</th><th>반영 대상</th><th>적합 활성화</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Xavier</strong></td><td>\(\sqrt{\dfrac{2}{n_{in}+n_{out}}}\)</td><td>\(n_{in}\)·\(n_{out}\) 모두</td><td>시그모이드 · tanh</td></tr>
+              <tr><td><strong>He</strong></td><td>\(\sqrt{\dfrac{2}{n_{in}}}\)</td><td>\(n_{in}\)만</td><td>ReLU 계열</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+
+        <div class="card">
+          <h4>핵심 한 줄 정리</h4>
+          <ul style="margin-bottom:0;">
+            <li>단층 퍼셉트론 = 선형 분리만 가능 → <strong>XOR 불가</strong>. 은닉층을 쌓은 MLP가 해결.</li>
+            <li>학습 루프 4단계 = <code>zero_grad</code> → <code>forward</code> → <code>backward</code> → <code>step</code>.</li>
+            <li>은닉층 활성화는 <strong>ReLU</strong>, 출력층 + 손실은 문제 유형에 맞게.</li>
+            <li><code>CrossEntropyLoss</code>에 소프트맥스를 <strong>중복 적용 금지</strong>.</li>
+            <li>깊은 망의 두 적 = <strong>과적합</strong>(규제·드롭아웃)과 <strong>기울기 소실</strong>(ReLU·초기화·정규화).</li>
+          </ul>
+        </div>
+      </section>
+
+      <footer class="foot">
+        <p>원문 출처 · <a href="https://wikidocs.net/book/2788" target="_blank" rel="noopener">위키독스 「딥 러닝 파이토치 교과서 — 입문부터 LLM 파인튜닝까지」</a> 06장 (06-01 ~ 06-08).</p>
+        <p style="margin-top:6px;">LikeLion 26기 AI NLP 부트캠프 · 학습 정리 노트</p>
+      </footer>
+
+    </div>
+  </main>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  // KaTeX
+  if (window.renderMathInElement){
+    renderMathInElement(document.body, {
+      delimiters:[
+        {left:'$$',right:'$$',display:true},
+        {left:'$',right:'$',display:false},
+        {left:'\\(',right:'\\)',display:false},
+        {left:'\\[',right:'\\]',display:true}
+      ],
+      throwOnError:false,
+      ignoredTags:['script','noscript','style','textarea','pre','code']
+    });
+  }
+  // highlight.js
+  if (window.hljs){ document.querySelectorAll('pre code.language-python').forEach(function(b){ hljs.highlightElement(b); }); }
+
+  // progress bar
+  var prog = document.getElementById('progress');
+  function updateProgress(){
+    var h = document.documentElement;
+    var scrolled = h.scrollTop;
+    var height = h.scrollHeight - h.clientHeight;
+    prog.style.width = (height>0 ? (scrolled/height*100) : 0) + '%';
+  }
+  window.addEventListener('scroll', updateProgress, {passive:true});
+  updateProgress();
+
+  // scroll-spy
+  var links = Array.prototype.slice.call(document.querySelectorAll('#toc a'));
+  var map = {};
+  links.forEach(function(a){
+    var id = a.getAttribute('href').slice(1);
+    var sec = document.getElementById(id);
+    if (sec) map[id] = a;
+  });
+  var sections = Object.keys(map).map(function(id){ return document.getElementById(id); });
+  var observer = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if (e.isIntersecting){
+        links.forEach(function(a){ a.classList.remove('active'); });
+        var a = map[e.target.id];
+        if (a){ a.classList.add('active'); }
+      }
+    });
+  }, {rootMargin:'-15% 0px -70% 0px', threshold:0});
+  sections.forEach(function(s){ observer.observe(s); });
+
+  // mobile nav
+  var body = document.body, toggle = document.getElementById('navtoggle'), scrim = document.getElementById('scrim');
+  function closeNav(){ body.classList.remove('nav-open'); }
+  toggle.addEventListener('click', function(){ body.classList.toggle('nav-open'); });
+  scrim.addEventListener('click', closeNav);
+  links.forEach(function(a){ a.addEventListener('click', closeNav); });
+});
+</script>
+</body>
+</html>
