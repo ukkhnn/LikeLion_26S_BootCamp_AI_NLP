@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seq2Seq &amp; Attention — PyTorch 딥러닝 보충 가이드</title>
+
+<!-- Fonts -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap">
+
+<!-- KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+
+<!-- highlight.js -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+<style>
+:root{
+  --flame:#ee4c2c;
+  --flame-deep:#c73a1e;
+  --flame-soft:#fdece7;
+  --ink:#1c2230;
+  --ink-soft:#525b70;
+  --ink-faint:#8a92a6;
+  --bg:#fbfaf8;
+  --card:#ffffff;
+  --line:#e9e5df;
+  --enc:#f2790f;       /* 인코더 (교재의 주황) */
+  --enc-soft:#fef3e6;
+  --dec:#16a34a;       /* 디코더 (교재의 초록) */
+  --dec-soft:#eafaf0;
+  --emb:#2563eb;       /* 임베딩 층 (교재의 파랑) */
+  --emb-soft:#eaf1fe;
+  --sm:#e5372f;        /* softmax (교재의 빨강) */
+  --ctx:#0ea5b7;       /* 컨텍스트 벡터 (교재의 시안) */
+  --ctx-soft:#e6f8fb;
+  --code-bg:#111827;
+  --sidebar-w:272px;
+  --radius:14px;
+  --shadow:0 1px 2px rgba(28,34,48,.05),0 8px 24px -12px rgba(28,34,48,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{
+  font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  background:var(--bg);color:var(--ink);
+  line-height:1.78;font-size:16.5px;
+  -webkit-font-smoothing:antialiased;
+}
+code,pre,.mono{font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace}
+
+/* ── 진행 바 ─────────────────────────── */
+#progress{position:fixed;top:0;left:0;height:3px;width:0%;
+  background:linear-gradient(90deg,var(--flame),#ff8a3d);z-index:1000;transition:width .08s linear}
+
+/* ── 사이드바 ────────────────────────── */
+#sidebar{
+  position:fixed;top:0;left:0;bottom:0;width:var(--sidebar-w);
+  background:var(--card);border-right:1px solid var(--line);
+  padding:28px 0 40px;overflow-y:auto;z-index:900;
+}
+#sidebar .brand{padding:0 24px 20px;border-bottom:1px solid var(--line);margin-bottom:14px}
+#sidebar .brand .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:17px;letter-spacing:-.02em}
+#sidebar .brand .logo .fl{width:26px;height:26px;flex:none}
+#sidebar .brand .sub{font-size:12px;color:var(--ink-faint);margin-top:5px;letter-spacing:.02em}
+#sidebar .group{padding:10px 14px 4px}
+#sidebar .group-label{font-size:11px;font-weight:800;color:var(--ink-faint);
+  text-transform:uppercase;letter-spacing:.14em;padding:8px 10px 6px}
+#sidebar a{
+  display:flex;align-items:baseline;gap:8px;
+  padding:6.5px 10px;border-radius:8px;
+  color:var(--ink-soft);text-decoration:none;font-size:13.5px;line-height:1.45;
+  transition:background .15s,color .15s;
+}
+#sidebar a .no{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink-faint);flex:none;width:26px}
+#sidebar a:hover{background:#f4f2ee;color:var(--ink)}
+#sidebar a.active{background:var(--flame-soft);color:var(--flame-deep);font-weight:700}
+#sidebar a.active .no{color:var(--flame)}
+
+/* 모바일 토글 */
+#menu-btn{display:none;position:fixed;top:14px;left:14px;z-index:950;
+  width:42px;height:42px;border-radius:12px;border:1px solid var(--line);
+  background:var(--card);box-shadow:var(--shadow);cursor:pointer;
+  align-items:center;justify-content:center;font-size:18px;color:var(--ink)}
+#overlay{display:none;position:fixed;inset:0;background:rgba(20,24,34,.4);z-index:890}
+
+/* ── 본문 레이아웃 ────────────────────── */
+main{margin-left:var(--sidebar-w);padding:0 40px 120px}
+.wrap{max-width:820px;margin:0 auto}
+section{padding-top:64px}
+section:first-of-type{padding-top:0}
+
+/* ── 히어로 ──────────────────────────── */
+.hero{padding:78px 0 20px}
+.hero .eyebrow{display:inline-flex;align-items:center;gap:8px;
+  font-size:12.5px;font-weight:700;letter-spacing:.1em;color:var(--flame);
+  background:var(--flame-soft);padding:6px 14px;border-radius:100px;margin-bottom:22px}
+.hero h1{font-size:clamp(34px,5vw,52px);font-weight:900;letter-spacing:-.035em;line-height:1.12}
+.hero h1 .arrow{color:var(--flame)}
+.hero .lead{margin-top:18px;font-size:18px;color:var(--ink-soft);max-width:640px}
+.hero .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:26px}
+.hero .meta span{font-size:12.5px;font-weight:600;color:var(--ink-soft);
+  background:var(--card);border:1px solid var(--line);border-radius:100px;padding:5px 13px}
+.hero .meta span b{color:var(--flame-deep)}
+
+/* ── 타이포 ──────────────────────────── */
+h2{font-size:27px;font-weight:850;letter-spacing:-.025em;line-height:1.3;
+  padding-bottom:14px;border-bottom:2px solid var(--ink);margin-bottom:26px;
+  display:flex;align-items:baseline;gap:12px}
+h2 .idx{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--flame)}
+h3{font-size:19.5px;font-weight:800;letter-spacing:-.02em;margin:38px 0 14px;
+  display:flex;align-items:center;gap:10px}
+h3::before{content:'';width:8px;height:8px;border-radius:2.5px;background:var(--flame);flex:none;transform:rotate(45deg)}
+h4{font-size:16.5px;font-weight:800;margin:26px 0 10px}
+p{margin-bottom:15px}
+p:last-child{margin-bottom:0}
+strong{font-weight:750;color:var(--ink)}
+.pt{color:var(--flame-deep);font-weight:750}
+ul.plain{margin:0 0 15px 4px;list-style:none}
+ul.plain li{padding-left:22px;position:relative;margin-bottom:8px}
+ul.plain li::before{content:'—';position:absolute;left:0;color:var(--flame);font-weight:700}
+ol.steps{margin:0 0 15px 22px}
+ol.steps li{margin-bottom:8px;padding-left:4px}
+
+/* ── 콜아웃 ──────────────────────────── */
+.callout{border-left:4px solid var(--flame);background:var(--card);
+  border-radius:0 var(--radius) var(--radius) 0;padding:16px 20px;margin:20px 0;
+  box-shadow:var(--shadow);font-size:15.5px}
+.callout .ct{font-weight:800;color:var(--flame-deep);display:block;margin-bottom:4px;font-size:14px;letter-spacing:.01em}
+.callout.note{border-color:var(--emb)}
+.callout.note .ct{color:var(--emb)}
+.callout.warn{border-color:#d97706}
+.callout.warn .ct{color:#b45309}
+
+/* ── 코드 블록 ───────────────────────── */
+pre{background:var(--code-bg);border-radius:var(--radius);
+  padding:18px 20px;overflow-x:auto;margin:18px 0;
+  font-size:13.5px;line-height:1.7;box-shadow:var(--shadow)}
+pre code{background:none;padding:0;font-size:inherit}
+:not(pre)>code{background:#eef0f4;color:#c2410c;border-radius:6px;
+  padding:2px 7px;font-size:.86em;font-weight:600}
+.out{background:#f4f2ee;border:1px dashed var(--line);border-radius:var(--radius);
+  padding:12px 20px;margin:-8px 0 18px;font-family:'JetBrains Mono',monospace;
+  font-size:13.5px;color:var(--ink-soft);white-space:pre-wrap}
+.out::before{content:'출력';display:block;font-size:10px;font-weight:800;
+  letter-spacing:.14em;color:var(--ink-faint);margin-bottom:5px;font-family:'Pretendard Variable',sans-serif}
+
+/* ── 표 ─────────────────────────────── */
+.tbl{width:100%;border-collapse:collapse;margin:20px 0;font-size:14.5px;
+  background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.tbl th{background:var(--ink);color:#fff;font-weight:700;text-align:left;
+  padding:11px 16px;font-size:13.5px;letter-spacing:.02em}
+.tbl td{padding:11px 16px;border-top:1px solid var(--line);vertical-align:top}
+.tbl tr:nth-child(even) td{background:#faf9f6}
+.tbl td .katex{font-size:1em}
+
+/* ── 그림/다이어그램 ─────────────────── */
+.fig{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:26px 22px 14px;margin:22px 0;box-shadow:var(--shadow)}
+.fig svg{display:block;width:100%;height:auto}
+.fig .cap{text-align:center;font-size:13px;color:var(--ink-faint);margin-top:12px;
+  padding-top:12px;border-top:1px dashed var(--line)}
+.fig .cap b{color:var(--ink-soft)}
+
+/* SVG 공통 클래스 */
+.sv-enc{fill:var(--enc)} .sv-dec{fill:var(--dec)} .sv-emb{fill:var(--emb)}
+.sv-sm{fill:var(--sm)} .sv-ctx{fill:var(--ctx)}
+.sv-lbl{font-family:'Pretendard Variable',sans-serif;font-size:12px;fill:var(--ink-soft)}
+.sv-lblb{font-family:'Pretendard Variable',sans-serif;font-size:12px;font-weight:700;fill:var(--ink)}
+.sv-cell{font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;fill:#fff}
+.sv-word{font-family:'Pretendard Variable',sans-serif;font-size:13px;font-weight:700;fill:var(--ink)}
+.sv-line{stroke:#9aa1b2;stroke-width:1.6;fill:none}
+.sv-arrow{stroke:#9aa1b2;stroke-width:1.6;fill:none;marker-end:url(#ah)}
+.sv-arrow-b{stroke:var(--ink);stroke-width:1.8;fill:none;marker-end:url(#ahb)}
+
+/* ── 수식 블록 ───────────────────────── */
+.eq{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:18px 22px;margin:18px 0;text-align:center;box-shadow:var(--shadow);overflow-x:auto}
+.eq .katex-display{margin:0}
+
+/* ── 인터랙티브 위젯 공통 ─────────────── */
+.widget{background:linear-gradient(180deg,#fff,#fdfcfa);
+  border:1.5px solid var(--flame);border-radius:18px;
+  padding:24px;margin:26px 0;box-shadow:0 12px 32px -16px rgba(238,76,44,.28)}
+.widget .w-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.widget .w-badge{font-size:10.5px;font-weight:800;letter-spacing:.12em;
+  color:#fff;background:var(--flame);border-radius:6px;padding:3px 9px}
+.widget .w-title{font-size:17px;font-weight:850;letter-spacing:-.01em}
+.widget .w-desc{font-size:13.5px;color:var(--ink-soft);margin-bottom:16px}
+.wbtn{appearance:none;border:1.5px solid var(--flame);background:#fff;color:var(--flame-deep);
+  font-family:inherit;font-size:13.5px;font-weight:750;border-radius:10px;
+  padding:8px 16px;cursor:pointer;transition:all .15s}
+.wbtn:hover{background:var(--flame-soft)}
+.wbtn.primary{background:var(--flame);color:#fff}
+.wbtn.primary:hover{background:var(--flame-deep)}
+.wbtn:disabled{opacity:.4;cursor:not-allowed}
+.w-status{font-size:13.5px;background:#f4f2ee;border-radius:10px;padding:12px 16px;
+  margin-top:14px;color:var(--ink);min-height:48px}
+.w-status b{color:var(--flame-deep)}
+
+/* 위젯1 : 디코딩 시뮬레이터 */
+#w1 .stage{opacity:.18;transition:opacity .35s}
+#w1 .stage.on{opacity:1}
+#w1 .flow{opacity:0;transition:opacity .35s}
+#w1 .flow.on{opacity:1}
+
+/* 위젯2 : 교사 강요 */
+.tf-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
+.tf-col{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px}
+.tf-col h5{font-size:13.5px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.tf-col h5 .dot{width:9px;height:9px;border-radius:50%}
+.tf-row{display:flex;align-items:center;gap:6px;margin-bottom:9px;font-size:12.5px;flex-wrap:wrap}
+.tf-row .t-lab{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);width:28px;flex:none}
+.chip{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;
+  border-radius:7px;padding:3px 9px;border:1.5px solid transparent;transition:all .25s}
+.chip.in{background:var(--emb-soft);color:var(--emb);border-color:#bcd3fb}
+.chip.pred{background:var(--dec-soft);color:#15803d;border-color:#b5e6c6}
+.chip.gt{background:#fef9c3;color:#a16207;border-color:#fde68a}
+.chip.bad{background:#fee2e2;color:#b91c1c;border-color:#fca5a5}
+.tf-arr{color:var(--ink-faint);font-size:12px}
+
+/* 위젯3 : 어텐션 플레이그라운드 */
+.ap-grid{display:grid;grid-template-columns:280px 1fr;gap:20px;margin-top:8px}
+.ap-panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px}
+.ap-panel h5{font-size:13px;font-weight:800;margin-bottom:12px;color:var(--ink);
+  display:flex;align-items:center;gap:7px}
+.ap-presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.ap-presets button{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
+  border:1.5px solid var(--line);background:#faf9f6;color:var(--ink-soft);
+  border-radius:8px;padding:5px 10px;cursor:pointer;transition:all .15s}
+.ap-presets button:hover{border-color:var(--flame);color:var(--flame-deep)}
+.ap-presets button.sel{background:var(--flame);border-color:var(--flame);color:#fff}
+.ap-slider{display:grid;grid-template-columns:38px 1fr 44px;align-items:center;gap:8px;margin-bottom:8px}
+.ap-slider label{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;color:var(--ink-soft)}
+.ap-slider output{font-family:'JetBrains Mono',monospace;font-size:11.5px;text-align:right;color:var(--ink)}
+input[type=range]{width:100%;accent-color:var(--flame);height:4px}
+.ap-words{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.ap-word{text-align:center;border-radius:10px;padding:10px 4px 8px;border:1.5px solid var(--line);
+  background:#fff;transition:all .25s;position:relative;overflow:hidden}
+.ap-word .wtxt{font-weight:800;font-size:14.5px;position:relative;z-index:1}
+.ap-word .wsub{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-faint);position:relative;z-index:1}
+.ap-word .fill{position:absolute;inset:0;background:var(--flame);opacity:0;transition:opacity .25s}
+.ap-bars .bar-row{display:grid;grid-template-columns:60px 1fr 52px;align-items:center;gap:10px;margin-bottom:8px}
+.ap-bars .bar-lab{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;color:var(--ink-soft)}
+.ap-bars .bar-track{background:#f0ede8;border-radius:6px;height:20px;overflow:hidden}
+.ap-bars .bar-fill{height:100%;background:linear-gradient(90deg,var(--flame),#ff8a3d);
+  border-radius:6px;width:0%;transition:width .25s}
+.ap-bars .bar-val{font-family:'JetBrains Mono',monospace;font-size:11.5px;text-align:right}
+.ap-scores{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink-soft);
+  background:#f4f2ee;border-radius:8px;padding:10px 12px;margin-bottom:12px;line-height:1.9}
+.ap-scores b{color:var(--ink)}
+.ap-result{border:1.5px dashed var(--flame);border-radius:10px;padding:12px 14px;
+  font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--flame-soft)}
+.ap-result b{color:var(--flame-deep);font-size:12.5px}
+
+/* ── 요약 카드 ───────────────────────── */
+.sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:20px 0}
+.sum-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:18px 20px;box-shadow:var(--shadow)}
+.sum-card .n{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--flame);letter-spacing:.08em}
+.sum-card h5{font-size:15px;font-weight:800;margin:5px 0 6px}
+.sum-card p{font-size:13.5px;color:var(--ink-soft);margin:0}
+
+/* ── 푸터 ───────────────────────────── */
+footer{margin-top:90px;padding-top:24px;border-top:1px solid var(--line);
+  font-size:13px;color:var(--ink-faint);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+
+/* ── 반응형 ──────────────────────────── */
+@media (max-width:1024px){
+  #sidebar{transform:translateX(-100%);transition:transform .25s}
+  #sidebar.open{transform:translateX(0)}
+  #menu-btn{display:flex}
+  #overlay.show{display:block}
+  main{margin-left:0;padding:0 22px 90px}
+  .hero{padding-top:86px}
+  .tbl{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .ap-scores,.ap-result{overflow-x:auto}
+  .ap-grid{grid-template-columns:1fr}
+  .tf-grid{grid-template-columns:1fr}
+  .sum-grid{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *{transition:none!important;animation:none!important}
+}
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+<button id="menu-btn" aria-label="목차 열기">☰</button>
+<div id="overlay"></div>
+<!-- ══════════════ 사이드바 ══════════════ -->
+<nav id="sidebar">
+  <div class="brand">
+    <div class="logo">
+      <svg class="fl" viewBox="0 0 24 24" fill="none"><path d="M12 2C8 7 14 8.5 14 12.5C14 14 13 15 12 15C11 15 10.2 14.2 10.2 13C8.5 14 7.5 15.8 7.5 17.5C7.5 20 9.5 22 12 22C15.6 22 18.5 19.1 18.5 15.5C18.5 9 13.5 6.5 12 2Z" fill="#ee4c2c"/></svg>
+      <span>Seq2Seq · Attention</span>
+    </div>
+    <div class="sub">PyTorch 딥러닝 학습노트 보충 가이드</div>
+  </div>
+  <div class="group">
+    <div class="group-label">Part 1 · 시퀀스투시퀀스</div>
+    <a href="#s1-1"><span class="no">1.1</span>seq2seq란 무엇인가</a>
+    <a href="#s1-2"><span class="no">1.2</span>모델의 개요</a>
+    <a href="#s1-3"><span class="no">1.3</span>동작 과정 — 인코더와 디코더</a>
+    <a href="#s1-4"><span class="no">1.4</span>테스트 단계 <small>· 시뮬레이터</small></a>
+    <a href="#s1-5"><span class="no">1.5</span>훈련 단계와 교사 강요</a>
+    <a href="#s1-6"><span class="no">1.6</span>임베딩 층</a>
+    <a href="#s1-7"><span class="no">1.7</span>RNN 셀 복습</a>
+    <a href="#s1-8"><span class="no">1.8</span>디코더와 소프트맥스</a>
+    <a href="#s1-9"><span class="no">1.9</span>다양한 변형들</a>
+  </div>
+  <div class="group">
+    <div class="group-label">Part 2 · 어텐션 메커니즘</div>
+    <a href="#s2-1"><span class="no">2.1</span>seq2seq의 두 가지 한계</a>
+    <a href="#s2-2"><span class="no">2.2</span>어텐션의 아이디어</a>
+    <a href="#s2-3"><span class="no">2.3</span>어텐션 함수 — Q, K, V</a>
+    <a href="#s2-4"><span class="no">2.4</span>닷-프로덕트 어텐션 6단계</a>
+    <a href="#s2-5"><span class="no">2.5</span>어텐션 플레이그라운드</a>
+    <a href="#s2-6"><span class="no">2.6</span>다양한 어텐션 종류</a>
+    <a href="#s2-7"><span class="no">2.7</span>정리 — 트랜스포머로 가는 길</a>
+  </div>
+</nav>
+
+<main>
+<div class="wrap">
+
+<!-- ══════════════ 히어로 ══════════════ -->
+<header class="hero">
+  <span class="eyebrow">NLP 고급 · CH 16-01 &amp; 17-01</span>
+  <h1>Seq2Seq <span class="arrow">→</span><br>Attention</h1>
+  <p class="lead">
+    입력 시퀀스를 하나의 벡터로 압축해 번역하는 <strong>seq2seq</strong>의 구조를 완전히 이해하고,
+    그 병목을 깨기 위해 등장한 <strong>어텐션 메커니즘</strong>을 수식·그림·인터랙티브 실습으로 파헤친다.
+  </p>
+  <div class="meta">
+    <span>📖 딥 러닝 파이토치 교과서 <b>16-01 · 17-01</b></span>
+    <span>🧩 인터랙티브 위젯 <b>3개</b></span>
+    <span>✏️ 예제 문장 <b>I am a student → je suis étudiant</b></span>
+  </div>
+</header>
+
+<!-- SVG 화살표 marker 정의 (전역) -->
+<svg width="0" height="0" style="position:absolute;overflow:hidden" aria-hidden="true">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#9aa1b2"/>
+    </marker>
+    <marker id="ahb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1c2230"/>
+    </marker>
+    <marker id="ahf" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#ee4c2c"/>
+    </marker>
+  </defs>
+</svg>
+
+<!-- ══════════════ 1.1 ══════════════ -->
+<section id="s1-1">
+  <h2><span class="idx">1.1</span>seq2seq란 무엇인가</h2>
+  <p>
+    <strong>시퀀스-투-시퀀스(Sequence-to-Sequence, seq2seq)</strong>는 입력된 시퀀스로부터
+    <strong>다른 도메인의 시퀀스</strong>를 출력하는 모델이다. 핵심은 "다른 도메인"이라는 표현이다.
+    입력과 출력이 같은 형태의 나열이 아니라, 서로 다른 세계(언어, 길이, 표현 방식)에 속한 시퀀스일 수 있다는 뜻이다.
+  </p>
+  <p>입력·출력 시퀀스를 무엇으로 구성하느냐에 따라 같은 구조로 전혀 다른 응용이 만들어진다.</p>
+  <table class="tbl">
+    <thead><tr><th>응용 분야</th><th>입력 시퀀스</th><th>출력 시퀀스</th></tr></thead>
+    <tbody>
+      <tr><td><strong>챗봇</strong> (Chatbot)</td><td>질문</td><td>대답</td></tr>
+      <tr><td><strong>기계 번역</strong> (Machine Translation)</td><td>입력 문장</td><td>번역 문장</td></tr>
+      <tr><td><strong>내용 요약</strong> (Text Summarization)</td><td>긴 원문</td><td>짧은 요약문</td></tr>
+      <tr><td><strong>STT</strong> (Speech to Text)</td><td>음성 신호</td><td>텍스트</td></tr>
+    </tbody>
+  </table>
+  <p>
+    이 가이드에서는 교재와 동일하게 <strong>기계 번역</strong>을 예제로 삼아
+    <code>I am a student</code> → <code>je suis étudiant</code> 번역 과정을 따라가며 seq2seq를 설명한다.
+    설명 방식은 내부가 보이지 않는 커다란 <strong>블랙 박스</strong>에서 시작해 점차 확대해 들어가는 방식이다.
+    참고로 여기서 다루는 내용의 대부분은 RNN 챕터에서 배운 부품들이다.
+    그 부품을 <strong>어떻게 조립했느냐</strong>에 따라 seq2seq라는 구조가 만들어진다.
+  </p>
+</section>
+
+<!-- ══════════════ 1.2 ══════════════ -->
+<section id="s1-2">
+  <h2><span class="idx">1.2</span>모델의 개요 — 블랙 박스에서 시작하기</h2>
+  <p>가장 바깥에서 보면 seq2seq 번역기는 영어 문장을 넣으면 프랑스어 문장이 나오는 상자다.</p>
+
+  <div class="fig">
+    <svg viewBox="0 0 700 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="seq2seq 블랙박스">
+      <text x="350" y="26" text-anchor="middle" class="sv-word" font-size="15">je suis étudiant</text>
+      <line x1="350" y1="62" x2="350" y2="36" class="sv-arrow-b"/>
+      <rect x="170" y="66" width="360" height="70" rx="12" fill="#1e2a4a"/>
+      <text x="350" y="96" text-anchor="middle" fill="#fff" font-size="15" font-weight="800" font-family="Pretendard Variable,sans-serif">기계 번역기</text>
+      <text x="350" y="118" text-anchor="middle" fill="#9db1dd" font-size="11.5" font-family="JetBrains Mono,monospace">SEQUENCE TO SEQUENCE</text>
+      <line x1="350" y1="168" x2="350" y2="142" class="sv-arrow-b"/>
+      <text x="350" y="190" text-anchor="middle" class="sv-word" font-size="15">I am a student</text>
+    </svg>
+    <div class="cap"><b>그림 1.</b> 블랙 박스로 본 seq2seq — 'I am a student'를 입력받아 'je suis étudiant'를 출력한다.</div>
+  </div>
+
+  <p>이 상자의 뚜껑을 열면, seq2seq는 크게 두 개의 아키텍처로 구성되어 있다. 바로 <strong>인코더(Encoder)</strong>와 <strong>디코더(Decoder)</strong>다.</p>
+
+  <div class="fig">
+    <svg viewBox="0 0 700 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="인코더 컨텍스트 디코더">
+      <text x="480" y="26" text-anchor="middle" class="sv-word" font-size="14">je suis étudiant</text>
+      <line x1="480" y1="60" x2="480" y2="36" class="sv-arrow-b"/>
+      <rect x="90" y="64" width="200" height="82" rx="14" class="sv-enc"/>
+      <text x="190" y="100" text-anchor="middle" fill="#fff" font-size="15" font-weight="800" font-family="Pretendard Variable,sans-serif">인코더</text>
+      <text x="190" y="122" text-anchor="middle" fill="#ffe4cc" font-size="11" font-family="JetBrains Mono,monospace">Encoder</text>
+      <rect x="316" y="76" width="66" height="58" rx="9" class="sv-ctx"/>
+      <text x="349" y="101" text-anchor="middle" fill="#fff" font-size="10" font-weight="800" font-family="JetBrains Mono,monospace">CONTEXT</text>
+      <text x="349" y="116" text-anchor="middle" fill="#d2f4fa" font-size="9" font-family="JetBrains Mono,monospace">vector</text>
+      <rect x="408" y="64" width="200" height="82" rx="14" class="sv-dec"/>
+      <text x="508" y="100" text-anchor="middle" fill="#fff" font-size="15" font-weight="800" font-family="Pretendard Variable,sans-serif">디코더</text>
+      <text x="508" y="122" text-anchor="middle" fill="#d3f5de" font-size="11" font-family="JetBrains Mono,monospace">Decoder</text>
+      <line x1="292" y1="105" x2="313" y2="105" class="sv-arrow-b"/>
+      <line x1="384" y1="105" x2="405" y2="105" class="sv-arrow-b"/>
+      <line x1="190" y1="182" x2="190" y2="150" class="sv-arrow-b"/>
+      <text x="190" y="203" text-anchor="middle" class="sv-word" font-size="14">I am a student</text>
+    </svg>
+    <div class="cap"><b>그림 2.</b> seq2seq의 내부 — 인코더가 만든 컨텍스트 벡터를 디코더가 넘겨받는다.</div>
+  </div>
+
+  <ul class="plain">
+    <li><strong>인코더</strong>는 입력 문장의 모든 단어들을 <strong>순차적으로</strong> 입력받은 뒤, 마지막에 이 모든 단어의 정보를 압축해서 <strong>하나의 벡터</strong>로 만든다. 이를 <span class="pt">컨텍스트 벡터(context vector)</span>라고 한다. 컨텍스트란 한국어로 '문맥'이다.</li>
+    <li>입력 문장의 정보가 하나의 컨텍스트 벡터로 모두 압축되면, 인코더는 이 벡터를 <strong>디코더로 전송</strong>한다.</li>
+    <li><strong>디코더</strong>는 컨텍스트 벡터를 받아서 번역된 단어를 <strong>한 개씩 순차적으로</strong> 출력한다.</li>
+  </ul>
+
+  <div class="callout note">
+    <span class="ct">컨텍스트 벡터의 실제 크기</span>
+    교재의 그림에서는 컨텍스트 벡터를 <code>[0.15, 0.21, -0.11, 0.91]</code>처럼 크기 4의 벡터로 표현하지만,
+    실제 현업의 seq2seq 모델에서는 보통 <strong>수백 이상의 차원</strong>을 갖는다.
+    이 "고정된 크기"라는 성질이 뒤에서 배울 어텐션의 등장 배경이 된다.
+  </div>
+</section>
+
+<!-- ══════════════ 1.3 ══════════════ -->
+<section id="s1-3">
+  <h2><span class="idx">1.3</span>동작 과정 — 인코더와 디코더의 내부</h2>
+  <p>
+    인코더와 디코더의 내부를 확대하면, 사실은 <strong>두 개의 RNN 아키텍처</strong>다.
+    입력 문장을 받는 RNN 셀들의 묶음이 인코더, 출력 문장을 내놓는 RNN 셀들의 묶음이 디코더다.
+    물론 성능 문제 때문에 실제로는 바닐라 RNN이 아니라 <span class="pt">LSTM 셀</span> 또는 <span class="pt">GRU 셀</span>로 구성한다.
+  </p>
+
+  <div class="fig">
+    <svg viewBox="0 0 700 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="seq2seq 전체 구조">
+      <!-- 인코더 프레임 -->
+      <rect x="18" y="58" width="300" height="112" rx="12" fill="none" stroke="#f2790f" stroke-width="1.6" stroke-dasharray="none"/>
+      <text x="30" y="50" class="sv-lblb" fill="#f2790f">인코더(Encoder)</text>
+      <!-- 디코더 프레임 -->
+      <rect x="400" y="58" width="284" height="112" rx="12" fill="none" stroke="#16a34a" stroke-width="1.6"/>
+      <text x="412" y="50" class="sv-lblb" fill="#16a34a">디코더(Decoder)</text>
+      <!-- 인코더 LSTM 셀 -->
+      <g>
+        <rect x="32" y="82" width="60" height="42" rx="9" class="sv-enc"/><text x="62" y="107" text-anchor="middle" class="sv-cell">LSTM</text>
+        <rect x="104" y="82" width="60" height="42" rx="9" class="sv-enc"/><text x="134" y="107" text-anchor="middle" class="sv-cell">LSTM</text>
+        <rect x="176" y="82" width="60" height="42" rx="9" class="sv-enc"/><text x="206" y="107" text-anchor="middle" class="sv-cell">LSTM</text>
+        <rect x="248" y="82" width="60" height="42" rx="9" class="sv-enc"/><text x="278" y="107" text-anchor="middle" class="sv-cell">LSTM</text>
+        <line x1="92" y1="103" x2="101" y2="103" class="sv-arrow"/>
+        <line x1="164" y1="103" x2="173" y2="103" class="sv-arrow"/>
+        <line x1="236" y1="103" x2="245" y2="103" class="sv-arrow"/>
+      </g>
+      <!-- CONTEXT -->
+      <rect x="330" y="80" width="58" height="46" rx="8" class="sv-ctx"/>
+      <text x="359" y="100" text-anchor="middle" fill="#fff" font-size="8.5" font-weight="800" font-family="JetBrains Mono,monospace">CONTEXT</text>
+      <text x="359" y="113" text-anchor="middle" fill="#d2f4fa" font-size="8" font-family="JetBrains Mono,monospace">h_last</text>
+      <line x1="310" y1="103" x2="327" y2="103" class="sv-arrow-b"/>
+      <line x1="390" y1="103" x2="407" y2="103" class="sv-arrow-b"/>
+      <!-- 디코더 LSTM 셀 -->
+      <g>
+        <rect x="412" y="82" width="58" height="42" rx="9" class="sv-dec"/><text x="441" y="107" text-anchor="middle" class="sv-cell">LSTM</text>
+        <rect x="480" y="82" width="58" height="42" rx="9" class="sv-dec"/><text x="509" y="107" text-anchor="middle" class="sv-cell">LSTM</text>
+        <rect x="548" y="82" width="58" height="42" rx="9" class="sv-dec"/><text x="577" y="107" text-anchor="middle" class="sv-cell">LSTM</text>
+        <rect x="616" y="82" width="58" height="42" rx="9" class="sv-dec"/><text x="645" y="107" text-anchor="middle" class="sv-cell">LSTM</text>
+        <line x1="470" y1="103" x2="477" y2="103" class="sv-arrow"/>
+        <line x1="538" y1="103" x2="545" y2="103" class="sv-arrow"/>
+        <line x1="606" y1="103" x2="613" y2="103" class="sv-arrow"/>
+      </g>
+      <!-- 입력 단어 -->
+      <g class="sv-word" font-size="12">
+        <text x="62" y="212" text-anchor="middle">I</text><text x="134" y="212" text-anchor="middle">am</text>
+        <text x="206" y="212" text-anchor="middle">a</text><text x="278" y="212" text-anchor="middle">student</text>
+        <text x="441" y="212" text-anchor="middle">&lt;sos&gt;</text><text x="509" y="212" text-anchor="middle">je</text>
+        <text x="577" y="212" text-anchor="middle">suis</text><text x="645" y="212" text-anchor="middle">étudiant</text>
+      </g>
+      <g>
+        <line x1="62" y1="196" x2="62" y2="128" class="sv-arrow"/><line x1="134" y1="196" x2="134" y2="128" class="sv-arrow"/>
+        <line x1="206" y1="196" x2="206" y2="128" class="sv-arrow"/><line x1="278" y1="196" x2="278" y2="128" class="sv-arrow"/>
+        <line x1="441" y1="196" x2="441" y2="128" class="sv-arrow"/><line x1="509" y1="196" x2="509" y2="128" class="sv-arrow"/>
+        <line x1="577" y1="196" x2="577" y2="128" class="sv-arrow"/><line x1="645" y1="196" x2="645" y2="128" class="sv-arrow"/>
+      </g>
+      <!-- 출력 단어 -->
+      <g class="sv-word" font-size="12" fill="#15803d">
+        <text x="441" y="24" text-anchor="middle">je</text><text x="509" y="24" text-anchor="middle">suis</text>
+        <text x="577" y="24" text-anchor="middle">étudiant</text><text x="645" y="24" text-anchor="middle">&lt;eos&gt;</text>
+      </g>
+      <g>
+        <line x1="441" y1="78" x2="441" y2="34" class="sv-arrow"/><line x1="509" y1="78" x2="509" y2="34" class="sv-arrow"/>
+        <line x1="577" y1="78" x2="577" y2="34" class="sv-arrow"/><line x1="645" y1="78" x2="645" y2="34" class="sv-arrow"/>
+      </g>
+    </svg>
+    <div class="cap"><b>그림 3.</b> seq2seq의 동작 과정 — 인코더의 마지막 은닉 상태가 컨텍스트 벡터가 되어 디코더의 첫 은닉 상태로 쓰인다.</div>
+  </div>
+
+  <p>인코더부터 자세히 보면, 처리 순서는 다음과 같다.</p>
+  <ol class="steps">
+    <li>입력 문장은 <strong>단어 토큰화</strong>를 통해 단어 단위로 쪼개진다.</li>
+    <li>단어 토큰 각각은 RNN 셀의 <strong>각 시점(time step)의 입력</strong>이 된다.</li>
+    <li>인코더 RNN 셀은 모든 단어를 입력받은 뒤, <span class="pt">인코더 RNN 셀의 마지막 시점의 은닉 상태</span>를 디코더 RNN 셀로 넘겨준다. 이것이 바로 <strong>컨텍스트 벡터</strong>다.</li>
+    <li>컨텍스트 벡터는 <span class="pt">디코더 RNN 셀의 첫 번째 은닉 상태</span>로 사용된다.</li>
+  </ol>
+
+  <div class="callout">
+    <span class="ct">한 줄 정의</span>
+    컨텍스트 벡터 = 인코더 마지막 RNN 셀의 은닉 상태 = 입력 문장의 모든 단어 토큰 정보를 <strong>요약</strong>해 담은 하나의 벡터.
+    디코더는 이 벡터를 초기 은닉 상태 $h_0$로 삼아 문장 생성을 시작한다.
+  </div>
+</section>
+
+<!-- ══════════════ 1.4 ══════════════ -->
+<section id="s1-4">
+  <h2><span class="idx">1.4</span>테스트 단계 — 한 단어씩 예측을 이어가기</h2>
+  <p>
+    디코더는 초기 입력으로 문장의 시작을 의미하는 심볼 <code>&lt;sos&gt;</code>를 받는다.
+    <code>&lt;sos&gt;</code>가 입력되면 디코더는 <strong>다음에 등장할 확률이 높은 단어</strong>를 예측한다.
+    첫 번째 시점의 디코더 RNN 셀이 <code>je</code>를 예측했다면, 이 예측된 단어 <code>je</code>를
+    <strong>다음 시점 RNN 셀의 입력</strong>으로 넣는다. 두 번째 시점의 셀은 <code>je</code>로부터
+    다음 단어 <code>suis</code>를 예측하고, 또 다시 이것을 다음 시점의 입력으로 보낸다.
+  </p>
+  <p>
+    디코더는 이런 식으로 <strong>"예측한 단어를 다음 시점의 입력으로 넣는 행위"</strong>를 반복하며,
+    문장의 끝을 의미하는 심볼 <code>&lt;eos&gt;</code>가 예측될 때까지 계속한다.
+    자기 자신의 출력을 다시 입력으로 사용한다는 의미에서 이를 <strong>자기회귀(auto-regressive)</strong> 생성이라고 부르기도 한다.
+    <strong>지금 설명하는 것은 테스트 과정 동안의 이야기</strong>라는 점을 기억하자. 훈련 과정은 1.5에서 다르게 동작한다.
+  </p>
+
+  <!-- ── 위젯 1 : 디코딩 시뮬레이터 ── -->
+  <div class="widget" id="w1">
+    <div class="w-head"><span class="w-badge">INTERACTIVE</span><span class="w-title">seq2seq 디코딩 시뮬레이터</span></div>
+    <p class="w-desc">[다음 단계] 버튼을 눌러 인코딩 → 컨텍스트 벡터 → 자기회귀 디코딩의 흐름을 시점별로 따라가 보자.</p>
+    <div class="fig" style="margin:0 0 14px;box-shadow:none">
+      <svg viewBox="0 0 700 262" xmlns="http://www.w3.org/2000/svg">
+        <!-- 인코더 -->
+        <g id="w1-enc" class="stage">
+          <rect x="18" y="70" width="300" height="112" rx="12" fill="none" stroke="#f2790f" stroke-width="1.6"/>
+          <text x="30" y="62" class="sv-lblb" fill="#f2790f">인코더</text>
+          <rect x="32" y="94" width="60" height="42" rx="9" class="sv-enc"/><text x="62" y="119" text-anchor="middle" class="sv-cell">LSTM</text>
+          <rect x="104" y="94" width="60" height="42" rx="9" class="sv-enc"/><text x="134" y="119" text-anchor="middle" class="sv-cell">LSTM</text>
+          <rect x="176" y="94" width="60" height="42" rx="9" class="sv-enc"/><text x="206" y="119" text-anchor="middle" class="sv-cell">LSTM</text>
+          <rect x="248" y="94" width="60" height="42" rx="9" class="sv-enc"/><text x="278" y="119" text-anchor="middle" class="sv-cell">LSTM</text>
+          <line x1="92" y1="115" x2="101" y2="115" class="sv-arrow"/><line x1="164" y1="115" x2="173" y2="115" class="sv-arrow"/><line x1="236" y1="115" x2="245" y2="115" class="sv-arrow"/>
+          <g class="sv-word" font-size="12">
+            <text x="62" y="224" text-anchor="middle">I</text><text x="134" y="224" text-anchor="middle">am</text>
+            <text x="206" y="224" text-anchor="middle">a</text><text x="278" y="224" text-anchor="middle">student</text>
+          </g>
+          <line x1="62" y1="208" x2="62" y2="140" class="sv-arrow"/><line x1="134" y1="208" x2="134" y2="140" class="sv-arrow"/>
+          <line x1="206" y1="208" x2="206" y2="140" class="sv-arrow"/><line x1="278" y1="208" x2="278" y2="140" class="sv-arrow"/>
+        </g>
+        <!-- CONTEXT -->
+        <g id="w1-ctx" class="stage">
+          <line x1="310" y1="115" x2="327" y2="115" class="sv-arrow-b"/>
+          <rect x="330" y="92" width="58" height="46" rx="8" class="sv-ctx"/>
+          <text x="359" y="112" text-anchor="middle" fill="#fff" font-size="8.5" font-weight="800" font-family="JetBrains Mono,monospace">CONTEXT</text>
+          <text x="359" y="125" text-anchor="middle" fill="#d2f4fa" font-size="8" font-family="JetBrains Mono,monospace">vector</text>
+          <line x1="390" y1="115" x2="407" y2="115" class="sv-arrow-b"/>
+        </g>
+        <!-- 디코더 셀 t1~t4 -->
+        <g id="w1-d1" class="stage">
+          <rect x="412" y="94" width="58" height="42" rx="9" class="sv-dec"/><text x="441" y="119" text-anchor="middle" class="sv-cell">LSTM</text>
+          <text x="441" y="224" text-anchor="middle" class="sv-word" font-size="12">&lt;sos&gt;</text>
+          <line x1="441" y1="208" x2="441" y2="140" class="sv-arrow"/>
+          <text x="441" y="36" text-anchor="middle" class="sv-word" font-size="12" fill="#15803d">je</text>
+          <line x1="441" y1="90" x2="441" y2="46" class="sv-arrow"/>
+        </g>
+        <g id="w1-f1" class="flow">
+          <path d="M 452 40 C 480 40 490 60 500 200 C 502 212 505 218 509 218" fill="none" stroke="#ee4c2c" stroke-width="1.6" stroke-dasharray="4 3" marker-end="url(#ahf)"/>
+        </g>
+        <g id="w1-d2" class="stage">
+          <line x1="470" y1="115" x2="477" y2="115" class="sv-arrow"/>
+          <rect x="480" y="94" width="58" height="42" rx="9" class="sv-dec"/><text x="509" y="119" text-anchor="middle" class="sv-cell">LSTM</text>
+          <text x="509" y="224" text-anchor="middle" class="sv-word" font-size="12">je</text>
+          <line x1="509" y1="208" x2="509" y2="140" class="sv-arrow"/>
+          <text x="509" y="36" text-anchor="middle" class="sv-word" font-size="12" fill="#15803d">suis</text>
+          <line x1="509" y1="90" x2="509" y2="46" class="sv-arrow"/>
+        </g>
+        <g id="w1-f2" class="flow">
+          <path d="M 522 40 C 548 40 558 60 568 200 C 570 212 573 218 577 218" fill="none" stroke="#ee4c2c" stroke-width="1.6" stroke-dasharray="4 3" marker-end="url(#ahf)"/>
+        </g>
+        <g id="w1-d3" class="stage">
+          <line x1="538" y1="115" x2="545" y2="115" class="sv-arrow"/>
+          <rect x="548" y="94" width="58" height="42" rx="9" class="sv-dec"/><text x="577" y="119" text-anchor="middle" class="sv-cell">LSTM</text>
+          <text x="577" y="224" text-anchor="middle" class="sv-word" font-size="12">suis</text>
+          <line x1="577" y1="208" x2="577" y2="140" class="sv-arrow"/>
+          <text x="577" y="36" text-anchor="middle" class="sv-word" font-size="12" fill="#15803d">étudiant</text>
+          <line x1="577" y1="90" x2="577" y2="46" class="sv-arrow"/>
+        </g>
+        <g id="w1-f3" class="flow">
+          <path d="M 594 40 C 618 40 628 60 636 200 C 638 212 641 218 645 218" fill="none" stroke="#ee4c2c" stroke-width="1.6" stroke-dasharray="4 3" marker-end="url(#ahf)"/>
+        </g>
+        <g id="w1-d4" class="stage">
+          <line x1="606" y1="115" x2="613" y2="115" class="sv-arrow"/>
+          <rect x="616" y="94" width="58" height="42" rx="9" class="sv-dec"/><text x="645" y="119" text-anchor="middle" class="sv-cell">LSTM</text>
+          <text x="645" y="224" text-anchor="middle" class="sv-word" font-size="12">étudiant</text>
+          <line x1="645" y1="208" x2="645" y2="140" class="sv-arrow"/>
+          <text x="645" y="36" text-anchor="middle" class="sv-word" font-size="13" font-weight="800" fill="#ee4c2c">&lt;eos&gt;</text>
+          <line x1="645" y1="90" x2="645" y2="46" class="sv-arrow"/>
+        </g>
+      </svg>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="wbtn" id="w1-reset">↺ 처음으로</button>
+      <button class="wbtn primary" id="w1-next">다음 단계 →</button>
+    </div>
+    <div class="w-status" id="w1-status"></div>
+  </div>
+</section>
+
+<!-- ══════════════ 1.5 ══════════════ -->
+<section id="s1-5">
+  <h2><span class="idx">1.5</span>훈련 단계와 교사 강요 (Teacher Forcing)</h2>
+  <p>
+    seq2seq는 <strong>훈련 과정과 테스트 과정(또는 실제 번역기를 사람이 쓸 때)의 작동 방식이 조금 다르다.</strong>
+  </p>
+  <p>
+    훈련 과정에서는 디코더에게 인코더가 보낸 컨텍스트 벡터와 함께
+    <strong>실제 정답</strong>인 <code>&lt;sos&gt; je suis étudiant</code>를 입력으로 준다.
+    그리고 이 입력을 받았을 때 <code>je suis étudiant &lt;eos&gt;</code>가 나와야 한다고
+    정답을 알려주면서 훈련한다. 즉, 디코더의 각 시점 입력으로 <em>이전 시점의 예측값이 아니라</em>
+    <strong>정답 시퀀스 자체</strong>를 넣는 것이다. 이를 <span class="pt">교사 강요(teacher forcing)</span>라고 한다.
+  </p>
+  <p>
+    반면 테스트 과정에서는 1.4에서 본 것처럼 디코더가 오직 컨텍스트 벡터와 <code>&lt;sos&gt;</code>만 받은 뒤,
+    스스로 예측한 단어를 다음 시점의 입력으로 넣는 행위를 반복한다.
+  </p>
+
+  <!-- ── 위젯 2 : 교사 강요 비교 ── -->
+  <div class="widget" id="w2">
+    <div class="w-head"><span class="w-badge">INTERACTIVE</span><span class="w-title">교사 강요는 왜 필요한가?</span></div>
+    <p class="w-desc">
+      훈련 초기의 모델은 예측이 자주 틀린다. 버튼을 눌러 <b>t=2 시점에서 오답이 발생</b>했다고 가정해 보자.
+      두 방식에서 이후 시점의 입력이 어떻게 달라지는지 비교한다.
+    </p>
+    <button class="wbtn primary" id="w2-toggle">💥 t=2 시점에 오답 발생시키기</button>
+    <div class="tf-grid">
+      <div class="tf-col">
+        <h5><span class="dot" style="background:var(--dec)"></span>훈련 · 교사 강요</h5>
+        <div class="tf-row"><span class="t-lab">t=1</span><span class="chip in">&lt;sos&gt;</span><span class="tf-arr">→</span><span class="chip pred" data-k="tf-p1">je ✓</span></div>
+        <div class="tf-row"><span class="t-lab">t=2</span><span class="chip gt">je (정답)</span><span class="tf-arr">→</span><span class="chip pred" id="w2-tf-p2">suis ✓</span></div>
+        <div class="tf-row"><span class="t-lab">t=3</span><span class="chip gt">suis (정답)</span><span class="tf-arr">→</span><span class="chip pred">étudiant ✓</span></div>
+        <div class="tf-row"><span class="t-lab">t=4</span><span class="chip gt">étudiant (정답)</span><span class="tf-arr">→</span><span class="chip pred">&lt;eos&gt; ✓</span></div>
+        <p style="font-size:12.5px;color:var(--ink-soft);margin-top:10px" id="w2-tf-msg">
+          입력은 항상 <b>정답 시퀀스</b>이므로, 한 시점의 오답이 다음 시점을 오염시키지 않는다.
+        </p>
+      </div>
+      <div class="tf-col">
+        <h5><span class="dot" style="background:var(--flame)"></span>테스트 · 자기회귀</h5>
+        <div class="tf-row"><span class="t-lab">t=1</span><span class="chip in">&lt;sos&gt;</span><span class="tf-arr">→</span><span class="chip pred">je ✓</span></div>
+        <div class="tf-row"><span class="t-lab">t=2</span><span class="chip pred">je (예측)</span><span class="tf-arr">→</span><span class="chip pred" id="w2-ar-p2">suis ✓</span></div>
+        <div class="tf-row"><span class="t-lab">t=3</span><span class="chip pred" id="w2-ar-i3">suis (예측)</span><span class="tf-arr">→</span><span class="chip pred" id="w2-ar-p3">étudiant ✓</span></div>
+        <div class="tf-row"><span class="t-lab">t=4</span><span class="chip pred" id="w2-ar-i4">étudiant (예측)</span><span class="tf-arr">→</span><span class="chip pred" id="w2-ar-p4">&lt;eos&gt; ✓</span></div>
+        <p style="font-size:12.5px;color:var(--ink-soft);margin-top:10px" id="w2-ar-msg">
+          예측값이 그대로 다음 입력이 된다. 예측이 맞는 동안은 문제가 없다.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <span class="ct">왜 훈련에서 교사 강요를 쓰는가</span>
+    훈련 초기에는 모델이 엉터리 예측을 쏟아낸다. 만약 훈련에서도 자기회귀 방식을 쓰면,
+    한 시점의 잘못된 예측이 다음 시점의 입력을 오염시키고, 그 오염된 입력이 또 잘못된 예측을 낳는
+    <strong>오차의 연쇄</strong>가 발생해 학습이 매우 느리고 불안정해진다. 교사 강요는 매 시점의 입력을 정답으로 고정해
+    이 연쇄를 끊고 학습을 안정화한다. 다만 훈련(정답 입력)과 테스트(예측 입력)의 조건이 달라지는
+    <strong>노출 편향(exposure bias)</strong>이라는 부작용이 생길 수 있다는 점도 함께 알아두면 좋다.
+  </div>
+</section>
+
+<!-- ══════════════ 1.6 ══════════════ -->
+<section id="s1-6">
+  <h2><span class="idx">1.6</span>임베딩 층 (Embedding Layer)</h2>
+  <p>
+    기계는 텍스트보다 숫자를 잘 처리한다. 자연어 처리에서 텍스트를 벡터로 바꾸는 방법으로는
+    <strong>워드 임베딩</strong>(9챕터 참고)이 사용된다.
+    즉, seq2seq에서 사용되는 모든 단어들은 워드 임베딩을 통해 <strong>임베딩 벡터</strong>로 표현된 상태로 RNN 셀에 들어간다.
+    그림 3에서 각 LSTM 셀 아래에 있던 파란 <code>embedding</code> 상자가 바로 모든 단어에 대해
+    임베딩 과정을 거치게 하는 단계인 <span class="pt">임베딩 층(embedding layer)</span>이다.
+  </p>
+  <p>예를 들어 I, am, a, student라는 단어들의 임베딩 벡터는 다음과 같은 모습을 가진다.</p>
+  <table class="tbl" style="text-align:center">
+    <thead><tr><th style="text-align:center">I</th><th style="text-align:center">am</th><th style="text-align:center">a</th><th style="text-align:center">student</th></tr></thead>
+    <tbody class="mono" style="font-size:13px">
+      <tr><td>0.157</td><td>0.78</td><td>0.75</td><td>0.88</td></tr>
+      <tr><td>-0.25</td><td>0.29</td><td>-0.81</td><td>-0.17</td></tr>
+      <tr><td>0.478</td><td>-0.96</td><td>0.96</td><td>0.29</td></tr>
+      <tr><td>-0.78</td><td>0.52</td><td>0.12</td><td>0.48</td></tr>
+    </tbody>
+  </table>
+  <p>
+    여기서는 그림으로 표현하고자 사이즈를 4로 했지만, 실제 임베딩 벡터는 보통 <strong>수백 개의 차원</strong>을 가질 수 있다.
+    파이토치에서는 이 층을 <code>nn.Embedding(vocab_size, embedding_dim)</code>으로 만들며,
+    임베딩 벡터의 값들 역시 학습 과정에서 함께 갱신되는 <strong>학습 가능한 파라미터</strong>다.
+  </p>
+</section>
+
+<!-- ══════════════ 1.7 ══════════════ -->
+<section id="s1-7">
+  <h2><span class="idx">1.7</span>RNN 셀 복습 — 컨텍스트 벡터의 정체</h2>
+  <p>이미 RNN에 대해 배웠지만, seq2seq를 이해하는 데 꼭 필요한 부분만 다시 복습한다. 하나의 RNN 셀은 각 시점(time step)마다 <strong>두 개의 입력</strong>을 받는다.</p>
+
+  <div class="fig">
+    <svg viewBox="0 0 700 190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="RNN 셀의 입출력">
+      <text x="350" y="24" text-anchor="middle" class="sv-lblb">현재 time-step t에서의 은닉 상태</text>
+      <line x1="350" y1="66" x2="350" y2="34" class="sv-arrow-b"/>
+      <circle cx="350" cy="98" r="30" class="sv-enc"/>
+      <text x="350" y="103" text-anchor="middle" class="sv-cell" font-size="11">RNN</text>
+      <path d="M 372 82 a 20 14 0 1 1 -2 30" fill="none" stroke="#c05605" stroke-width="1.8" marker-end="url(#ah)"/>
+      <line x1="230" y1="98" x2="316" y2="98" class="sv-arrow-b"/>
+      <text x="222" y="93" text-anchor="end" class="sv-lbl">time step t-1에서의</text>
+      <text x="222" y="109" text-anchor="end" class="sv-lbl">은닉 상태</text>
+      <line x1="350" y1="166" x2="350" y2="132" class="sv-arrow-b"/>
+      <text x="350" y="184" text-anchor="middle" class="sv-lbl">현재 time-step t에서의 입력 벡터</text>
+    </svg>
+    <div class="cap"><b>그림 4.</b> RNN 셀은 이전 시점의 은닉 상태 $h_{t-1}$와 현재 시점의 입력 $x_t$를 받아 현재 은닉 상태 $h_t$를 만든다.</div>
+  </div>
+
+  <p>
+    현재 시점을 $t$라고 할 때, RNN 셀은 $t-1$에서의 은닉 상태와 $t$에서의 입력 벡터를 받아
+    <strong>$t$에서의 은닉 상태</strong>를 만든다. 이 은닉 상태는 위에 또 다른 은닉층이나 출력층이 있으면
+    위의 층으로 보내지고, 필요 없으면 값을 무시할 수 있다. 그리고 RNN 셀은
+    다음 시점 $t+1$의 RNN 셀의 입력으로 현재 $t$에서의 은닉 상태를 보낸다.
+  </p>
+  <div class="callout">
+    <span class="ct">컨텍스트 벡터가 "요약"인 이유</span>
+    이런 구조에서 현재 시점 $t$의 은닉 상태는 <strong>과거 모든 시점의 은닉 상태 값들의 영향을 누적해서 받아온 값</strong>이다.
+    그러므로 컨텍스트 벡터 — 인코더의 <strong>마지막</strong> RNN 셀의 은닉 상태 — 는
+    입력 문장의 모든 단어 토큰들의 정보를 <strong>요약해서</strong> 담고 있다고 할 수 있다.
+    다만 "요약"이라는 말 그대로, 모든 것을 담을 수는 없다. 이 한계가 Part 2의 출발점이다.
+  </div>
+</section>
+
+<!-- ══════════════ 1.8 ══════════════ -->
+<section id="s1-8">
+  <h2><span class="idx">1.8</span>디코더와 소프트맥스 — 단어를 고르는 방법</h2>
+  <p>
+    디코더는 인코더의 마지막 RNN 셀의 은닉 상태인 컨텍스트 벡터를 <strong>첫 번째 은닉 상태의 값</strong>으로 사용한다.
+    디코더의 첫 번째 RNN 셀은 이 은닉 상태와 현재 입력 <code>&lt;sos&gt;</code>로부터 다음에 등장할 단어를 예측하고,
+    이 예측된 단어는 다음 시점 $t+1$ RNN 셀의 입력값이 된다. $t+1$의 셀 역시 이 입력값과
+    $t$에서의 은닉 상태로부터 $t+1$의 출력 벡터, 즉 또다시 다음에 등장할 단어를 예측한다.
+  </p>
+  <p>
+    그렇다면 "단어를 예측한다"는 것은 정확히 어떤 연산일까?
+    출력 단어로 나올 수 있는 후보는 단어 집합(vocabulary) 안의 <strong>모든 단어</strong>다.
+    seq2seq 모델은 선택될 수 있는 모든 단어들로부터 하나를 골라야 하는데, 이때 쓰는 함수가 바로
+    <span class="pt">소프트맥스 함수</span>다.
+  </p>
+
+  <div class="fig">
+    <svg viewBox="0 0 700 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="디코더의 Dense와 softmax">
+      <rect x="150" y="112" width="400" height="96" rx="12" fill="none" stroke="#16a34a" stroke-width="1.6"/>
+      <text x="162" y="104" class="sv-lblb" fill="#16a34a">디코더(Decoder)</text>
+      <g>
+        <rect x="170" y="132" width="70" height="42" rx="9" class="sv-dec"/><text x="205" y="157" text-anchor="middle" class="sv-cell">LSTM</text>
+        <rect x="266" y="132" width="70" height="42" rx="9" class="sv-dec"/><text x="301" y="157" text-anchor="middle" class="sv-cell">LSTM</text>
+        <rect x="362" y="132" width="70" height="42" rx="9" class="sv-dec"/><text x="397" y="157" text-anchor="middle" class="sv-cell">LSTM</text>
+        <rect x="458" y="132" width="70" height="42" rx="9" class="sv-dec"/><text x="493" y="157" text-anchor="middle" class="sv-cell">LSTM</text>
+        <line x1="240" y1="153" x2="263" y2="153" class="sv-arrow"/><line x1="336" y1="153" x2="359" y2="153" class="sv-arrow"/><line x1="432" y1="153" x2="455" y2="153" class="sv-arrow"/>
+      </g>
+      <g>
+        <rect x="172" y="66" width="66" height="20" rx="5" fill="#1e2a4a"/><text x="205" y="80" text-anchor="middle" fill="#fff" font-size="9.5" font-family="JetBrains Mono,monospace" font-weight="700">Dense</text>
+        <rect x="268" y="66" width="66" height="20" rx="5" fill="#1e2a4a"/><text x="301" y="80" text-anchor="middle" fill="#fff" font-size="9.5" font-family="JetBrains Mono,monospace" font-weight="700">Dense</text>
+        <rect x="364" y="66" width="66" height="20" rx="5" fill="#1e2a4a"/><text x="397" y="80" text-anchor="middle" fill="#fff" font-size="9.5" font-family="JetBrains Mono,monospace" font-weight="700">Dense</text>
+        <rect x="460" y="66" width="66" height="20" rx="5" fill="#1e2a4a"/><text x="493" y="80" text-anchor="middle" fill="#fff" font-size="9.5" font-family="JetBrains Mono,monospace" font-weight="700">Dense</text>
+        <rect x="172" y="42" width="66" height="20" rx="5" class="sv-sm"/><text x="205" y="56" text-anchor="middle" fill="#fff" font-size="9.5" font-family="JetBrains Mono,monospace" font-weight="700">softmax</text>
+        <rect x="268" y="42" width="66" height="20" rx="5" class="sv-sm"/><text x="301" y="56" text-anchor="middle" fill="#fff" font-size="9.5" font-family="JetBrains Mono,monospace" font-weight="700">softmax</text>
+        <rect x="364" y="42" width="66" height="20" rx="5" class="sv-sm"/><text x="397" y="56" text-anchor="middle" fill="#fff" font-size="9.5" font-family="JetBrains Mono,monospace" font-weight="700">softmax</text>
+        <rect x="460" y="42" width="66" height="20" rx="5" class="sv-sm"/><text x="493" y="56" text-anchor="middle" fill="#fff" font-size="9.5" font-family="JetBrains Mono,monospace" font-weight="700">softmax</text>
+        <line x1="205" y1="128" x2="205" y2="90" class="sv-arrow"/><line x1="301" y1="128" x2="301" y2="90" class="sv-arrow"/><line x1="397" y1="128" x2="397" y2="90" class="sv-arrow"/><line x1="493" y1="128" x2="493" y2="90" class="sv-arrow"/>
+      </g>
+      <g class="sv-word" font-size="12" fill="#15803d">
+        <text x="205" y="24" text-anchor="middle">je</text><text x="301" y="24" text-anchor="middle">suis</text>
+        <text x="397" y="24" text-anchor="middle">étudiant</text><text x="493" y="24" text-anchor="middle">&lt;eos&gt;</text>
+      </g>
+      <line x1="205" y1="38" x2="205" y2="32" class="sv-line"/><line x1="301" y1="38" x2="301" y2="32" class="sv-line"/><line x1="397" y1="38" x2="397" y2="32" class="sv-line"/><line x1="493" y1="38" x2="493" y2="32" class="sv-line"/>
+      <g class="sv-word" font-size="12">
+        <text x="205" y="232" text-anchor="middle">&lt;sos&gt;</text><text x="301" y="232" text-anchor="middle">je</text>
+        <text x="397" y="232" text-anchor="middle">suis</text><text x="493" y="232" text-anchor="middle">étudiant</text>
+      </g>
+      <line x1="205" y1="216" x2="205" y2="178" class="sv-arrow"/><line x1="301" y1="216" x2="301" y2="178" class="sv-arrow"/><line x1="397" y1="216" x2="397" y2="178" class="sv-arrow"/><line x1="493" y1="216" x2="493" y2="178" class="sv-arrow"/>
+    </svg>
+    <div class="cap"><b>그림 5.</b> 디코더 각 시점의 출력 벡터는 Dense 층과 softmax 함수를 거쳐 단어별 확률이 된다.</div>
+  </div>
+
+  <p>
+    디코더의 각 시점 RNN 셀에서 출력 벡터가 나오면, 해당 벡터는 소프트맥스 함수를 통해
+    <strong>출력 시퀀스의 각 단어별 확률값</strong>을 반환하고, 디코더는 이 확률로부터 출력 단어를 결정한다.
+    Dense 층은 은닉 상태 차원을 단어 집합 크기로 바꿔 주는 역할을 하며,
+    softmax는 그 값을 합이 1인 확률 분포로 만든다.
+  </p>
+</section>
+
+<!-- ══════════════ 1.9 ══════════════ -->
+<section id="s1-9">
+  <h2><span class="idx">1.9</span>다양한 변형들 — 컨텍스트 벡터를 쓰는 세 가지 방법</h2>
+  <p>
+    지금까지 본 것은 가장 기본적인 seq2seq다. 사실 seq2seq는 어떻게 구현하느냐에 따라 충분히 더 복잡해질 수 있고,
+    그 변형의 축은 <strong>컨텍스트 벡터를 어떻게 활용하느냐</strong>다.
+  </p>
+  <ol class="steps">
+    <li><strong>초기 은닉 상태로만 사용</strong> — 지금까지 배운 방식. 컨텍스트 벡터를 디코더의 첫 은닉 상태로만 쓴다.</li>
+    <li><strong>매 시점의 입력으로 사용</strong> — 거기서 더 나아가, 디코더가 단어를 예측하는 <strong>매 시점마다</strong> 컨텍스트 벡터를 하나의 입력으로 함께 넣어 줄 수도 있다.</li>
+    <li><strong>어텐션 메커니즘</strong> — 거기서 한 발 더 나아가면, 지금 알고 있는 컨텍스트 벡터보다 <strong>더욱 문맥을 반영할 수 있는 컨텍스트 벡터</strong>를 <em>매 시점마다 새로 계산</em>해서 입력으로 사용할 수 있다.</li>
+  </ol>
+  <p>세 번째 방법이 바로 Part 2에서 다룰 <span class="pt">어텐션 메커니즘</span>이다.</p>
+</section>
+
+<!-- ══════════════ 2.1 ══════════════ -->
+<section id="s2-1">
+  <h2><span class="idx">2.1</span>seq2seq의 두 가지 한계</h2>
+  <p>
+    앞서 배운 seq2seq 모델은 인코더에서 입력 시퀀스를 컨텍스트 벡터라는
+    <strong>하나의 고정된 크기의 벡터 표현</strong>으로 압축하고,
+    디코더는 이 컨텍스트 벡터를 통해서 출력 시퀀스를 만들어냈다.
+    하지만 이러한 RNN 기반 seq2seq 모델에는 크게 두 가지 문제가 있다.
+  </p>
+
+  <div class="sum-grid">
+    <div class="sum-card" style="border-left:4px solid var(--flame)">
+      <span class="n">PROBLEM 01</span>
+      <h5>정보 손실 — 고정 크기 병목</h5>
+      <p>하나의 고정된 크기의 벡터에 <b>모든 정보를 압축</b>하려고 하니까 정보 손실이 발생한다.
+      문장이 길어질수록 벡터에 욱여넣어야 할 정보가 늘어나지만, 벡터의 크기는 그대로다.</p>
+    </div>
+    <div class="sum-card" style="border-left:4px solid var(--flame)">
+      <span class="n">PROBLEM 02</span>
+      <h5>기울기 소실 (Vanishing Gradient)</h5>
+      <p>RNN의 고질적인 문제인 기울기 소실이 존재한다. 시퀀스가 길어질수록
+      먼 과거 시점의 정보가 역전파 과정에서 희미해져 학습이 어려워진다.</p>
+    </div>
+  </div>
+
+  <div class="fig">
+    <svg viewBox="0 0 700 150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="정보 병목">
+      <g class="sv-word" font-size="11.5">
+        <text x="30" y="52">The</text><text x="66" y="52">committee,</text><text x="150" y="52">which</text>
+        <text x="196" y="52">had</text><text x="230" y="52">been</text><text x="272" y="52">deliberating</text>
+        <text x="30" y="76">for</text><text x="58" y="76">several</text><text x="115" y="76">weeks,</text>
+        <text x="170" y="76">finally</text><text x="216" y="76">reached</text><text x="282" y="76">a</text>
+        <text x="30" y="100">unanimous</text><text x="118" y="100">decision</text><text x="185" y="100">…</text>
+      </g>
+      <rect x="20" y="30" width="336" height="86" rx="12" fill="none" stroke="#f2790f" stroke-width="1.5" stroke-dasharray="5 4"/>
+      <text x="24" y="22" class="sv-lbl" fill="#c05605">긴 입력 문장 (많은 정보)</text>
+      <path d="M 366 73 L 434 73" class="sv-arrow-b"/>
+      <text x="400" y="63" text-anchor="middle" class="sv-lbl" font-size="10.5">압축</text>
+      <rect x="444" y="45" width="46" height="56" rx="8" class="sv-ctx"/>
+      <g fill="#fff" font-family="JetBrains Mono,monospace" font-size="8">
+        <text x="467" y="62" text-anchor="middle">0.15</text><text x="467" y="74" text-anchor="middle">0.21</text>
+        <text x="467" y="86" text-anchor="middle">-0.1</text><text x="467" y="97" text-anchor="middle">0.91</text>
+      </g>
+      <text x="467" y="122" text-anchor="middle" class="sv-lbl" font-size="10.5">고정 크기 벡터</text>
+      <path d="M 500 73 L 560 73" class="sv-arrow-b"/>
+      <text x="620" y="70" text-anchor="middle" class="sv-lblb" fill="#b91c1c" font-size="12.5">정보 손실 발생</text>
+      <text x="620" y="88" text-anchor="middle" class="sv-lbl" font-size="10.5">번역 품질 저하</text>
+    </svg>
+    <div class="cap"><b>그림 6.</b> 문장이 아무리 길어도 고정 크기 벡터 하나로 압축해야 하는 병목 구조.</div>
+  </div>
+
+  <p>
+    결국 이 두 문제는 기계 번역 분야에서 <strong>입력 문장이 길면 번역 품질이 떨어지는 현상</strong>으로 나타났다.
+    입력 시퀀스가 길어지면 출력 시퀀스의 정확도가 떨어지는 것을 <strong>보정</strong>해 주기 위해 등장한 기법이 바로
+    <span class="pt">어텐션(Attention)</span>이다.
+  </p>
+</section>
+
+<!-- ══════════════ 2.2 ══════════════ -->
+<section id="s2-2">
+  <h2><span class="idx">2.2</span>어텐션의 아이디어</h2>
+  <p>
+    어텐션의 기본 아이디어는, 디코더에서 출력 단어를 예측하는 <strong>매 시점(time step)마다</strong>,
+    인코더에서의 <strong>전체 입력 문장을 다시 한 번 참고</strong>한다는 점이다.
+  </p>
+  <p>
+    단, 전체 입력 문장을 전부 다 <strong>동일한 비율</strong>로 참고하는 것이 아니다.
+    해당 시점에서 예측해야 할 단어와 <strong>연관이 있는 입력 단어 부분을 좀 더 집중(attention)</strong>해서 본다.
+    예컨대 <code>étudiant</code>를 예측하는 순간이라면, 입력 문장에서 <code>student</code>에 해당하는 부분을
+    가장 강하게 참고하는 식이다.
+  </p>
+  <div class="callout">
+    <span class="ct">한 문장 요약</span>
+    기존 seq2seq: "요약본(컨텍스트 벡터) 하나만 보고 문장 전체를 번역해라." →
+    어텐션: "<strong>매 단어를 번역할 때마다 원문 전체를 다시 펼쳐 보되, 지금 필요한 부분에 집중해라.</strong>"
+  </div>
+</section>
+
+<!-- ══════════════ 2.3 ══════════════ -->
+<section id="s2-3">
+  <h2><span class="idx">2.3</span>어텐션 함수 — Q, K, V</h2>
+
+  <h3>Key-Value 자료형에서 출발하기</h3>
+  <p>
+    어텐션 메커니즘을 설명하기 전에, 컴퓨터공학의 많은 분야에서 사용되는
+    <strong>Key-Value로 구성되는 자료형</strong>을 잠깐 짚고 간다.
+    파이썬에도 Key-Value로 구성되는 자료형인 <strong>딕셔너리(Dict)</strong>가 있다.
+    딕셔너리는 키(Key)와 값(Value)의 쌍으로 구성되며, <strong>키를 통해서 맵핑된 값을 찾아낼 수 있다</strong>는 특징을 갖는다.
+  </p>
+
+<pre><code class="language-python"># 파이썬의 딕셔너리 자료형을 선언
+# 키(Key) : 값(value)의 형식으로 키와 값의 쌍(Pair)을 선언한다.
+dict = {"2017" : "Transformer", "2018" : "BERT"}
+
+print(dict["2017"])  # 2017이라는 키에 해당되는 값을 출력
+print(dict["2018"])  # 2018이라는 키에 해당되는 값을 출력</code></pre>
+  <div class="out">Transformer
+BERT</div>
+
+  <p>
+    위 자료형에서 <code>"2017"</code>은 키에 해당되며, <code>"Transformer"</code>는 2017이라는 키와 맵핑되는 값에 해당된다.
+    마찬가지로 <code>"2018"</code>은 키, <code>"BERT"</code>는 그 키와 맵핑되는 값이다.
+    딕셔너리 조회는 <strong>키가 정확히 일치하는 하나의 값</strong>만 돌려준다.
+    어텐션은 이 조회를 <strong>부드럽게(soft)</strong> 만든 것이라고 볼 수 있다 —
+    "정확히 일치하는 키 하나"가 아니라, <strong>모든 키와의 유사도</strong>를 재서 값들을 <strong>섞어서</strong> 돌려준다.
+  </p>
+
+  <h3>어텐션 함수의 정의</h3>
+  <div class="eq">$$\text{Attention}(Q,\; K,\; V) = \text{Attention Value}$$</div>
+  <p>
+    어텐션 함수는 주어진 <strong>'쿼리(Query)'</strong>에 대해서 모든 <strong>'키(Key)'와의 유사도</strong>를 각각 구한다.
+    그리고 구해낸 이 유사도를 키와 맵핑되어 있는 각각의 <strong>'값(Value)'에 반영</strong>해 준다.
+    그리고 유사도가 반영된 '값(Value)'을 <strong>모두 더해서 리턴</strong>한다.
+    이 리턴값을 <span class="pt">어텐션 값(Attention Value)</span>이라고 한다.
+  </p>
+
+  <div class="fig">
+    <svg viewBox="0 0 700 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="어텐션 함수 개념도">
+      <rect x="150" y="18" width="330" height="196" rx="12" fill="none" stroke="#9aa1b2" stroke-width="1.4" stroke-dasharray="6 4"/>
+      <text x="315" y="228" text-anchor="middle" class="sv-lblb">Source</text>
+      <g>
+        <rect x="176" y="36" width="76" height="34" rx="7" fill="#1d4ed8"/><text x="214" y="57" text-anchor="middle" fill="#fff" font-size="11" font-weight="700" font-family="Pretendard Variable,sans-serif">Key1</text>
+        <rect x="276" y="36" width="76" height="34" rx="7" fill="#1d4ed8"/><text x="314" y="57" text-anchor="middle" fill="#fff" font-size="11" font-weight="700" font-family="Pretendard Variable,sans-serif">Key2</text>
+        <rect x="376" y="36" width="76" height="34" rx="7" fill="#1d4ed8"/><text x="414" y="57" text-anchor="middle" fill="#fff" font-size="11" font-weight="700" font-family="Pretendard Variable,sans-serif">Key3</text>
+      </g>
+      <g>
+        <rect x="176" y="140" width="76" height="52" rx="7" fill="#65a30d"/><text x="214" y="170" text-anchor="middle" fill="#fff" font-size="11" font-weight="700" font-family="Pretendard Variable,sans-serif">Value1</text>
+        <rect x="276" y="140" width="76" height="52" rx="7" fill="#65a30d"/><text x="314" y="170" text-anchor="middle" fill="#fff" font-size="11" font-weight="700" font-family="Pretendard Variable,sans-serif">Value2</text>
+        <rect x="376" y="140" width="76" height="52" rx="7" fill="#65a30d"/><text x="414" y="170" text-anchor="middle" fill="#fff" font-size="11" font-weight="700" font-family="Pretendard Variable,sans-serif">Value3</text>
+      </g>
+      <line x1="214" y1="74" x2="214" y2="136" class="sv-arrow"/>
+      <line x1="314" y1="74" x2="314" y2="136" class="sv-arrow"/>
+      <line x1="414" y1="74" x2="414" y2="136" class="sv-arrow"/>
+      <rect x="18" y="86" width="92" height="40" rx="8" class="sv-enc" fill="#ee7b30"/>
+      <text x="64" y="111" text-anchor="middle" fill="#fff" font-size="12.5" font-weight="800" font-family="Pretendard Variable,sans-serif">Query</text>
+      <line x1="110" y1="106" x2="500" y2="106" stroke="#9aa1b2" stroke-width="1.6"/>
+      <line x1="500" y1="106" x2="540" y2="106" class="sv-arrow-b"/>
+      <rect x="544" y="82" width="120" height="48" rx="8" fill="#1e2a4a"/>
+      <text x="604" y="102" text-anchor="middle" fill="#fff" font-size="11.5" font-weight="800" font-family="Pretendard Variable,sans-serif">Attention</text>
+      <text x="604" y="118" text-anchor="middle" fill="#9db1dd" font-size="11.5" font-weight="800" font-family="Pretendard Variable,sans-serif">Value</text>
+    </svg>
+    <div class="cap"><b>그림 7.</b> 쿼리는 모든 키와의 유사도를 구하고, 유사도가 반영된 값들의 합이 어텐션 값이 된다.</div>
+  </div>
+
+  <h3>seq2seq + 어텐션에서의 Q, K, V</h3>
+  <p>지금부터 배우게 되는 seq2seq + 어텐션 모델에서 Q, K, V에 해당되는 것은 각각 다음과 같다.</p>
+  <table class="tbl">
+    <thead><tr><th style="width:70px">기호</th><th style="width:120px">이름</th><th>seq2seq + 어텐션에서의 정체</th></tr></thead>
+    <tbody>
+      <tr><td class="mono"><b>Q</b></td><td>Query</td><td><strong>$t$ 시점의 디코더 셀에서의 은닉 상태</strong> — "지금 무엇을 찾고 있는가"</td></tr>
+      <tr><td class="mono"><b>K</b></td><td>Keys</td><td><strong>모든 시점의 인코더 셀의 은닉 상태들</strong> — "유사도를 잴 대상"</td></tr>
+      <tr><td class="mono"><b>V</b></td><td>Values</td><td><strong>모든 시점의 인코더 셀의 은닉 상태들</strong> — "실제로 가져올 정보"</td></tr>
+    </tbody>
+  </table>
+  <div class="callout note">
+    <span class="ct">K와 V가 같다?</span>
+    seq2seq + 어텐션에서는 Keys와 Values가 <strong>동일하게 인코더의 은닉 상태들</strong>이다.
+    유사도를 재는 대상과 가져올 정보가 같은 벡터인 셈이다. 나중에 배울 트랜스포머에서는
+    같은 입력에서 서로 다른 가중치 행렬을 곱해 Q, K, V를 <strong>따로</strong> 만들어 낸다는 점에서 구분된다.
+  </div>
+</section>
+
+<!-- ══════════════ 2.4 ══════════════ -->
+<section id="s2-4">
+  <h2><span class="idx">2.4</span>닷-프로덕트 어텐션(Dot-Product Attention) 6단계</h2>
+  <p>
+    어텐션은 다양한 종류가 있는데, 그중에서도 가장 수식적으로 이해하기 쉬운
+    <strong>닷-프로덕트 어텐션(Dot-Product Attention)</strong>을 통해 어텐션을 이해해 본다.
+    seq2seq에서 사용되는 어텐션 중 닷-프로덕트 어텐션과 다른 어텐션의 차이는 주로
+    <strong>중간 수식(어텐션 스코어 함수)의 차이</strong>일 뿐, 메커니즘 자체는 거의 유사하다.
+  </p>
+  <p>
+    상황 설정: 디코더의 첫 번째·두 번째 LSTM 셀은 이미 어텐션 메커니즘을 통해 <code>je</code>와 <code>suis</code>를 예측했고,
+    이제 <strong>세 번째 셀에서 <code>étudiant</code>를 예측</strong>하려는 시점이다.
+    이 셀은 출력 단어를 예측하기 위해 <strong>인코더의 모든 입력 단어들의 정보를 다시 한 번 참고</strong>하고자 한다.
+  </p>
+  <p>기호 정리부터 한다. 인코더의 시점을 각각 $1, 2, \dots, N$이라 할 때,</p>
+  <ul class="plain">
+    <li>인코더의 은닉 상태(hidden state): $h_1, h_2, \dots, h_N$</li>
+    <li>디코더의 현재 시점 $t$에서의 은닉 상태: $s_t$</li>
+    <li>여기서는 인코더의 은닉 상태와 디코더의 은닉 상태의 <strong>차원이 같다고 가정</strong>한다 (예: 둘 다 4차원).</li>
+  </ul>
+  <p>
+    이전 챕터에서 배웠듯 시점 $t$에서 디코더 셀은 두 개의 입력 —
+    <strong>이전 시점 $t{-}1$의 은닉 상태</strong>와 <strong>이전 시점의 출력 단어</strong> — 을 필요로 한다.
+    그런데 어텐션 메커니즘에서는 여기에 <strong>또 다른 값</strong> 하나가 추가된다. 바로
+    <span class="pt">어텐션 값(Attention Value)</span>이며, $t$번째 단어를 예측하기 위한 어텐션 값을 $a_t$라고 정의한다.
+    지금부터 배우는 모든 과정은 <strong>$a_t$를 구하기 위한 여정</strong>이다.
+  </p>
+
+  <h3>Step 1 — 어텐션 스코어(Attention Score)를 구한다</h3>
+  <p>
+    <strong>어텐션 스코어</strong>란 현재 디코더의 시점 $t$에서 단어를 예측하기 위해, 인코더의 모든 은닉 상태 각각이
+    디코더의 현 시점 은닉 상태 $s_t$와 <strong>얼마나 유사한지</strong>를 판단하는 스코어값이다.
+  </p>
+  <p>
+    닷-프로덕트 어텐션에서는 이 스코어 값을 구하기 위해 $s_t$를 <strong>전치(transpose)</strong>하고
+    각 은닉 상태와 <strong>내적(dot product)</strong>을 수행한다. 즉, 모든 어텐션 스코어 값은 <strong>스칼라</strong>다.
+  </p>
+
+  <div class="fig">
+    <svg viewBox="0 0 700 150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="내적 계산">
+      <text x="255" y="34" text-anchor="middle" font-size="14" font-style="italic" font-family="JetBrains Mono,monospace" fill="#15803d">s&#7511;&#7488;</text>
+      <g stroke="#86b6a4" stroke-width="1.4" fill="#eaf6f0">
+        <rect x="160" y="46" width="46" height="30"/><rect x="206" y="46" width="46" height="30"/>
+        <rect x="252" y="46" width="46" height="30"/><rect x="298" y="46" width="46" height="30"/>
+      </g>
+      <text x="375" y="68" text-anchor="middle" font-size="20" fill="#525b70">×</text>
+      <text x="446" y="26" text-anchor="middle" font-size="14" font-style="italic" font-family="JetBrains Mono,monospace" fill="#c05605">h&#7522;</text>
+      <g stroke="#f2b06e" stroke-width="1.4" fill="#fdf1e3">
+        <rect x="423" y="34" width="46" height="24"/><rect x="423" y="58" width="46" height="24"/>
+        <rect x="423" y="82" width="46" height="24"/><rect x="423" y="106" width="46" height="24"/>
+      </g>
+      <text x="520" y="68" text-anchor="middle" font-size="18" fill="#525b70">=</text>
+      <rect x="556" y="48" width="52" height="34" rx="6" fill="#fdece7" stroke="#ee4c2c" stroke-width="1.5"/>
+      <text x="582" y="70" text-anchor="middle" font-size="12" font-weight="700" font-family="JetBrains Mono,monospace" fill="#c73a1e">scalar</text>
+      <text x="582" y="102" text-anchor="middle" class="sv-lbl" font-size="11">어텐션 스코어</text>
+    </svg>
+    <div class="cap"><b>그림 8.</b> (1×4 행벡터) × (4×1 열벡터) = 스칼라. 전치한 $s_t$와 $h_i$의 내적이 곧 스코어다.</div>
+  </div>
+
+  <p>어텐션 스코어 함수를 정의하면 다음과 같다.</p>
+  <div class="eq">$$score(s_t,\ h_i) = s_t^{T} h_i$$</div>
+  <p>
+    $s_t$와 인코더의 <strong>모든 은닉 상태</strong>의 어텐션 스코어를 모은 값을 $e^t$라고 정의한다.
+    $e^t$의 수식은 다음과 같다.
+  </p>
+  <div class="eq">$$e^{t} = [\,s_t^{T}h_1,\ \dots,\ s_t^{T}h_N\,]$$</div>
+
+  <h3>Step 2 — 소프트맥스로 어텐션 분포(Attention Distribution)를 구한다</h3>
+  <p>
+    $e^t$에 <strong>소프트맥스 함수</strong>를 적용하여, 모든 값을 합하면 1이 되는 확률 분포를 얻는다.
+    이를 <span class="pt">어텐션 분포(Attention Distribution)</span>라고 하며,
+    분포를 이루는 각각의 값을 <span class="pt">어텐션 가중치(Attention Weight)</span>라고 한다.
+  </p>
+  <div class="eq">$$\alpha^{t} = softmax(e^{t})$$</div>
+  <p>
+    예를 들어 소프트맥스를 적용해 얻은 I, am, a, student의 어텐션 가중치가 각각
+    <strong>0.1, 0.4, 0.1, 0.4</strong>라고 하면 이들의 합은 1이다.
+    교재의 그림에서 소프트맥스 위에 그려진 빨간 직사각형들의 크기가 바로 이 가중치의 크기다 —
+    <strong>어텐션 가중치가 클수록 직사각형이 크고, 예측에 도움이 되는 정도가 크다</strong>는 뜻이다.
+    각 입력 단어가 디코더의 예측에 도움이 되는 정도가 수치화되면, 이를 하나의 정보로 담아 디코더로 전송한다(교재 그림의 초록 삼각형).
+    결과적으로 디코더는 출력 단어를 더 정확하게 예측할 확률이 높아진다.
+  </p>
+
+  <h3>Step 3 — 가중합으로 어텐션 값(Attention Value)을 구한다</h3>
+  <p>
+    이제 지금까지 준비해 온 정보들을 하나로 합치는 단계다. 어텐션의 최종 결과값을 얻기 위해
+    <strong>각 인코더의 은닉 상태와 어텐션 가중치를 곱하고, 최종적으로 모두 더한다</strong>.
+    요약하면 <span class="pt">가중합(Weighted Sum)</span>이다.
+  </p>
+  <div class="eq">$$a_t = \sum_{i=1}^{N} \alpha_i^{t}\, h_i$$</div>
+  <div class="callout">
+    <span class="ct">또 하나의 "컨텍스트 벡터"</span>
+    이 어텐션 값 $a_t$는 인코더의 문맥을 포함하고 있다고 하여 <strong>컨텍스트 벡터(context vector)</strong>라고도 불린다.
+    Part 1의 가장 기본적인 seq2seq에서 <strong>인코더의 마지막 은닉 상태</strong>를 컨텍스트 벡터라고 부른 것과 대조된다 —
+    그쪽은 문장 전체에 대해 <strong>단 하나</strong>, 이쪽은 디코더의 <strong>매 시점마다 새로</strong> 계산되는 맞춤형 문맥이다.
+  </div>
+
+  <h3>Step 4 — 어텐션 값과 디코더의 $t$ 시점 은닉 상태를 연결한다 (Concatenate)</h3>
+  <p>
+    어텐션 값 $a_t$가 구해지면, 어텐션 메커니즘은 $a_t$를 $s_t$와 <strong>결합(concatenate)</strong>하여
+    하나의 벡터로 만든다. 이를 $v_t$라고 정의한다.
+    그리고 이 $v_t$를 $\hat{y}$ 예측 연산의 입력으로 사용함으로써, 인코더로부터 얻은 정보를 활용하여
+    $\hat{y}$를 좀 더 잘 예측할 수 있게 된다. <strong>이것이 어텐션 메커니즘의 핵심이다.</strong>
+  </p>
+
+  <div class="fig">
+    <svg viewBox="0 0 700 170" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="concatenate">
+      <text x="180" y="24" text-anchor="middle" font-size="13" font-family="JetBrains Mono,monospace" fill="#1e3a8a" font-style="italic">a&#8348;</text>
+      <g stroke="#7c9bd8" stroke-width="1.3" fill="#e8effc">
+        <rect x="158" y="34" width="44" height="22"/><rect x="158" y="56" width="44" height="22"/>
+        <rect x="158" y="78" width="44" height="22"/><rect x="158" y="100" width="44" height="22"/>
+      </g>
+      <text x="242" y="82" text-anchor="middle" font-size="17" fill="#525b70">+</text>
+      <text x="305" y="24" text-anchor="middle" font-size="13" font-family="JetBrains Mono,monospace" fill="#15803d" font-style="italic">s&#8348;</text>
+      <g stroke="#86b6a4" stroke-width="1.3" fill="#eaf6f0">
+        <rect x="283" y="34" width="44" height="22"/><rect x="283" y="56" width="44" height="22"/>
+        <rect x="283" y="78" width="44" height="22"/><rect x="283" y="100" width="44" height="22"/>
+      </g>
+      <path d="M 350 78 L 420 78" class="sv-arrow-b"/>
+      <text x="385" y="66" text-anchor="middle" class="sv-lbl" font-size="10.5" fill="#15803d">concatenate</text>
+      <text x="472" y="18" text-anchor="middle" font-size="13" font-family="JetBrains Mono,monospace" fill="#0f766e" font-style="italic">v&#8348; = [a&#8348; ; s&#8348;]</text>
+      <g stroke="#7c9bd8" stroke-width="1.3" fill="#e8effc">
+        <rect x="450" y="28" width="44" height="16"/><rect x="450" y="44" width="44" height="16"/>
+        <rect x="450" y="60" width="44" height="16"/><rect x="450" y="76" width="44" height="16"/>
+      </g>
+      <g stroke="#86b6a4" stroke-width="1.3" fill="#eaf6f0">
+        <rect x="450" y="92" width="44" height="16"/><rect x="450" y="108" width="44" height="16"/>
+        <rect x="450" y="124" width="44" height="16"/><rect x="450" y="140" width="44" height="16"/>
+      </g>
+      <text x="560" y="80" class="sv-lbl" font-size="11.5">4차원 + 4차원</text>
+      <text x="560" y="98" class="sv-lbl" font-size="11.5">= 8차원 벡터</text>
+    </svg>
+    <div class="cap"><b>그림 9.</b> 어텐션 값 $a_t$(위)와 디코더 은닉 상태 $s_t$(아래)를 이어 붙여 $v_t$를 만든다.</div>
+  </div>
+
+  <h3>Step 5 — 출력층 연산의 입력이 되는 $\tilde{s}_t$를 계산한다</h3>
+  <p>
+    논문에서는 $v_t$를 바로 출력층으로 보내기 전에 <strong>신경망 연산을 한 번 더 추가</strong>했다.
+    가중치 행렬과 곱한 후 <strong>하이퍼볼릭탄젠트 함수</strong>를 지나도록 하여,
+    출력층 연산을 위한 새로운 벡터 $\tilde{s}_t$를 얻는다.
+  </p>
+  <div class="eq">$$\tilde{s}_t = \tanh(\mathbf{W_c}[a_t\,;\,s_t] + b_c)$$</div>
+  <p>
+    여기서 $\mathbf{W_c}$는 학습 가능한 가중치 행렬, $b_c$는 편향이다.
+    어텐션 메커니즘을 사용하지 않는 seq2seq에서는 출력층의 입력이 $t$ 시점의 은닉 상태 $s_t$였던 반면,
+    <strong>어텐션 메커니즘에서는 출력층의 입력이 $\tilde{s}_t$가 되는 셈</strong>이다.
+  </p>
+
+  <h3>Step 6 — $\tilde{s}_t$를 출력층의 입력으로 사용한다</h3>
+  <p>$\tilde{s}_t$를 출력층의 입력으로 사용하여 예측 벡터를 얻는다.</p>
+  <div class="eq">$$\hat{y}_t = \text{Softmax}(\mathbf{W_y}\,\tilde{s}_t + b_y)$$</div>
+
+  <div class="fig">
+    <svg viewBox="0 0 700 128" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="어텐션 파이프라인 요약">
+      <g font-family="Pretendard Variable,sans-serif" font-size="11" font-weight="700">
+        <rect x="10"  y="40" width="92" height="46" rx="9" fill="#fdf1e3" stroke="#f2790f" stroke-width="1.4"/>
+        <text x="56" y="59" text-anchor="middle" fill="#c05605">① 스코어</text>
+        <text x="56" y="75" text-anchor="middle" fill="#c05605" font-family="JetBrains Mono,monospace" font-size="9.5">s&#7511;&#7488;h&#7522;</text>
+        <rect x="126" y="40" width="92" height="46" rx="9" fill="#fdecec" stroke="#e5372f" stroke-width="1.4"/>
+        <text x="172" y="59" text-anchor="middle" fill="#b91c1c">② softmax</text>
+        <text x="172" y="75" text-anchor="middle" fill="#b91c1c" font-family="JetBrains Mono,monospace" font-size="9.5">&#945;&#7511;</text>
+        <rect x="242" y="40" width="92" height="46" rx="9" fill="#e8effc" stroke="#2563eb" stroke-width="1.4"/>
+        <text x="288" y="59" text-anchor="middle" fill="#1d4ed8">③ 가중합</text>
+        <text x="288" y="75" text-anchor="middle" fill="#1d4ed8" font-family="JetBrains Mono,monospace" font-size="9.5">a&#8348;=&#931;&#945;&#7522;h&#7522;</text>
+        <rect x="358" y="40" width="92" height="46" rx="9" fill="#eaf6f0" stroke="#16a34a" stroke-width="1.4"/>
+        <text x="404" y="59" text-anchor="middle" fill="#15803d">④ concat</text>
+        <text x="404" y="75" text-anchor="middle" fill="#15803d" font-family="JetBrains Mono,monospace" font-size="9.5">[a&#8348;;s&#8348;]</text>
+        <rect x="474" y="40" width="92" height="46" rx="9" fill="#e6f8fb" stroke="#0ea5b7" stroke-width="1.4"/>
+        <text x="520" y="59" text-anchor="middle" fill="#0e7490">⑤ tanh</text>
+        <text x="520" y="75" text-anchor="middle" fill="#0e7490" font-family="JetBrains Mono,monospace" font-size="9.5">s&#771;&#8348;</text>
+        <rect x="590" y="40" width="100" height="46" rx="9" fill="#1e2a4a"/>
+        <text x="640" y="59" text-anchor="middle" fill="#fff">⑥ 출력층</text>
+        <text x="640" y="75" text-anchor="middle" fill="#9db1dd" font-family="JetBrains Mono,monospace" font-size="9.5">&#375;&#8348;</text>
+      </g>
+      <line x1="102" y1="63" x2="123" y2="63" class="sv-arrow-b"/>
+      <line x1="218" y1="63" x2="239" y2="63" class="sv-arrow-b"/>
+      <line x1="334" y1="63" x2="355" y2="63" class="sv-arrow-b"/>
+      <line x1="450" y1="63" x2="471" y2="63" class="sv-arrow-b"/>
+      <line x1="566" y1="63" x2="587" y2="63" class="sv-arrow-b"/>
+    </svg>
+    <div class="cap"><b>그림 10.</b> 닷-프로덕트 어텐션 전체 파이프라인 한눈에 보기.</div>
+  </div>
+</section>
+
+<!-- ══════════════ 2.5 ══════════════ -->
+<section id="s2-5">
+  <h2><span class="idx">2.5</span>어텐션 플레이그라운드 — 직접 계산해 보기</h2>
+  <p>
+    수식만 보면 감이 잘 안 온다. 아래 위젯에서 인코더의 은닉 상태 4개($h_1 \sim h_4$, 각각 I·am·a·student에 대응)는
+    고정해 두고, <strong>디코더 은닉 상태 $s_t$(= Query)를 직접 조절</strong>하면
+    어텐션 스코어 → 소프트맥스 → 가중합의 전 과정이 실시간으로 다시 계산된다.
+    $s_t$가 어떤 $h_i$와 비슷한 방향을 가리킬수록 그 단어의 어텐션 가중치가 커지는 것을 확인해 보자.
+  </p>
+
+  <div class="widget" id="w3">
+    <div class="w-head"><span class="w-badge">INTERACTIVE</span><span class="w-title">닷-프로덕트 어텐션 계산기</span></div>
+    <p class="w-desc">
+      프리셋 버튼을 누르거나 슬라이더로 $s_t$의 4개 성분을 직접 바꿔 보자.
+      단어 위의 주황색 채움이 진할수록 어텐션 가중치가 크다.
+    </p>
+    <div class="ap-grid">
+      <!-- 좌측: 쿼리 조절 -->
+      <div class="ap-panel">
+        <h5>🎛 Query — 디코더 은닉 상태 s<sub>t</sub></h5>
+        <div class="ap-presets">
+          <button data-preset="je">je 예측 시점</button>
+          <button data-preset="suis">suis 예측 시점</button>
+          <button data-preset="etu" class="sel">étudiant 예측 시점</button>
+        </div>
+        <div class="ap-slider"><label>s[0]</label><input type="range" id="s0" min="-2" max="2" step="0.1" value="1.0"><output id="o0">1.0</output></div>
+        <div class="ap-slider"><label>s[1]</label><input type="range" id="s1" min="-2" max="2" step="0.1" value="-0.2"><output id="o1">-0.2</output></div>
+        <div class="ap-slider"><label>s[2]</label><input type="range" id="s2" min="-2" max="2" step="0.1" value="0.4"><output id="o2">0.4</output></div>
+        <div class="ap-slider"><label>s[3]</label><input type="range" id="s3" min="-2" max="2" step="0.1" value="1.9"><output id="o3">1.9</output></div>
+        <div style="margin-top:14px;font-size:11.5px;color:var(--ink-faint);line-height:1.7" class="mono">
+          h₁(I)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = [ 2.0, 0.5,-1.0, 0.3]<br>
+          h₂(am)&nbsp;&nbsp;&nbsp;&nbsp; = [ 0.4, 1.8, 0.2,-0.5]<br>
+          h₃(a)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = [-0.3, 0.2, 1.5, 0.1]<br>
+          h₄(student) = [ 1.2,-0.4, 0.6, 2.0]
+        </div>
+      </div>
+      <!-- 우측: 결과 -->
+      <div class="ap-panel">
+        <h5>📊 어텐션 계산 결과</h5>
+        <div class="ap-words">
+          <div class="ap-word" id="apw-0"><div class="fill"></div><div class="wtxt">I</div><div class="wsub">h₁</div></div>
+          <div class="ap-word" id="apw-1"><div class="fill"></div><div class="wtxt">am</div><div class="wsub">h₂</div></div>
+          <div class="ap-word" id="apw-2"><div class="fill"></div><div class="wtxt">a</div><div class="wsub">h₃</div></div>
+          <div class="ap-word" id="apw-3"><div class="fill"></div><div class="wtxt">student</div><div class="wsub">h₄</div></div>
+        </div>
+        <div class="ap-scores" id="ap-scores"></div>
+        <div class="ap-bars" id="ap-bars">
+          <div class="bar-row"><span class="bar-lab">α₁ (I)</span><div class="bar-track"><div class="bar-fill" id="bf-0"></div></div><span class="bar-val" id="bv-0"></span></div>
+          <div class="bar-row"><span class="bar-lab">α₂ (am)</span><div class="bar-track"><div class="bar-fill" id="bf-1"></div></div><span class="bar-val" id="bv-1"></span></div>
+          <div class="bar-row"><span class="bar-lab">α₃ (a)</span><div class="bar-track"><div class="bar-fill" id="bf-2"></div></div><span class="bar-val" id="bv-2"></span></div>
+          <div class="bar-row"><span class="bar-lab">α₄ (stu)</span><div class="bar-track"><div class="bar-fill" id="bf-3"></div></div><span class="bar-val" id="bv-3"></span></div>
+        </div>
+        <div class="ap-result" id="ap-result"></div>
+      </div>
+    </div>
+    <div class="w-status" id="w3-note" style="margin-top:16px">
+      💡 <b>관찰 포인트</b> — "étudiant 예측 시점" 프리셋에서는 <b>student(h₄)</b>의 가중치가 가장 크다.
+      s[0]을 키워 h₁과 비슷한 방향으로 만들면 <b>I</b>쪽으로 어텐션이 옮겨 가는 것을 볼 수 있다.
+      내적 = 방향·크기가 비슷할수록 큰 값 = 큰 유사도.
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ 2.6 ══════════════ -->
+<section id="s2-6">
+  <h2><span class="idx">2.6</span>다양한 종류의 어텐션</h2>
+  <p>
+    seq2seq + 어텐션 모델에 쓰일 수 있는 어텐션의 종류는 다양하지만,
+    닷-프로덕트 어텐션과 다른 어텐션들의 차이는 <strong>중간 수식의 차이</strong>라고 언급한 바 있다.
+    여기서 말하는 중간 수식이란 곧 <span class="pt">어텐션 스코어 함수</span>다.
+    위에서 배운 어텐션이 "닷-프로덕트" 어텐션인 이유는 어텐션 스코어를 구하는 방법이 <strong>내적</strong>이었기 때문이다.
+    현재 제시된 여러 종류의 어텐션 스코어 함수는 다음과 같다.
+    ($s_t$는 Query, $h_i$는 Keys, $W_a$·$W_b$는 학습 가능한 가중치 행렬)
+  </p>
+  <table class="tbl">
+    <thead><tr><th style="width:130px">이름</th><th>스코어 함수</th><th style="width:190px">비고</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>dot</strong></td>
+        <td>$score(s_t, h_i) = s_t^{T} h_i$</td>
+        <td>이번에 배운 방식. <strong>루옹(Luong) 어텐션</strong>이라고도 한다.</td>
+      </tr>
+      <tr>
+        <td><strong>scaled dot</strong></td>
+        <td>$score(s_t, h_i) = \dfrac{s_t^{T} h_i}{\sqrt{n}}$</td>
+        <td>내적을 차원 수의 제곱근으로 나눠 값의 폭주를 막는다. <strong>트랜스포머의 핵심 수식</strong>이 된다.</td>
+      </tr>
+      <tr>
+        <td><strong>general</strong></td>
+        <td>$score(s_t, h_i) = s_t^{T} W_a h_i$</td>
+        <td>내적 사이에 학습 가능한 행렬 $W_a$를 끼워 유연성을 높인다.</td>
+      </tr>
+      <tr>
+        <td><strong>concat</strong></td>
+        <td>$score(s_t, h_i) = W_a^{T}\tanh(W_b[s_t;h_i])$</td>
+        <td><strong>바다나우(Bahdanau) 어텐션</strong>이라고도 부른다. 다음 절(17-02)에서 자세히 다룬다.</td>
+      </tr>
+      <tr>
+        <td><strong>location-base</strong></td>
+        <td>$\alpha_t = softmax(W_a s_t)$</td>
+        <td>$\alpha_t$ 산출 시에 $s_t$만 사용하는 방법.</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="callout note">
+    <span class="ct">이름의 유래</span>
+    dot 스코어 함수는 제안한 사람의 이름을 따서 <strong>루옹(Luong) 어텐션</strong>,
+    concat 스코어 함수는 <strong>바다나우(Bahdanau) 어텐션</strong>이라고 부른다.
+    어떤 스코어 함수를 쓰든 "스코어 → softmax → 가중합 → 활용"이라는 큰 뼈대는 동일하다.
+  </div>
+</section>
+
+<!-- ══════════════ 2.7 ══════════════ -->
+<section id="s2-7">
+  <h2><span class="idx">2.7</span>정리 — 트랜스포머로 가는 길</h2>
+  <div class="sum-grid">
+    <div class="sum-card"><span class="n">SEQ2SEQ</span><h5>인코더 → 컨텍스트 벡터 → 디코더</h5>
+      <p>입력 문장을 하나의 고정 벡터(인코더 마지막 은닉 상태)로 압축하고, 디코더가 이를 초기 은닉 상태로 삼아 &lt;sos&gt;부터 &lt;eos&gt;까지 자기회귀로 단어를 생성한다.</p></div>
+    <div class="sum-card"><span class="n">TRAINING</span><h5>교사 강요 (Teacher Forcing)</h5>
+      <p>훈련 시 디코더 입력으로 예측값 대신 정답 시퀀스를 넣어 오차의 연쇄를 끊는다. 테스트 시에는 예측값을 다음 입력으로 쓰는 자기회귀 방식으로 동작한다.</p></div>
+    <div class="sum-card"><span class="n">PROBLEM</span><h5>고정 크기 병목 + 기울기 소실</h5>
+      <p>모든 정보를 벡터 하나에 압축하며 생기는 정보 손실과 RNN의 기울기 소실 때문에, 입력 문장이 길수록 번역 품질이 떨어진다.</p></div>
+    <div class="sum-card"><span class="n">ATTENTION</span><h5>매 시점, 전체 입력을 다시 본다</h5>
+      <p>디코더의 매 시점마다 Query($s_t$)와 인코더 은닉 상태들(K=V)의 유사도를 구해, 지금 필요한 단어에 집중한 맞춤형 컨텍스트 벡터 $a_t$를 만들어 예측에 활용한다.</p></div>
+  </div>
+  <p>
+    지금까지 seq2seq의 성능을 향상시켜 주기 위한 기법인 어텐션에 대해 알아봤다.
+    어텐션은 처음에는 <strong>RNN 기반 seq2seq의 성능을 보정하기 위한 목적</strong>으로 소개되었지만,
+    현재에 이르러서는 <strong>어텐션 스스로가 기존의 seq2seq를 대체하는 방법</strong>이 되어 가고 있다.
+    RNN을 완전히 걷어내고 어텐션만으로 인코더·디코더를 쌓은 구조 —
+    그것이 바로 다음 챕터에서 배울 <span class="pt">트랜스포머(Transformer)</span>다.
+  </p>
+  <div class="callout">
+    <span class="ct">다음 학습 예고</span>
+    17-02 바다나우 어텐션에서는 concat 스코어 함수를 쓰는 어텐션을,
+    그다음 트랜스포머 챕터에서는 scaled dot-product 어텐션과 셀프 어텐션(Q=K=V의 출처가 같은 어텐션)을 배운다.
+    이 가이드의 Q·K·V 개념과 6단계 파이프라인을 확실히 잡아 두면 트랜스포머는 "구조만 바뀐 같은 이야기"로 읽힌다.
+  </div>
+</section>
+
+<footer>
+  <span>딥 러닝 파이토치 교과서 16-01 · 17-01 보충 학습 가이드</span>
+  <span>LikeLion 26기 AI NLP · FUNDAMENTAL</span>
+</footer>
+
+</div><!-- /.wrap -->
+</main>
+
+<script>
+/* ═══════════ 초기화: KaTeX + highlight.js ═══════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  const tryRender = () => {
+    if (window.renderMathInElement) {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left:'$$', right:'$$', display:true},
+          {left:'$',  right:'$',  display:false}
+        ],
+        throwOnError:false
+      });
+    } else { setTimeout(tryRender, 120); }
+  };
+  tryRender();
+  const tryHl = () => {
+    if (window.hljs) { hljs.highlightAll(); } else { setTimeout(tryHl, 120); }
+  };
+  tryHl();
+});
+
+/* ═══════════ 진행 바 ═══════════ */
+const progress = document.getElementById('progress');
+window.addEventListener('scroll', () => {
+  const h = document.documentElement;
+  const pct = h.scrollTop / (h.scrollHeight - h.clientHeight) * 100;
+  progress.style.width = pct + '%';
+}, {passive:true});
+
+/* ═══════════ 사이드바: 모바일 토글 + 스크롤스파이 ═══════════ */
+const sidebar = document.getElementById('sidebar');
+const menuBtn = document.getElementById('menu-btn');
+const overlay = document.getElementById('overlay');
+menuBtn.addEventListener('click', () => { sidebar.classList.add('open'); overlay.classList.add('show'); });
+overlay.addEventListener('click', () => { sidebar.classList.remove('open'); overlay.classList.remove('show'); });
+sidebar.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+  sidebar.classList.remove('open'); overlay.classList.remove('show');
+}));
+
+const navLinks = [...sidebar.querySelectorAll('a')];
+const sections = navLinks.map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+const spy = new IntersectionObserver(entries => {
+  entries.forEach(en => {
+    if (en.isIntersecting) {
+      navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + en.target.id));
+    }
+  });
+}, {rootMargin:'-25% 0px -65% 0px'});
+sections.forEach(s => spy.observe(s));
+
+/* ═══════════ 위젯 1: 디코딩 시뮬레이터 ═══════════ */
+(() => {
+  const steps = [
+    {on:['w1-enc'],
+     msg:'<b>Step 0 · 인코딩</b> — 인코더가 I → am → a → student를 순차적으로 읽으며 은닉 상태를 갱신한다. 각 단어는 임베딩 벡터로 변환되어 LSTM 셀에 입력된다.'},
+    {on:['w1-enc','w1-ctx'],
+     msg:'<b>Step 1 · 컨텍스트 벡터 생성</b> — 인코더 마지막 시점의 은닉 상태가 컨텍스트 벡터가 되어 디코더로 전송되고, 디코더의 첫 번째 은닉 상태로 사용된다.'},
+    {on:['w1-enc','w1-ctx','w1-d1'],
+     msg:'<b>Step 2 · t=1</b> — 디코더가 컨텍스트 벡터와 &lt;sos&gt;를 입력받아 첫 단어 <b>je</b>를 예측한다.'},
+    {on:['w1-enc','w1-ctx','w1-d1','w1-f1','w1-d2'],
+     msg:'<b>Step 3 · t=2</b> — 방금 예측한 <b>je</b>가 다음 시점의 입력이 된다(주황 점선). 디코더는 <b>suis</b>를 예측한다. 이것이 자기회귀(auto-regressive) 생성이다.'},
+    {on:['w1-enc','w1-ctx','w1-d1','w1-f1','w1-d2','w1-f2','w1-d3'],
+     msg:'<b>Step 4 · t=3</b> — <b>suis</b>를 입력으로 받아 <b>étudiant</b>를 예측한다. 같은 패턴의 반복이다.'},
+    {on:['w1-enc','w1-ctx','w1-d1','w1-f1','w1-d2','w1-f2','w1-d3','w1-f3','w1-d4'],
+     msg:'<b>Step 5 · t=4, 종료</b> — <b>étudiant</b>를 입력받은 디코더가 <b>&lt;eos&gt;</b>를 예측하면 문장 생성이 끝난다. 최종 출력: <b>je suis étudiant</b> 🎉'}
+  ];
+  let cur = -1;
+  const status = document.getElementById('w1-status');
+  const nextBtn = document.getElementById('w1-next');
+  const allIds = ['w1-enc','w1-ctx','w1-d1','w1-f1','w1-d2','w1-f2','w1-d3','w1-f3','w1-d4'];
+  function render(){
+    allIds.forEach(id => document.getElementById(id).classList.remove('on'));
+    if (cur < 0){
+      status.innerHTML = '버튼을 눌러 시작한다. 인코더가 입력 문장을 읽는 것부터 &lt;eos&gt; 출력까지 6단계로 진행된다.';
+      nextBtn.disabled = false; nextBtn.textContent = '다음 단계 →';
+      return;
+    }
+    steps[cur].on.forEach(id => document.getElementById(id).classList.add('on'));
+    status.innerHTML = steps[cur].msg;
+    if (cur === steps.length - 1){ nextBtn.disabled = true; nextBtn.textContent = '완료 ✓'; }
+    else { nextBtn.disabled = false; nextBtn.textContent = '다음 단계 →'; }
+  }
+  nextBtn.addEventListener('click', () => { if (cur < steps.length - 1){ cur++; render(); } });
+  document.getElementById('w1-reset').addEventListener('click', () => { cur = -1; render(); });
+  render();
+})();
+
+/* ═══════════ 위젯 2: 교사 강요 비교 ═══════════ */
+(() => {
+  const btn = document.getElementById('w2-toggle');
+  let broken = false;
+  const arP2 = document.getElementById('w2-ar-p2');
+  const arI3 = document.getElementById('w2-ar-i3');
+  const arP3 = document.getElementById('w2-ar-p3');
+  const arI4 = document.getElementById('w2-ar-i4');
+  const arP4 = document.getElementById('w2-ar-p4');
+  const arMsg = document.getElementById('w2-ar-msg');
+  const tfMsg = document.getElementById('w2-tf-msg');
+  btn.addEventListener('click', () => {
+    broken = !broken;
+    if (broken){
+      arP2.textContent = 'vais ✗';  arP2.className = 'chip bad';
+      arI3.textContent = 'vais (오염)'; arI3.className = 'chip bad';
+      arP3.textContent = '??? ✗';   arP3.className = 'chip bad';
+      arI4.textContent = '??? (오염)'; arI4.className = 'chip bad';
+      arP4.textContent = '??? ✗';   arP4.className = 'chip bad';
+      arMsg.innerHTML = '💥 t=2의 오답 <b>vais</b>가 t=3의 입력을 오염시키고, 그 오염이 t=4까지 <b>연쇄</b>된다. 훈련 초기라면 학습이 매우 불안정해진다.';
+      tfMsg.innerHTML = '✅ t=2에서 모델이 <b>vais</b>라고 틀리게 예측하더라도, t=3의 입력은 여전히 정답 <b>suis</b>다. 오답은 손실(loss)로만 반영되고 <b>다음 시점을 오염시키지 않는다</b>.';
+      btn.textContent = '↺ 오답 없는 상태로 되돌리기';
+    } else {
+      arP2.textContent = 'suis ✓';     arP2.className = 'chip pred';
+      arI3.textContent = 'suis (예측)';  arI3.className = 'chip pred';
+      arP3.textContent = 'étudiant ✓'; arP3.className = 'chip pred';
+      arI4.textContent = 'étudiant (예측)'; arI4.className = 'chip pred';
+      arP4.textContent = '<eos> ✓';    arP4.className = 'chip pred';
+      arMsg.textContent = '예측값이 그대로 다음 입력이 된다. 예측이 맞는 동안은 문제가 없다.';
+      tfMsg.innerHTML = '입력은 항상 <b>정답 시퀀스</b>이므로, 한 시점의 오답이 다음 시점을 오염시키지 않는다.';
+      btn.textContent = '💥 t=2 시점에 오답 발생시키기';
+    }
+  });
+})();
+
+/* ═══════════ 위젯 3: 어텐션 플레이그라운드 ═══════════ */
+(() => {
+  const H = [
+    [ 2.0,  0.5, -1.0,  0.3],   // I
+    [ 0.4,  1.8,  0.2, -0.5],   // am
+    [-0.3,  0.2,  1.5,  0.1],   // a
+    [ 1.2, -0.4,  0.6,  2.0]    // student
+  ];
+  const presets = {
+    je:   [ 1.8,  0.6, -0.8,  0.5],
+    suis: [ 0.5,  1.9,  0.1, -0.2],
+    etu:  [ 1.0, -0.2,  0.4,  1.9]
+  };
+  const sliders = [0,1,2,3].map(i => document.getElementById('s'+i));
+  const outs    = [0,1,2,3].map(i => document.getElementById('o'+i));
+
+  const dot = (a,b) => a.reduce((acc,v,i) => acc + v*b[i], 0);
+  const softmax = arr => {
+    const m = Math.max(...arr);
+    const ex = arr.map(v => Math.exp(v - m));
+    const s = ex.reduce((a,b) => a+b, 0);
+    return ex.map(v => v/s);
+  };
+  const f = (v,d=2) => (v>=0?' ':'') + v.toFixed(d);
+
+  function update(){
+    const s = sliders.map(sl => parseFloat(sl.value));
+    sliders.forEach((sl,i) => outs[i].value = parseFloat(sl.value).toFixed(1));
+
+    const e = H.map(h => dot(s,h));           // ① 어텐션 스코어
+    const alpha = softmax(e);                  // ② 어텐션 분포
+    const a = [0,1,2,3].map(d =>              // ③ 가중합
+      H.reduce((acc,h,i) => acc + alpha[i]*h[d], 0));
+
+    // 스코어 표시
+    document.getElementById('ap-scores').innerHTML =
+      '<b>① 어텐션 스코어</b> e&#7511; = s&#7511;&#7488;h&#7522;<br>' +
+      'e = [' + e.map(v=>f(v)).join(',') + ' ]';
+
+    // 막대 + 단어 하이라이트
+    const maxA = Math.max(...alpha);
+    alpha.forEach((v,i) => {
+      document.getElementById('bf-'+i).style.width = (v*100).toFixed(1) + '%';
+      document.getElementById('bv-'+i).textContent = v.toFixed(3);
+      const w = document.getElementById('apw-'+i);
+      w.querySelector('.fill').style.opacity = (v*0.85).toFixed(3);
+      w.style.borderColor = (v === maxA) ? 'var(--flame)' : 'var(--line)';
+    });
+
+    // 가중합 결과
+    document.getElementById('ap-result').innerHTML =
+      '<b>③ 어텐션 값 (가중합)</b><br>' +
+      'a&#8348; = &#931; &#945;&#7522;h&#7522; = [' + a.map(v=>f(v)).join(',') + ' ]';
+  }
+
+  sliders.forEach(sl => sl.addEventListener('input', () => {
+    document.querySelectorAll('.ap-presets button').forEach(b => b.classList.remove('sel'));
+    update();
+  }));
+  document.querySelectorAll('.ap-presets button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.ap-presets button').forEach(b => b.classList.remove('sel'));
+      btn.classList.add('sel');
+      const p = presets[btn.dataset.preset];
+      sliders.forEach((sl,i) => sl.value = p[i]);
+      update();
+    });
+  });
+  update();
+})();
+</script>
+</body>
+</html>
