@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BERT · GPT · LLM & RAG — 사전학습 언어모델 완전 정복</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css">
+
+<style>
+:root{
+  --flame:#ee4c2c; --flame-2:#c93414; --flame-soft:#fdece8;
+  --teal:#0f9d8f; --teal-2:#0a7d72; --teal-soft:#e6f5f3;
+  --amber:#e8a33d; --amber-soft:#fbf1de;
+  --ink:#1a1d23; --ink-2:#3d434f; --ink-3:#727a88;
+  --line:#e8eaed; --line-2:#f1f3f5;
+  --bg:#ffffff; --bg-soft:#f8f9fb; --bg-soft-2:#f2f4f7;
+  --code-bg:#0d1117;
+  --sidebar-w:272px; --content-max:860px;
+  --radius:16px; --radius-sm:10px;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,monospace;
+  --sans:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);color:var(--ink);background:var(--bg);line-height:1.78;font-size:16px;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
+.katex{position:relative}
+.katex-display{position:relative;overflow-x:auto;overflow-y:hidden;padding:4px 2px 8px}
+.katex-display::-webkit-scrollbar{height:6px}
+.katex-display::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+
+/* ---------- progress bar ---------- */
+.progress-track{position:fixed;top:0;left:0;right:0;height:3px;background:transparent;z-index:120}
+.progress-bar{height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--flame));transition:width .1s linear}
+
+/* ---------- sidebar ---------- */
+.sidebar{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;overflow-y:auto;background:var(--bg-soft);border-right:1px solid var(--line);padding:26px 16px 40px;z-index:100}
+.sidebar-brand{display:flex;align-items:center;gap:10px;padding:0 8px 18px;margin-bottom:10px;border-bottom:1px solid var(--line)}
+.brand-mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--flame),var(--flame-2));display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 3px 10px rgba(238,76,44,.28)}
+.brand-mark svg{width:20px;height:20px}
+.brand-txt b{display:block;font-size:14px;font-weight:800;letter-spacing:-.01em;line-height:1.25}
+.brand-txt span{font-size:11px;color:var(--ink-3);font-family:var(--mono);letter-spacing:.02em}
+.nav-group{margin-top:16px}
+.nav-group-label{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);padding:0 10px;margin-bottom:6px}
+.nav-link{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:8px;font-size:13.5px;color:var(--ink-2);text-decoration:none;transition:background .15s,color .15s;line-height:1.35}
+.nav-link .idx{font-family:var(--mono);font-size:11px;color:var(--ink-3);min-width:16px;transition:color .15s}
+.nav-link:hover{background:var(--bg-soft-2);color:var(--ink)}
+.nav-link.active{background:var(--flame-soft);color:var(--flame-2);font-weight:600}
+.nav-link.active .idx{color:var(--flame)}
+
+/* ---------- layout ---------- */
+.content{margin-left:var(--sidebar-w);max-width:var(--content-max);padding:0 clamp(20px,5vw,64px) 120px}
+.nav-toggle{display:none}
+
+/* ---------- hero ---------- */
+.hero{padding:72px 0 44px;border-bottom:1px solid var(--line-2)}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;font-family:var(--mono);letter-spacing:.04em;color:var(--teal-2);background:var(--teal-soft);padding:5px 12px;border-radius:999px;margin-bottom:22px}
+.eyebrow::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--teal)}
+.hero h1{font-size:clamp(30px,5vw,46px);font-weight:800;letter-spacing:-.025em;line-height:1.15;margin-bottom:18px}
+.hero h1 .hl{color:var(--flame)}
+.hero .lede{font-size:clamp(16px,2.3vw,19px);color:var(--ink-2);max-width:60ch;line-height:1.7}
+.lineage{display:flex;flex-wrap:wrap;align-items:center;gap:6px 4px;margin-top:34px;padding:16px 18px;background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius)}
+.chip{font-size:12.5px;font-weight:700;padding:5px 11px;border-radius:8px;white-space:nowrap;font-family:var(--mono);letter-spacing:-.01em}
+.chip.tf{background:var(--ink);color:#fff}
+.chip.enc{background:var(--teal-soft);color:var(--teal-2)}
+.chip.dec{background:var(--flame-soft);color:var(--flame-2)}
+.chip.llm{background:var(--amber-soft);color:#9a6a12}
+.arrow{color:var(--ink-3);font-size:13px;padding:0 1px}
+.plus{color:var(--ink-3);font-size:12px;font-weight:700;padding:0 2px}
+
+/* ---------- sections ---------- */
+section{padding:54px 0;border-bottom:1px solid var(--line-2);scroll-margin-top:24px}
+.sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:8px}
+.sec-num{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--flame)}
+h2{font-size:clamp(24px,3.6vw,32px);font-weight:800;letter-spacing:-.02em;line-height:1.2}
+.sec-sub{font-size:15px;color:var(--ink-3);margin-bottom:30px;margin-top:2px}
+h3{font-size:20px;font-weight:750;letter-spacing:-.01em;margin:38px 0 12px;line-height:1.35}
+h3 .tag{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--teal-2);background:var(--teal-soft);padding:2px 8px;border-radius:6px;margin-left:8px;vertical-align:middle}
+h4{font-size:16px;font-weight:700;margin:26px 0 8px}
+p{margin:12px 0;color:var(--ink-2)}
+strong{font-weight:700;color:var(--ink)}
+a.ilink{color:var(--flame-2);text-decoration:none;border-bottom:1.5px solid var(--flame-soft);transition:border-color .15s}
+a.ilink:hover{border-color:var(--flame)}
+ul,ol{margin:14px 0 14px 4px;padding-left:22px}
+li{margin:7px 0;color:var(--ink-2)}
+li::marker{color:var(--flame)}
+code:not(.hljs){font-family:var(--mono);font-size:.87em;background:var(--bg-soft-2);color:var(--flame-2);padding:2px 6px;border-radius:5px;font-weight:500}
+
+/* ---------- callouts ---------- */
+.callout{border-radius:var(--radius-sm);padding:16px 18px 16px 20px;margin:22px 0;border-left:4px solid;font-size:14.5px;line-height:1.72}
+.callout p{margin:6px 0;color:inherit}
+.callout .co-title{font-weight:800;font-size:13.5px;display:flex;align-items:center;gap:7px;margin-bottom:6px;letter-spacing:-.01em}
+.callout.note{background:var(--teal-soft);border-color:var(--teal);color:#0d5c54}
+.callout.note .co-title{color:var(--teal-2)}
+.callout.warn{background:var(--flame-soft);border-color:var(--flame);color:#8f2c15}
+.callout.warn .co-title{color:var(--flame-2)}
+.callout.pit{background:var(--amber-soft);border-color:var(--amber);color:#7a5410}
+.callout.pit .co-title{color:#9a6a12}
+.callout code:not(.hljs){background:rgba(255,255,255,.55)}
+
+/* ---------- key box ---------- */
+.keybox{background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;margin:24px 0}
+.keybox .kb-label{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--flame);margin-bottom:10px}
+
+/* ---------- tables ---------- */
+.tbl-wrap{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:var(--radius-sm)}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:520px}
+th,td{padding:11px 15px;text-align:left;border-bottom:1px solid var(--line-2);vertical-align:top}
+th{background:var(--bg-soft);font-weight:700;color:var(--ink);font-size:13px;letter-spacing:-.01em;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+td strong{color:var(--flame-2)}
+.tbl-wrap tbody tr:hover{background:var(--bg-soft)}
+
+/* ---------- code ---------- */
+pre{margin:20px 0;border-radius:var(--radius-sm);overflow-x:auto;border:1px solid #22272e;background:var(--code-bg)}
+pre code.hljs{font-family:var(--mono);font-size:13px;line-height:1.7;padding:18px 20px;display:block;background:transparent}
+.code-cap{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin:20px 0 -12px;padding-left:2px}
+
+/* ---------- figure / svg ---------- */
+figure{margin:26px 0}
+.fig-box{border:1px solid var(--line);border-radius:var(--radius);padding:24px 20px;background:linear-gradient(180deg,#fff,var(--bg-soft));overflow-x:auto}
+.fig-box svg{display:block;margin:0 auto;max-width:100%;height:auto}
+figcaption{text-align:center;font-size:13px;color:var(--ink-3);margin-top:12px;line-height:1.55}
+
+/* svg shared text */
+.svg-t{font-family:var(--sans);font-weight:700}
+.svg-s{font-family:var(--mono)}
+
+/* ---------- widget ---------- */
+.widget{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin:28px 0;background:#fff;box-shadow:0 1px 3px rgba(20,30,50,.04)}
+.wg-head{background:linear-gradient(135deg,#1a1d23,#2b3240);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:11px}
+.wg-head .wg-ic{width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.wg-head .wg-ic svg{width:17px;height:17px}
+.wg-head b{font-size:14.5px;font-weight:750;letter-spacing:-.01em}
+.wg-head span{display:block;font-size:11.5px;color:#9aa4b2;font-weight:400;margin-top:1px}
+.wg-body{padding:22px 20px}
+.wg-ctrl{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:18px}
+.seg{display:inline-flex;background:var(--bg-soft-2);border-radius:9px;padding:3px;gap:2px}
+.seg button{border:none;background:transparent;font-family:var(--sans);font-size:13px;font-weight:600;color:var(--ink-2);padding:6px 14px;border-radius:7px;cursor:pointer;transition:all .15s}
+.seg button.on{background:#fff;color:var(--flame-2);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.wg-label{font-size:12px;font-weight:700;color:var(--ink-3);font-family:var(--mono)}
+.wg-slider{display:flex;align-items:center;gap:10px;font-size:13px}
+input[type=range]{-webkit-appearance:none;appearance:none;height:5px;background:var(--line);border-radius:99px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--flame);cursor:pointer;box-shadow:0 1px 4px rgba(238,76,44,.4)}
+input[type=range]::-moz-range-thumb{width:17px;height:17px;border:none;border-radius:50%;background:var(--flame);cursor:pointer}
+.wg-val{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--flame-2);min-width:38px}
+.tok-btns{display:flex;flex-wrap:wrap;gap:7px}
+.tok-btns button{font-family:var(--mono);font-size:13px;font-weight:600;padding:6px 13px;border-radius:8px;border:1.5px solid var(--line);background:#fff;color:var(--ink-2);cursor:pointer;transition:all .15s}
+.tok-btns button.on{border-color:var(--flame);background:var(--flame-soft);color:var(--flame-2)}
+
+/* attention step rows */
+.step{display:flex;align-items:center;gap:12px;margin:9px 0;font-size:13px;flex-wrap:wrap}
+.step-lab{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);min-width:96px;font-weight:600}
+.vec{display:flex;gap:5px}
+.cell{font-family:var(--mono);font-size:12.5px;font-weight:600;padding:5px 0;width:52px;text-align:center;border-radius:6px;background:var(--bg-soft-2);color:var(--ink)}
+.cell.k{background:var(--teal-soft);color:var(--teal-2)}
+.wbar{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.wbar-row{display:flex;align-items:center;gap:9px;font-size:12.5px}
+.wbar-row .wl{font-family:var(--mono);min-width:60px;color:var(--ink-2)}
+.wbar-track{flex:1;height:20px;background:var(--bg-soft-2);border-radius:6px;overflow:hidden;position:relative}
+.wbar-fill{height:100%;background:linear-gradient(90deg,var(--flame),var(--flame-2));border-radius:6px;transition:width .35s cubic-bezier(.2,.8,.2,1)}
+.wbar-row .wv{font-family:var(--mono);font-weight:700;color:var(--flame-2);min-width:48px;text-align:right}
+
+/* heatmap grid */
+.hm{display:inline-grid;gap:4px;margin-top:6px}
+.hm-cell{width:44px;height:44px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:600;transition:all .3s}
+.hm-cell.masked{background:repeating-linear-gradient(45deg,#eef0f3,#eef0f3 4px,#e4e7eb 4px,#e4e7eb 8px);color:#b8bec7}
+.hm-axis{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);display:flex;align-items:center;justify-content:center}
+.hm-legend{display:flex;align-items:center;gap:10px;margin-top:14px;font-size:12px;color:var(--ink-3)}
+.hm-scale{width:110px;height:12px;border-radius:4px;background:linear-gradient(90deg,#e6f5f3,var(--teal))}
+
+/* stat readout */
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-top:20px}
+.stat{background:var(--bg-soft);border:1px solid var(--line);border-radius:11px;padding:14px 16px}
+.stat .s-lab{font-size:11px;color:var(--ink-3);font-weight:600;margin-bottom:5px;letter-spacing:.01em}
+.stat .s-val{font-family:var(--mono);font-size:21px;font-weight:800;color:var(--ink);letter-spacing:-.02em}
+.stat .s-val.flame{color:var(--flame-2)}
+.stat .s-val.teal{color:var(--teal-2)}
+.stat .s-sub{font-size:11px;color:var(--ink-3);font-family:var(--mono);margin-top:3px}
+
+/* quant bars */
+.qbars{display:flex;gap:5px;align-items:flex-end;height:120px;margin-top:8px;padding-bottom:2px;border-bottom:2px solid var(--line)}
+.qbar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;height:100%;justify-content:flex-end;position:relative}
+.qbar{width:100%;max-width:26px;border-radius:4px 4px 0 0;transition:height .3s}
+.qbar.orig{background:var(--ink-3)}
+.qbar.deq{background:var(--flame)}
+.qbar-mid{position:absolute;top:50%;left:0;right:0;height:1px;background:var(--line);z-index:0}
+
+/* number line for limits */
+.limit-card{border:1px solid var(--line);border-left:4px solid var(--flame);border-radius:var(--radius-sm);padding:16px 18px;margin:14px 0;background:#fff}
+.limit-card .lc-h{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+.limit-card .lc-n{font-family:var(--mono);font-size:12px;font-weight:800;color:#fff;background:var(--flame);width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.limit-card .lc-t{font-size:15.5px;font-weight:750}
+.limit-card p{margin:6px 0;font-size:14px}
+.solve{display:inline-flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.solve .st{font-family:var(--mono);font-size:11.5px;font-weight:600;color:var(--teal-2);background:var(--teal-soft);padding:3px 9px;border-radius:6px}
+.solve .sl{font-size:11.5px;color:var(--ink-3);font-weight:600;align-self:center;margin-right:2px}
+
+/* pill row */
+.pillrow{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.pill{font-size:13px;font-weight:600;padding:6px 13px;border-radius:999px;background:var(--bg-soft-2);color:var(--ink-2)}
+.pill b{color:var(--flame-2)}
+
+/* footer */
+.foot{padding:44px 0 0;color:var(--ink-3);font-size:13px;line-height:1.7}
+.foot code:not(.hljs){font-size:12px}
+
+/* ---------- responsive ---------- */
+@media (max-width:1000px){
+  :root{--sidebar-w:0px}
+  .sidebar{transform:translateX(-100%);transition:transform .28s cubic-bezier(.2,.8,.2,1);width:280px;box-shadow:0 0 40px rgba(0,0,0,.14);z-index:110}
+  .sidebar.open{transform:translateX(0)}
+  .content{margin-left:0;max-width:100%}
+  .nav-toggle{display:flex;position:fixed;top:14px;right:14px;z-index:115;width:44px;height:44px;border-radius:12px;background:#fff;border:1px solid var(--line);box-shadow:0 3px 12px rgba(0,0,0,.1);align-items:center;justify-content:center;cursor:pointer}
+  .nav-toggle svg{width:22px;height:22px}
+  .hero{padding:64px 0 40px}
+  .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.28);z-index:105;opacity:0;pointer-events:none;transition:opacity .28s}
+  .backdrop.show{opacity:1;pointer-events:auto}
+}
+@media (max-width:520px){
+  body{font-size:15px}
+  .cell{width:44px;font-size:11.5px}
+  .hm-cell{width:36px;height:36px;font-size:10px}
+  .step-lab{min-width:100%}
+}
+@media (prefers-reduced-motion:reduce){
+  *{scroll-behavior:auto!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+
+<div class="progress-track"><div class="progress-bar" id="pbar"></div></div>
+
+<div class="backdrop" id="backdrop"></div>
+<button class="nav-toggle" id="navToggle" aria-label="목차 열기">
+  <svg viewBox="0 0 24 24" fill="none" stroke="#1a1d23" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+</button>
+
+<!-- ============ SIDEBAR ============ -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="#fff"/></svg>
+    </div>
+    <div class="brand-txt">
+      <b>사전학습 언어모델</b>
+      <span>BERT · GPT · LLM · RAG</span>
+    </div>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">트랜스포머 토대</div>
+    <a class="nav-link" href="#overview"><span class="idx">00</span>개요 · 큰 그림</a>
+    <a class="nav-link" href="#attention"><span class="idx">01</span>Attention 다시 보기</a>
+    <a class="nav-link" href="#blocks"><span class="idx">02</span>Encoder & Decoder Block</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">사전학습 모델</div>
+    <a class="nav-link" href="#bert"><span class="idx">03</span>BERT</a>
+    <a class="nav-link" href="#gpt"><span class="idx">04</span>GPT</a>
+    <a class="nav-link" href="#rlhf"><span class="idx">05</span>InstructGPT & RLHF</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">LLM 시대</div>
+    <a class="nav-link" href="#limits"><span class="idx">06</span>LLM의 구조적 한계</a>
+    <a class="nav-link" href="#rag"><span class="idx">07</span>RAG</a>
+    <a class="nav-link" href="#compress"><span class="idx">08</span>모델 경량화</a>
+    <a class="nav-link" href="#summary"><span class="idx">09</span>핵심 정리</a>
+  </div>
+</nav>
+
+<!-- ============ CONTENT ============ -->
+<main class="content">
+
+<!-- HERO -->
+<header class="hero">
+  <div class="eyebrow">FUNDAMENTAL · 사전학습 언어모델</div>
+  <h1>같은 <span class="hl">Transformer</span>에서<br>어떻게 BERT와 GPT가 갈라졌나</h1>
+  <p class="lede">Attention 하나에서 출발해 인코더는 <strong>BERT</strong>로, 디코더는 <strong>GPT</strong>로 나뉘고, 지시를 따르게 만드는 <strong>RLHF</strong>를 거쳐 오늘날 <strong>LLM</strong>이 된다. 그 한계를 메우는 <strong>RAG</strong>와 몸집을 줄이는 <strong>경량화</strong>까지, 세 강의를 하나의 계보로 잇는다.</p>
+
+  <div class="lineage">
+    <span class="chip tf">Transformer</span>
+    <span class="arrow">→</span>
+    <span class="chip enc">Encoder → BERT</span>
+    <span class="plus">·</span>
+    <span class="chip dec">Decoder → GPT</span>
+    <span class="arrow">→</span>
+    <span class="chip dec">InstructGPT</span>
+    <span class="arrow">→</span>
+    <span class="chip llm">LLM</span>
+    <span class="arrow">→</span>
+    <span class="chip llm">RAG</span>
+    <span class="plus">·</span>
+    <span class="chip llm">경량화</span>
+  </div>
+</header>
+
+<!-- 00 OVERVIEW -->
+<section id="overview">
+  <div class="sec-head"><span class="sec-num">00</span><h2>개요 · 큰 그림</h2></div>
+  <p class="sec-sub">세 개의 강의(BERT / GPT / LLM & RAG)를 하나의 이야기로 읽는 지도</p>
+
+  <p>딥러닝의 대부분은 학습을 <strong>“정답을 맞추는 과정”</strong>으로 본다. 하지만 언어에는 정해진 정답이 드물다. 단어의 의미는 그 자체가 아니라 <strong>다른 단어들과의 관계</strong> 속에서 생긴다. 그래서 사전학습 언어모델은 “무엇을 맞출까(task)”가 아니라 <strong>“언어의 구조를 파라미터에 내재화하는 것”</strong>으로 목표를 옮긴다. 이 관점의 전환이 BERT·GPT를 관통하는 핵심이다.</p>
+
+  <p>모든 모델의 뿌리는 <strong>Transformer</strong>다. Transformer는 크게 인코더 블록과 디코더 블록으로 이뤄지는데, 여기서 두 갈래가 나온다. 인코더만 쌓으면 문맥을 <strong>양방향</strong>으로 보는 <strong>BERT</strong>가 되고, 디코더만 쌓으면 앞에서 뒤로 <strong>한 방향</strong>으로 생성하는 <strong>GPT</strong>가 된다.</p>
+
+  <figure>
+    <div class="fig-box">
+      <svg viewBox="0 0 720 340" role="img" aria-label="사전학습 언어모델 계보도">
+        <defs>
+          <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0L9 4.5L0 9z" fill="#9aa4b2"/></marker>
+        </defs>
+        <!-- connectors -->
+        <path d="M360 66 L200 110" stroke="#c7ccd4" stroke-width="2" fill="none" marker-end="url(#ah)"/>
+        <path d="M360 66 L520 110" stroke="#c7ccd4" stroke-width="2" fill="none" marker-end="url(#ah)"/>
+        <path d="M200 148 L200 186" stroke="#c7ccd4" stroke-width="2" fill="none" marker-end="url(#ah)"/>
+        <path d="M520 148 L520 186" stroke="#c7ccd4" stroke-width="2" fill="none" marker-end="url(#ah)"/>
+        <path d="M520 224 L520 258" stroke="#c7ccd4" stroke-width="2" fill="none" marker-end="url(#ah)"/>
+        <path d="M200 224 C200 250 360 250 360 258" stroke="#e0c088" stroke-width="2" stroke-dasharray="5 4" fill="none"/>
+        <path d="M520 296 C520 314 380 314 372 302" stroke="#c7ccd4" stroke-width="2" fill="none" marker-end="url(#ah)"/>
+
+        <!-- Transformer -->
+        <rect x="288" y="34" width="144" height="34" rx="9" fill="#1a1d23"/>
+        <text x="360" y="56" text-anchor="middle" fill="#fff" font-size="14" class="svg-t">Transformer</text>
+
+        <!-- Encoder / Decoder -->
+        <rect x="128" y="112" width="144" height="34" rx="9" fill="#e6f5f3" stroke="#0f9d8f" stroke-width="1.4"/>
+        <text x="200" y="134" text-anchor="middle" fill="#0a7d72" font-size="13.5" class="svg-t">Encoder Block</text>
+        <rect x="448" y="112" width="144" height="34" rx="9" fill="#fdece8" stroke="#ee4c2c" stroke-width="1.4"/>
+        <text x="520" y="134" text-anchor="middle" fill="#c93414" font-size="13.5" class="svg-t">Decoder Block</text>
+
+        <!-- BERT / GPT -->
+        <rect x="140" y="188" width="120" height="36" rx="9" fill="#0f9d8f"/>
+        <text x="200" y="211" text-anchor="middle" fill="#fff" font-size="15" class="svg-t">BERT</text>
+        <text x="200" y="171" text-anchor="middle" fill="#0a7d72" font-size="10.5" class="svg-s">양방향 · 이해</text>
+        <rect x="460" y="188" width="120" height="36" rx="9" fill="#ee4c2c"/>
+        <text x="520" y="211" text-anchor="middle" fill="#fff" font-size="15" class="svg-t">GPT</text>
+        <text x="520" y="171" text-anchor="middle" fill="#c93414" font-size="10.5" class="svg-s">단방향 · 생성</text>
+
+        <!-- InstructGPT -->
+        <rect x="448" y="260" width="144" height="34" rx="9" fill="#fff" stroke="#ee4c2c" stroke-width="1.6"/>
+        <text x="520" y="282" text-anchor="middle" fill="#c93414" font-size="13" class="svg-t">InstructGPT · RLHF</text>
+
+        <!-- LLM -->
+        <rect x="292" y="260" width="80" height="34" rx="9" fill="#e8a33d"/>
+        <text x="332" y="282" text-anchor="middle" fill="#fff" font-size="14" class="svg-t">LLM</text>
+
+        <!-- RAG / 경량화 -->
+        <rect x="150" y="300" width="96" height="30" rx="8" fill="#fbf1de" stroke="#e8a33d" stroke-width="1.2"/>
+        <text x="198" y="320" text-anchor="middle" fill="#9a6a12" font-size="12" class="svg-t">RAG</text>
+        <path d="M332 296 C332 310 250 312 246 316" stroke="#e0c088" stroke-width="1.6" stroke-dasharray="4 3" fill="none"/>
+      </svg>
+    </div>
+    <figcaption>하나의 Transformer에서 인코더는 BERT(이해), 디코더는 GPT(생성)로 갈라진다. GPT는 지시학습(RLHF)을 거쳐 LLM이 되고, LLM의 한계는 RAG·경량화로 보완된다.</figcaption>
+  </figure>
+
+  <div class="callout note">
+    <div class="co-title">이 문서를 읽는 순서</div>
+    <p><strong>01~02</strong>에서 Attention과 두 블록으로 트랜스포머를 복습하고, <strong>03~05</strong>에서 BERT·GPT·정렬(RLHF)을, <strong>06~08</strong>에서 LLM의 한계와 이를 넘으려는 RAG·경량화를 다룬다. 앞 장의 개념이 뒷장에서 계속 재사용되니 순서대로 보는 걸 권한다.</p>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>구분</th><th>BERT</th><th>GPT</th></tr></thead>
+      <tbody>
+        <tr><td>기반 구조</td><td><strong>Transformer 인코더</strong></td><td><strong>Transformer 디코더</strong></td></tr>
+        <tr><td>문맥 방향</td><td>양방향 (앞뒤 모두)</td><td>단방향 (앞 → 뒤)</td></tr>
+        <tr><td>핵심 학습법</td><td>MLM + NSP</td><td>다음 단어 예측 (LM)</td></tr>
+        <tr><td>Attention</td><td>Self-Attention</td><td>Masked Self-Attention</td></tr>
+        <tr><td>주 용도</td><td>분류·NER·QA 등 <em>이해</em></td><td>텍스트 <em>생성</em></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 01 ATTENTION -->
+<section id="attention">
+  <div class="sec-head"><span class="sec-num">01</span><h2>Attention 다시 보기</h2></div>
+  <p class="sec-sub">BERT도 GPT도 결국 이 연산의 반복이다 — Q·K·V로 문맥을 섞는 법</p>
+
+  <p>Attention의 아이디어는 단순하다. 어떤 단어를 표현할 때, <strong>다른 단어들의 정보를 얼마나 가져올지 가중치를 매겨 섞는다</strong>. 이 가중치를 계산하기 위해 각 토큰을 세 가지 역할의 벡터로 투영한다.</p>
+
+  <div class="pillrow">
+    <span class="pill"><b>Q</b> (Query) · 지금 무엇을 찾는가</span>
+    <span class="pill"><b>K</b> (Key) · 나는 어떤 정보를 가졌는가</span>
+    <span class="pill"><b>V</b> (Value) · 실제로 전달할 정보</span>
+  </div>
+
+  <p>실제로 Q·K·V는 입력 임베딩 $E$에 각각의 학습 가중치를 곱해서 만든다. $Q = E W_Q,\; K = E W_K,\; V = E W_V$. 즉 같은 입력에서 세 갈래로 나온 표현이다.</p>
+
+  <h3>Scaled Dot-Product Attention</h3>
+  <p>Query와 Key의 <strong>내적(유사도)</strong>으로 점수를 내고, 차원 크기로 나눠 스케일을 맞춘 뒤, softmax로 확률처럼 정규화한다. 그 가중치로 Value를 가중합한 것이 출력이다.</p>
+
+  <div class="keybox">
+    <div class="kb-label">핵심 수식</div>
+    <p style="text-align:center;margin:8px 0">$$\mathrm{Attention}(Q,K,V)=\mathrm{softmax}\!\left(\frac{QK^{\top}}{\sqrt{d_k}}\right)V$$</p>
+  </div>
+
+  <div class="callout note">
+    <div class="co-title">왜 $\sqrt{d_k}$로 나눌까</div>
+    <p>차원 $d_k$가 커지면 내적값의 분산도 함께 커진다. 값이 너무 크면 softmax가 한쪽으로 극단적으로 쏠려(거의 0 또는 1) 기울기가 소실된다. $\sqrt{d_k}$로 나눠 <strong>점수의 스케일을 안정</strong>시켜야 학습이 매끄럽다.</p>
+  </div>
+
+  <p>아래 위젯은 위 수식을 <strong>실제로 계산</strong>한다. 세 토큰 “나는 / 밥을 / 먹었다” 각각에 대해 Q·K·V가 주어져 있고(실제로는 $E W_Q$ 등으로 얻는 값), Query 토큰을 바꾸면 점수 → 스케일 → softmax → 출력이 단계별로 다시 계산된다.</p>
+
+  <div class="widget">
+    <div class="wg-head">
+      <div class="wg-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M4 6h16M4 12h10M4 18h7"/></svg></div>
+      <div><b>Scaled Dot-Product Attention 계산기</b><span>Query 토큰을 골라 한 단계씩 따라가기</span></div>
+    </div>
+    <div class="wg-body">
+      <div class="wg-ctrl">
+        <span class="wg-label">Query 토큰:</span>
+        <div class="tok-btns" id="w1btns"></div>
+      </div>
+      <div id="w1steps"></div>
+    </div>
+  </div>
+
+  <div class="code-cap"># PyTorch로 쓰면 딱 이만큼</div>
+  <pre><code class="language-python">import torch, math
+
+def scaled_dot_product_attention(Q, K, V, mask=None):
+    d_k = Q.size(-1)
+    scores = Q @ K.transpose(-2, -1) / math.sqrt(d_k)   # (…, Lq, Lk)
+    if mask is not None:
+        scores = scores.masked_fill(mask == 0, float('-inf'))
+    weights = torch.softmax(scores, dim=-1)             # 행 합 = 1
+    return weights @ V, weights                         # 출력, 어텐션 분포</code></pre>
+
+  <h3>Self-Attention <span class="tag">Q=K=V의 출처가 같음</span></h3>
+  <p><strong>Self-Attention</strong>은 Q·K·V를 모두 <em>같은 문장</em>에서 뽑는다. 즉 문장이 자기 자신을 보며 단어 간 관계를 학습한다. 순서는 Q-K 유사도로 <strong>스코어</strong>를 내고 → softmax로 <strong>Attention Distribution</strong>을 만들고 → V를 가중합해 <strong>Attention Vector</strong>를 얻는 3단계다.</p>
+
+  <h3>Multi-head Attention <span class="tag">여러 관점으로 동시에</span></h3>
+  <p>단일 Attention 하나로는 다양한 문맥(문법 관계, 지시 관계, 의미 관계…)을 한꺼번에 담기 어렵다. 그래서 벡터를 $h$개의 <strong>head</strong>로 쪼개 각자 독립적으로 Attention을 수행하고, 결과를 <strong>concat</strong>한 뒤 linear로 다시 섞어 의미를 통합한다.</p>
+  <div class="keybox">
+    <div class="kb-label">직관</div>
+    <p>차원 $d_{model}$을 $h$개로 나눠 각 head가 $d_k = d_{model}/h$ 차원에서 서로 다른 “관심사”를 학습한다. 하나의 큰 Attention보다, 여러 개의 작은 Attention이 <strong>표현의 다양성</strong>을 만든다.</p>
+  </div>
+</section>
+
+<!-- 02 BLOCKS -->
+<section id="blocks">
+  <div class="sec-head"><span class="sec-num">02</span><h2>Encoder & Decoder Block</h2></div>
+  <p class="sec-sub">BERT를 만드는 블록과 GPT를 만드는 블록, 무엇이 같고 무엇이 다른가</p>
+
+  <p>Transformer는 같은 블록을 $N$번 쌓아 만든다. 두 블록 모두 <strong>Residual connection</strong>(입력을 출력에 더함)과 <strong>Layer Normalization</strong>, 그리고 <strong>FFNN</strong>(위치별 feed-forward)을 공유한다. 결정적 차이는 <strong>Attention의 종류</strong>에 있다.</p>
+
+  <figure>
+    <div class="fig-box">
+      <svg viewBox="0 0 620 380" role="img" aria-label="인코더 블록과 디코더 블록 비교">
+        <!-- Encoder -->
+        <text x="150" y="24" text-anchor="middle" fill="#0a7d72" font-size="14" class="svg-t">Encoder Block</text>
+        <rect x="40" y="40" width="220" height="300" rx="14" fill="#f4faf9" stroke="#bfe5df" stroke-width="1.5"/>
+        <!-- MHA -->
+        <rect x="70" y="248" width="160" height="52" rx="9" fill="#ffe6d9" stroke="#ee4c2c" stroke-width="1.2"/>
+        <text x="150" y="270" text-anchor="middle" fill="#c93414" font-size="12.5" class="svg-t">Multi-Head</text>
+        <text x="150" y="288" text-anchor="middle" fill="#c93414" font-size="12.5" class="svg-t">Attention</text>
+        <rect x="70" y="222" width="160" height="22" rx="7" fill="#f2f5cf" stroke="#d9d98f" stroke-width="1"/>
+        <text x="150" y="237" text-anchor="middle" fill="#7a7a24" font-size="11" class="svg-t">Add & Norm</text>
+        <!-- FFN -->
+        <rect x="70" y="112" width="160" height="52" rx="9" fill="#d9ecfb" stroke="#7fbde8" stroke-width="1.2"/>
+        <text x="150" y="134" text-anchor="middle" fill="#1a6ba8" font-size="12.5" class="svg-t">Feed</text>
+        <text x="150" y="152" text-anchor="middle" fill="#1a6ba8" font-size="12.5" class="svg-t">Forward</text>
+        <rect x="70" y="86" width="160" height="22" rx="7" fill="#f2f5cf" stroke="#d9d98f" stroke-width="1"/>
+        <text x="150" y="101" text-anchor="middle" fill="#7a7a24" font-size="11" class="svg-t">Add & Norm</text>
+        <path d="M150 340 L150 300 M150 222 L150 164 M150 86 L150 56" stroke="#8a94a2" stroke-width="1.6" fill="none"/>
+        <text x="290" y="196" text-anchor="middle" fill="#6b7280" font-size="12" class="svg-s" transform="rotate(90 290 196)">N×</text>
+
+        <!-- Decoder -->
+        <text x="470" y="24" text-anchor="middle" fill="#c93414" font-size="14" class="svg-t">Decoder Block</text>
+        <rect x="360" y="40" width="220" height="300" rx="14" fill="#fdf6f4" stroke="#f4cfc4" stroke-width="1.5"/>
+        <!-- masked MHA -->
+        <rect x="390" y="256" width="160" height="52" rx="9" fill="#ffe6d9" stroke="#ee4c2c" stroke-width="1.2"/>
+        <text x="470" y="277" text-anchor="middle" fill="#c93414" font-size="11.5" class="svg-t">Masked Multi-</text>
+        <text x="470" y="294" text-anchor="middle" fill="#c93414" font-size="11.5" class="svg-t">Head Attn</text>
+        <rect x="390" y="230" width="160" height="22" rx="7" fill="#f2f5cf" stroke="#d9d98f" stroke-width="1"/>
+        <text x="470" y="245" text-anchor="middle" fill="#7a7a24" font-size="11" class="svg-t">Add & Norm</text>
+        <!-- cross MHA (dashed = optional / seq2seq only) -->
+        <rect x="390" y="158" width="160" height="46" rx="9" fill="#fff0e8" stroke="#f0a88f" stroke-width="1.2" stroke-dasharray="5 3"/>
+        <text x="470" y="176" text-anchor="middle" fill="#c96a4a" font-size="10.5" class="svg-t">(Enc–Dec Attn)</text>
+        <text x="470" y="191" text-anchor="middle" fill="#c96a4a" font-size="9.5" class="svg-s">seq2seq에만</text>
+        <rect x="390" y="132" width="160" height="22" rx="7" fill="#f2f5cf" stroke="#d9d98f" stroke-width="1"/>
+        <text x="470" y="147" text-anchor="middle" fill="#7a7a24" font-size="11" class="svg-t">Add & Norm</text>
+        <!-- FFN -->
+        <rect x="390" y="72" width="160" height="44" rx="9" fill="#d9ecfb" stroke="#7fbde8" stroke-width="1.2"/>
+        <text x="470" y="99" text-anchor="middle" fill="#1a6ba8" font-size="12.5" class="svg-t">Feed Forward</text>
+        <path d="M470 340 L470 308 M470 230 L470 204 M470 132 L470 116 M470 72 L470 52" stroke="#8a94a2" stroke-width="1.6" fill="none"/>
+        <text x="600" y="196" text-anchor="middle" fill="#6b7280" font-size="12" class="svg-s" transform="rotate(90 600 196)">N×</text>
+      </svg>
+    </div>
+    <figcaption>두 블록의 뼈대(Add&Norm · FFN)는 같다. 인코더는 일반 Self-Attention, 디코더는 <strong>Masked</strong> Self-Attention을 쓴다. 점선의 인코더–디코더 어텐션은 번역 같은 seq2seq에만 있고, GPT처럼 디코더만 쓰는 모델엔 없다.</figcaption>
+  </figure>
+
+  <h3>Process — 정보를 취합하는 방향</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th></th><th>Encoder</th><th>Decoder</th></tr></thead>
+      <tbody>
+        <tr><td>보는 범위</td><td><strong>모든 정보 취합</strong> (앞뒤 전부)</td><td><strong>이전 스텝의 정보만</strong> 취합</td></tr>
+        <tr><td>Attention</td><td>Self-Attention</td><td>Masked Self-Attention</td></tr>
+        <tr><td>적합한 일</td><td>문장 전체를 <em>이해</em></td><td>다음 토큰을 <em>생성</em></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Masked Self-Attention <span class="tag">미래를 가린다</span></h3>
+  <p>생성 모델은 왼쪽에서 오른쪽으로 한 토큰씩 만든다. 그런데 학습할 때 <strong>정답(뒤쪽 토큰)을 미리 보면 반칙</strong>이다. 그래서 각 위치가 <strong>자기 자신과 이전 위치까지만</strong> 볼 수 있도록, softmax 직전에 미래 위치의 점수를 $-\infty$로 채운다(마스킹). 그러면 softmax 후 그 자리의 가중치가 0이 된다.</p>
+
+  <div class="code-cap"># 상삼각(미래)을 True로 만들어 -inf 마스킹</div>
+  <pre><code class="language-python">L = 5
+# 대각선 위쪽(미래 위치)만 1 → 마스킹 대상
+causal = torch.triu(torch.ones(L, L), diagonal=1).bool()
+scores = scores.masked_fill(causal, float('-inf'))   # 미래 차단
+weights = torch.softmax(scores, dim=-1)              # 각 행은 과거에만 분포</code></pre>
+
+  <p>아래 위젯에서 모드를 <strong>Encoder(양방향)</strong> ↔ <strong>Decoder(마스킹)</strong>로 바꿔 보면, 디코더에서 우상단(미래)이 통째로 가려지는 걸 바로 확인할 수 있다. 셀의 숫자는 <em>실제로 softmax를 계산한</em> 어텐션 가중치이고, 각 행의 합은 항상 1이다.</p>
+
+  <div class="widget">
+    <div class="wg-head">
+      <div class="wg-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/></svg></div>
+      <div><b>Causal Mask 히트맵</b><span>양방향 vs 단방향, 어텐션 분포가 어떻게 잘리나</span></div>
+    </div>
+    <div class="wg-body">
+      <div class="wg-ctrl">
+        <div class="seg" id="w2mode">
+          <button data-m="enc" class="on">Encoder · 양방향</button>
+          <button data-m="dec">Decoder · 마스킹</button>
+        </div>
+        <div class="wg-slider">
+          <span class="wg-label">시퀀스 길이</span>
+          <input type="range" id="w2n" min="3" max="7" value="5" style="width:120px">
+          <span class="wg-val" id="w2nv">5</span>
+        </div>
+      </div>
+      <div id="w2grid" style="overflow-x:auto"></div>
+      <div class="hm-legend">
+        <span>낮음</span><div class="hm-scale"></div><span>높음</span>
+        <span style="margin-left:8px">· 빗금 = 마스킹(가중치 0)</span>
+      </div>
+      <p id="w2cap" style="font-size:13px;color:var(--ink-3);margin-top:14px"></p>
+    </div>
+  </div>
+</section>
+
+<!-- 03 BERT -->
+<section id="bert">
+  <div class="sec-head"><span class="sec-num">03</span><h2>BERT</h2></div>
+  <p class="sec-sub">Bidirectional Encoder Representations from Transformers — 인코더로 언어를 <em>이해</em>하기</p>
+
+  <p><strong>BERT</strong>는 Transformer의 <strong>인코더 구조</strong>를 쌓은 모델이다. 앞서 본 “task 중심”에서 벗어나, 단어의 <strong>문맥적 의미</strong> 자체를 파라미터에 새기는 두 가지 사전학습 과제를 쓴다: <strong>MLM</strong>과 <strong>NSP</strong>.</p>
+
+  <h3>MLM — Masked Language Modeling <span class="tag">단어의 문맥적 의미</span></h3>
+  <p>문장의 일부 단어를 <strong>[MASK]로 가리고</strong>, 남은 <strong>양방향 문맥</strong>으로 가려진 단어를 맞힌다. 앞뒤를 모두 보기 때문에 GPT의 단방향 예측보다 풍부한 문맥 표현을 얻는다.</p>
+  <div class="keybox">
+    <div class="kb-label">예시</div>
+    <p style="font-family:var(--mono);font-size:13.5px">Some people are running<br>→ Some <b style="color:#ee4c2c">[MASK]</b> are there &nbsp;&nbsp;→ &nbsp;모델이 <b style="color:#0f9d8f">people</b> 예측</p>
+  </div>
+
+  <div class="callout pit">
+    <div class="co-title">강의엔 안 나온 디테일: 15%와 80/10/10</div>
+    <p>BERT는 토큰의 <strong>15%</strong>를 예측 대상으로 고른 뒤, 그중 <strong>80%</strong>는 <code>[MASK]</code>로, <strong>10%</strong>는 <em>임의의 다른 단어</em>로, <strong>10%</strong>는 <em>원래 단어 그대로</em> 둔다. 이유는 <strong>학습–추론 불일치</strong> 완화다. 파인튜닝·추론 때는 <code>[MASK]</code> 토큰이 없는데, 학습을 100% <code>[MASK]</code>로만 하면 모델이 “<code>[MASK]</code> 자리만 신경 쓰는” 편향을 갖게 된다. 그래서 일부러 마스크가 아닌 경우도 섞는다.</p>
+  </div>
+
+  <h3>NSP — Next Sentence Prediction <span class="tag">문장 간 관계</span></h3>
+  <p>두 문장 A, B를 주고 <strong>B가 A 다음에 실제로 이어지는 문장인지</strong>(IsNext / NotNext) 이진 분류한다. 문장 <em>사이</em>의 의미 관계를 학습해 QA·자연어 추론 같은 <strong>문장 쌍</strong> 과제에 대비한다.</p>
+  <ul>
+    <li>학습 데이터의 <strong>50%</strong>는 진짜 이어지는 쌍(IsNext), 나머지 <strong>50%</strong>는 무작위로 붙인 쌍(NotNext)</li>
+    <li>판별은 문장 맨 앞 <code>[CLS]</code> 토큰의 최종 표현을 써서 수행한다</li>
+  </ul>
+
+  <h3>Embeddings — 세 임베딩의 합</h3>
+  <p>BERT의 입력은 세 임베딩을 <strong>더해서</strong> 만든다. Transformer 자체는 순서 개념이 없으므로 위치 정보를 따로 넣어야 하고, 문장 A/B를 구분하는 세그먼트 정보도 필요하다.</p>
+
+  <figure>
+    <div class="fig-box">
+      <svg viewBox="0 0 660 250" role="img" aria-label="BERT 입력 임베딩 = 토큰 + 세그먼트 + 위치">
+        <!-- tokens -->
+        <g font-size="11" class="svg-s">
+          <!-- row headers -->
+          <text x="8" y="40" fill="#6b7280" font-size="11">Token</text>
+          <text x="8" y="120" fill="#6b7280" font-size="11">Segment</text>
+          <text x="8" y="200" fill="#6b7280" font-size="11">Position</text>
+        </g>
+        <!-- 7 columns -->
+        <!-- helper: token labels -->
+        <g class="svg-s" font-size="11" text-anchor="middle">
+          <!-- Token embeddings (pink) -->
+          <g fill="#fce4ec" stroke="#e8a3b8">
+            <rect x="80" y="20" width="70" height="40" rx="6"/><rect x="158" y="20" width="70" height="40" rx="6"/>
+            <rect x="236" y="20" width="70" height="40" rx="6"/><rect x="314" y="20" width="70" height="40" rx="6"/>
+            <rect x="392" y="20" width="70" height="40" rx="6"/><rect x="470" y="20" width="70" height="40" rx="6"/>
+            <rect x="548" y="20" width="70" height="40" rx="6"/>
+          </g>
+          <g fill="#ad4568" font-size="11.5" font-weight="700">
+            <text x="115" y="45">[CLS]</text><text x="193" y="45">my</text><text x="271" y="45">dog</text>
+            <text x="349" y="45">is</text><text x="427" y="45">[SEP]</text><text x="505" y="45">he</text><text x="583" y="45">[SEP]</text>
+          </g>
+          <!-- plus -->
+          <g fill="#9aa4b2" font-size="16" font-weight="700">
+            <text x="115" y="82">+</text><text x="193" y="82">+</text><text x="271" y="82">+</text><text x="349" y="82">+</text>
+            <text x="427" y="82">+</text><text x="505" y="82">+</text><text x="583" y="82">+</text>
+          </g>
+          <!-- Segment embeddings (green) -->
+          <g>
+            <rect x="80" y="98" width="70" height="40" rx="6" fill="#dcefdc" stroke="#9ec99a"/><rect x="158" y="98" width="70" height="40" rx="6" fill="#dcefdc" stroke="#9ec99a"/>
+            <rect x="236" y="98" width="70" height="40" rx="6" fill="#dcefdc" stroke="#9ec99a"/><rect x="314" y="98" width="70" height="40" rx="6" fill="#dcefdc" stroke="#9ec99a"/>
+            <rect x="392" y="98" width="70" height="40" rx="6" fill="#dcefdc" stroke="#9ec99a"/>
+            <rect x="470" y="98" width="70" height="40" rx="6" fill="#cfe6f5" stroke="#8fc0dd"/><rect x="548" y="98" width="70" height="40" rx="6" fill="#cfe6f5" stroke="#8fc0dd"/>
+          </g>
+          <g font-size="12" font-weight="700">
+            <text x="115" y="123" fill="#3d7a37">E_A</text><text x="193" y="123" fill="#3d7a37">E_A</text><text x="271" y="123" fill="#3d7a37">E_A</text>
+            <text x="349" y="123" fill="#3d7a37">E_A</text><text x="427" y="123" fill="#3d7a37">E_A</text>
+            <text x="505" y="123" fill="#1a6ba8">E_B</text><text x="583" y="123" fill="#1a6ba8">E_B</text>
+          </g>
+          <!-- plus -->
+          <g fill="#9aa4b2" font-size="16" font-weight="700">
+            <text x="115" y="162">+</text><text x="193" y="162">+</text><text x="271" y="162">+</text><text x="349" y="162">+</text>
+            <text x="427" y="162">+</text><text x="505" y="162">+</text><text x="583" y="162">+</text>
+          </g>
+          <!-- Position embeddings (gray) -->
+          <g fill="#eef0f3" stroke="#c7ccd4">
+            <rect x="80" y="178" width="70" height="40" rx="6"/><rect x="158" y="178" width="70" height="40" rx="6"/>
+            <rect x="236" y="178" width="70" height="40" rx="6"/><rect x="314" y="178" width="70" height="40" rx="6"/>
+            <rect x="392" y="178" width="70" height="40" rx="6"/><rect x="470" y="178" width="70" height="40" rx="6"/>
+            <rect x="548" y="178" width="70" height="40" rx="6"/>
+          </g>
+          <g fill="#5a6472" font-size="12" font-weight="700">
+            <text x="115" y="203">E₀</text><text x="193" y="203">E₁</text><text x="271" y="203">E₂</text><text x="349" y="203">E₃</text>
+            <text x="427" y="203">E₄</text><text x="505" y="203">E₅</text><text x="583" y="203">E₆</text>
+          </g>
+        </g>
+      </svg>
+    </div>
+    <figcaption><strong>입력 = 토큰 임베딩 + 세그먼트 임베딩 + 위치 임베딩</strong>. 토큰은 의미를, 세그먼트($E_A/E_B$)는 어느 문장 소속인지를, 위치는 순서를 담는다.</figcaption>
+  </figure>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>임베딩 종류</th><th>담는 정보</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Token</strong></td><td>단어의 의미를 담은 표현</td></tr>
+        <tr><td><strong>Segment</strong></td><td>토큰이 어느 문장(A/B)에 속하는지</td></tr>
+        <tr><td><strong>Position</strong></td><td>단어의 순서·거리 정보</td></tr>
+        <tr><td>Prompt</td><td>프롬프트를 표현으로 바꿔 입력</td></tr>
+        <tr><td>Entity</td><td>각 토큰의 엔티티 유형 정보</td></tr>
+        <tr><td>Modality</td><td>서로 다른 modality(텍스트·이미지 등)를 통합</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Fine-Tuning — 하나의 사전학습, 여러 과제</h3>
+  <p>사전학습된 BERT 위에 <strong>가벼운 출력 헤드</strong>만 얹어 각 과제(MNLI 추론, NER 개체명, SQuAD QA…)에 맞게 미세조정한다. 예컨대 SQuAD에서는 정답이 문단의 어디서 시작하고 끝나는지 <strong>Start/End Span</strong>을 예측한다. 무거운 표현 학습은 한 번만 하고, 과제별로는 살짝만 손대는 것이 사전학습–파인튜닝 패러다임의 핵심이다.</p>
+</section>
+
+<!-- 04 GPT -->
+<section id="gpt">
+  <div class="sec-head"><span class="sec-num">04</span><h2>GPT</h2></div>
+  <p class="sec-sub">Generative Pre-trained Transformer — 디코더로 언어를 <em>생성</em>하기</p>
+
+  <p><strong>GPT</strong>는 Transformer의 <strong>디코더 구조</strong>를 쓰고, 핵심은 <strong>Masked Attention</strong>이다. 각 위치가 이전 토큰들만 보며 <strong>다음 단어를 예측</strong>하도록 학습한다(autoregressive language modeling).</p>
+
+  <div class="callout warn">
+    <div class="co-title">GPT의 디코더에는 없는 것</div>
+    <p>원래 Transformer 디코더에는 인코더 출력을 참조하는 <strong>인코더–디코더 어텐션(cross-attention)</strong>이 있다. 하지만 GPT는 <strong>인코더가 아예 없다</strong>. 그래서 cross-attention도 없고, <strong>Masked Self-Attention + FFN</strong> 블록만 쌓는다. 02장 디코더 그림에서 점선으로 표시한 그 층이 GPT엔 빠진 셈이다.</p>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>관점</th><th>BERT (인코더)</th><th>GPT (디코더)</th></tr></thead>
+      <tbody>
+        <tr><td>Attention</td><td>양방향 Self-Attention</td><td><strong>Masked</strong> Self-Attention</td></tr>
+        <tr><td>학습 목표</td><td>가려진 단어 복원(MLM)</td><td>다음 단어 예측(LM)</td></tr>
+        <tr><td>본질</td><td>문맥 <em>이해</em></td><td>문맥 <em>생성</em></td></tr>
+        <tr><td>cross-attention</td><td>—</td><td>없음 (인코더 부재)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>GPT가 가져온 변화</h3>
+  <div class="pillrow">
+    <span class="pill"><b>In-Context Learning</b> · 예시만 보고 즉석 적응</span>
+    <span class="pill"><b>LLM</b> · 규모의 법칙</span>
+    <span class="pill"><b>생성형 AI</b> · 새 콘텐츠 창작</span>
+  </div>
+  <p><strong>In-Context Learning</strong>은 파라미터를 업데이트하지 않고도, 프롬프트 안에 몇 개의 예시(few-shot)만 넣으면 모델이 그 자리에서 패턴을 파악해 문제를 푸는 능력이다. 규모가 커질수록 이 능력이 창발적으로 강해졌고, 이것이 <strong>LLM</strong>과 <strong>생성형 AI</strong> 시대를 열었다.</p>
+</section>
+
+<!-- 05 RLHF -->
+<section id="rlhf">
+  <div class="sec-head"><span class="sec-num">05</span><h2>InstructGPT & RLHF</h2></div>
+  <p class="sec-sub">“그럴듯한 텍스트 생성”에서 “지시를 따르는 모델”로</p>
+
+  <p><strong>InstructGPT</strong>는 GPT-3를 <strong>사용자의 지시(Instruction)를 더 잘 따르도록</strong> 파인튜닝한 버전이다. Hugging Face에서 배포되는 모델의 <code>-instruct</code>, <code>-chat</code>, <code>-rlhf</code> 태그가 이런 정렬(alignment)을 거쳤음을 나타낸다. 정렬은 보통 <strong>SFT → 보상 모델 → PPO</strong>의 3단계로 진행된다.</p>
+
+  <figure>
+    <div class="fig-box">
+      <svg viewBox="0 0 680 200" role="img" aria-label="RLHF 3단계 파이프라인">
+        <defs><marker id="ah2" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0L9 4.5L0 9z" fill="#8a94a2"/></marker></defs>
+        <!-- step 1 -->
+        <rect x="20" y="46" width="190" height="108" rx="14" fill="#e6f5f3" stroke="#0f9d8f" stroke-width="1.5"/>
+        <circle cx="48" cy="74" r="13" fill="#0f9d8f"/><text x="48" y="79" text-anchor="middle" fill="#fff" font-size="13" class="svg-t">1</text>
+        <text x="70" y="79" fill="#0a7d72" font-size="14" class="svg-t">SFT</text>
+        <text x="38" y="106" fill="#0d5c54" font-size="11" class="svg-s">instruction–response</text>
+        <text x="38" y="124" fill="#0d5c54" font-size="11" class="svg-s">데이터로 지도학습</text>
+        <text x="38" y="142" fill="#0d5c54" font-size="11" class="svg-s">→ 지시 수행 능력</text>
+        <!-- step 2 -->
+        <rect x="245" y="46" width="190" height="108" rx="14" fill="#fbf1de" stroke="#e8a33d" stroke-width="1.5"/>
+        <circle cx="273" cy="74" r="13" fill="#e8a33d"/><text x="273" y="79" text-anchor="middle" fill="#fff" font-size="13" class="svg-t">2</text>
+        <text x="295" y="79" fill="#9a6a12" font-size="13.5" class="svg-t">Reward Model</text>
+        <text x="263" y="106" fill="#7a5410" font-size="11" class="svg-s">사람의 선호(랭킹)를</text>
+        <text x="263" y="124" fill="#7a5410" font-size="11" class="svg-s">모방하는 보상 모델</text>
+        <text x="263" y="142" fill="#7a5410" font-size="11" class="svg-s">→ 응답 품질 점수화</text>
+        <!-- step 3 -->
+        <rect x="470" y="46" width="190" height="108" rx="14" fill="#fdece8" stroke="#ee4c2c" stroke-width="1.5"/>
+        <circle cx="498" cy="74" r="13" fill="#ee4c2c"/><text x="498" y="79" text-anchor="middle" fill="#fff" font-size="13" class="svg-t">3</text>
+        <text x="520" y="79" fill="#c93414" font-size="14" class="svg-t">PPO (RL)</text>
+        <text x="488" y="106" fill="#8f2c15" font-size="11" class="svg-s">보상을 최대화하도록</text>
+        <text x="488" y="124" fill="#8f2c15" font-size="11" class="svg-s">policy 강화학습</text>
+        <text x="488" y="142" fill="#8f2c15" font-size="11" class="svg-s">→ 정렬된 모델</text>
+        <!-- arrows -->
+        <path d="M210 100 L243 100" stroke="#8a94a2" stroke-width="2" marker-end="url(#ah2)"/>
+        <path d="M435 100 L468 100" stroke="#8a94a2" stroke-width="2" marker-end="url(#ah2)"/>
+      </svg>
+    </div>
+    <figcaption>SFT로 지시를 따르게 만들고, 사람 선호를 학습한 보상 모델을 기준 삼아, PPO로 보상이 높은 응답 쪽으로 정책을 밀어준다.</figcaption>
+  </figure>
+
+  <h3>1단계 · SFT (Supervised Fine-Tuning)</h3>
+  <p>기존 모델은 <strong>“텍스트를 그럴듯하게 생성”</strong>하는 것이 목표다. SFT는 <strong>instruction–response</strong> 데이터로 <strong>“지시사항을 수행”</strong>하는 과제를 지도학습으로 가르친다.</p>
+  <div class="callout warn">
+    <div class="co-title">SFT의 한계</div>
+    <p>사람이 직접 만든 예시로 데이터셋을 구성하다 보니 ① <strong>데이터 수가 부족</strong>하고 ② <strong>모든 상황을 커버하지 못</strong>하며 ③ 무엇보다 <strong>이 답이 좋은지 나쁜지 평가할 기준이 없다</strong>. “맞는 답”은 알려줄 수 있어도 “더 나은 답”은 가르치기 어렵다.</p>
+  </div>
+
+  <h3>2~3단계 · Reward Model & PPO</h3>
+  <p>이 “좋고 나쁨”의 기준을 사람 대신 매겨 주는 것이 <strong>보상(Reward) 모델</strong>이다. 사람이 여러 응답에 매긴 <strong>선호(랭킹)</strong>를 학습해, 임의의 응답에 점수를 준다. 그 뒤 <strong>PPO(Proximal Policy Optimization)</strong>로 보상이 높은 출력의 확률을 키운다. 결과적으로 ① 더 자연스러운 문장 구조, ② 더 정확한 정보, ③ 유해 정보 생성 억제를 얻는다. <em>단, 모든 경우에 PPO가 필요한 건 아니다.</em></p>
+
+  <div class="keybox">
+    <div class="kb-label">PPO 학습 순서</div>
+    <ol style="margin-bottom:0">
+      <li>입력 $x$에 대해 응답 후보 $y$를 여러 개 샘플링</li>
+      <li>각 $(x, y)$ 쌍을 보상 모델로 reward 계산</li>
+      <li><strong>KL penalty</strong>로 원래 policy와 너무 크게 벌어지지 않도록 제약</li>
+      <li>reward가 높았던 출력의 확률은 ↑, 낮은 출력의 확률은 ↓ 방향으로 업데이트</li>
+    </ol>
+  </div>
+
+  <div class="callout pit">
+    <div class="co-title">헷갈리기 쉬운 지점: KL penalty ≠ ratio clipping</div>
+    <p>강의 자료는 “KL penalty로 reward 값을 제한(Clipping)”이라 묶어 설명하는데, 엄밀히는 <strong>두 가지 서로 다른 장치</strong>다. ⑴ <strong>KL penalty</strong>는 RL 정책이 <strong>SFT 기준 모델에서 너무 멀어지지 않게</strong> 붙이는 벌점항이다(보상 해킹 방지). ⑵ PPO의 이름이 된 <strong>clipping</strong>은 목적함수에서 <strong>확률비(ratio)</strong> $\frac{\pi_\theta}{\pi_{old}}$를 일정 범위로 잘라 <strong>한 번의 업데이트가 과격해지지 않게</strong> 하는 장치다. 둘 다 “안정화”라는 목적은 같지만 대상이 다르다.</p>
+  </div>
+</section>
+
+<!-- 06 LIMITS -->
+<section id="limits">
+  <div class="sec-head"><span class="sec-num">06</span><h2>LLM의 구조적 한계</h2></div>
+  <p class="sec-sub">잘 만든 LLM에도 <em>구조에서 비롯되는</em> 여섯 가지 한계가 있다 — 그리고 각각의 극복 시도</p>
+
+  <p>LLM은 강력하지만, 그 강력함이 곧 만능은 아니다. 아래 한계들은 프롬프트를 잘 쓴다고 사라지지 않는, <strong>모델 구조 자체에서 나오는</strong> 제약이다. RAG를 비롯한 여러 기법이 이 한계들을 겨냥한다.</p>
+
+  <div class="limit-card">
+    <div class="lc-h"><span class="lc-n">1</span><span class="lc-t">확률적 언어 모델</span></div>
+    <p>LLM은 <strong>다음 단어의 확률 분포</strong>를 예측한다. 사실 판단(factual reasoning)보다 <strong>언어적 일관성과 패턴 재현</strong>에 강하다. 그럴듯하지만 틀린 말(환각)이 나오는 근본 이유다.</p>
+    <div class="solve"><span class="sl">극복 →</span><span class="st">RAG</span><span class="st">Tool-augmented LLM</span><span class="st">Neuro-symbolic Reasoning</span></div>
+  </div>
+
+  <div class="limit-card">
+    <div class="lc-h"><span class="lc-n">2</span><span class="lc-t">Knowledge Cutoff (고정된 지식)</span></div>
+    <p>훈련 시점의 데이터에 <strong>지식이 고정</strong>된다. 세상은 계속 변하는데 모델의 지식은 특정 시점에 멈춰 있다.</p>
+    <div class="solve"><span class="sl">극복 →</span><span class="st">RAG</span><span class="st">Continuous Learning</span></div>
+  </div>
+
+  <div class="limit-card">
+    <div class="lc-h"><span class="lc-n">3</span><span class="lc-t">한정된 Context Window</span></div>
+    <p>Transformer는 입력 토큰 길이에 따라 <strong>제한된 context window</strong> 안에서만 정보를 유지한다. 장기 기억이나 세션 간 기억은 기본 구조에 없다.</p>
+    <div class="solve"><span class="sl">극복 →</span><span class="st">Advanced Attention</span><span class="st">Agent Memory</span><span class="st">Vector Memory</span></div>
+  </div>
+
+  <div class="limit-card">
+    <div class="lc-h"><span class="lc-n">4</span><span class="lc-t">의미 이해의 부재</span></div>
+    <p>LLM은 언어의 <strong>의미(semantics)</strong>가 아니라 <strong>형태(syntax·통계)</strong>를 학습한다. 사람처럼 세계관을 구성해 이해하고 출력하는 것이 아니다.</p>
+    <div class="solve"><span class="sl">극복 →</span><span class="st">Multimodality</span><span class="st">Embodied AI</span><span class="st">RLHF</span></div>
+  </div>
+
+  <div class="limit-card">
+    <div class="lc-h"><span class="lc-n">5</span><span class="lc-t">추론 구조의 불명확성</span></div>
+    <p>LLM의 추론은 <strong>통계적 연관성</strong>에 기반한 과정이지, 명시적 논리 구조를 밟는 것이 아니다.</p>
+    <div class="solve"><span class="sl">극복 →</span><span class="st">CoT</span><span class="st">Graph-of-Thought</span><span class="st">Symbolic Reasoner</span></div>
+  </div>
+
+  <div class="limit-card">
+    <div class="lc-h"><span class="lc-n">6</span><span class="lc-t">낮은 해석 가능성</span></div>
+    <p>상용 LLM은 파라미터가 수십 B 단위라 <strong>결정 과정을 직접 검증하기 어렵다</strong>. 특정 답을 생성한 이유를 해석할 가능성이 매우 낮다.</p>
+    <div class="solve"><span class="sl">극복 →</span><span class="st">Mechanistic Interpretability</span><span class="st">Concept Bottleneck Model</span></div>
+  </div>
+
+  <div class="callout note">
+    <div class="co-title">한 줄 요약</div>
+    <p>한계 <strong>1·2</strong>(사실성·최신성)는 <strong>RAG</strong>가, <strong>3</strong>(맥락 길이)은 <strong>메모리 기법</strong>이, <strong>5</strong>(추론)는 <strong>CoT 계열</strong>이 주로 겨냥한다. 다음 장의 RAG가 왜 그렇게 중요한지 여기서 답이 나온다.</p>
+  </div>
+</section>
+
+<!-- 07 RAG -->
+<section id="rag">
+  <div class="sec-head"><span class="sec-num">07</span><h2>RAG</h2></div>
+  <p class="sec-sub">Retrieval-Augmented Generation — 모델 밖의 지식을 끌어와 답한다</p>
+
+  <div class="callout pit">
+    <div class="co-title">표기 바로잡기</div>
+    <p>강의 슬라이드 제목의 <code>Retrueval</code>은 <strong><code>Retrieval</code></strong>의 오타다. 정식 명칭은 <strong>Retrieval-Augmented Generation</strong>이다.</p>
+  </div>
+
+  <p><strong>RAG</strong>는 LLM이 답을 만들기 전에 <strong>관련 문서를 먼저 검색</strong>해 프롬프트에 붙여 주는 방식이다. 앞 장의 한계 <strong>1(사실성)</strong>과 <strong>2(지식 고정)</strong>를 직접 겨냥한다. 모델을 다시 학습하지 않고도, <strong>검색된 최신·근거 문서</strong>를 바탕으로 답하게 만든다.</p>
+
+  <figure>
+    <div class="fig-box">
+      <svg viewBox="0 0 680 220" role="img" aria-label="RAG 흐름도">
+        <defs><marker id="ah3" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0L9 4.5L0 9z" fill="#8a94a2"/></marker></defs>
+        <!-- prompt -->
+        <rect x="24" y="26" width="120" height="46" rx="10" fill="#fffdf2" stroke="#d9d98f" stroke-width="1.4"/>
+        <text x="84" y="54" text-anchor="middle" fill="#7a7a24" font-size="13" class="svg-t">① 프롬프트</text>
+        <!-- doc store -->
+        <ellipse cx="84" cy="150" rx="34" ry="12" fill="#8fd4e8"/>
+        <path d="M50 150 v34 a34 12 0 0 0 68 0 v-34" fill="#a9dff0" stroke="#5fb8d6" stroke-width="1.2"/>
+        <ellipse cx="84" cy="150" rx="34" ry="12" fill="#c2e9f5" stroke="#5fb8d6" stroke-width="1.2"/>
+        <text x="84" y="205" text-anchor="middle" fill="#2b7a94" font-size="10.5" class="svg-s">Document store</text>
+        <!-- retrieved docs -->
+        <g>
+          <rect x="252" y="128" width="52" height="62" rx="4" fill="#f4f0fb" stroke="#b9a9d9"/>
+          <rect x="246" y="122" width="52" height="62" rx="4" fill="#f4f0fb" stroke="#b9a9d9"/>
+          <rect x="240" y="116" width="52" height="62" rx="4" fill="#fff" stroke="#9b86c9" stroke-width="1.3"/>
+          <path d="M248 130 h36 M248 138 h36 M248 146 h28" stroke="#c7b8e0" stroke-width="1.4"/>
+        </g>
+        <text x="266" y="205" text-anchor="middle" fill="#6b5a94" font-size="10.5" class="svg-s">② 관련 문서 검색</text>
+        <!-- generator -->
+        <rect x="392" y="90" width="150" height="60" rx="12" fill="#b0308f"/>
+        <text x="467" y="116" text-anchor="middle" fill="#fff" font-size="13" class="svg-t">Generator</text>
+        <text x="467" y="134" text-anchor="middle" fill="#f2d5ea" font-size="10.5" class="svg-s">③ 프롬프트+문서</text>
+        <!-- response -->
+        <rect x="586" y="96" width="86" height="48" rx="10" fill="#d6f0d0" stroke="#7cc46f" stroke-width="1.4"/>
+        <text x="629" y="118" text-anchor="middle" fill="#3d7a37" font-size="12.5" class="svg-t">④ 답변</text>
+        <text x="629" y="134" text-anchor="middle" fill="#3d7a37" font-size="10.5" class="svg-s">생성</text>
+        <!-- arrows -->
+        <path d="M144 49 L392 108" stroke="#8a94a2" stroke-width="1.8" marker-end="url(#ah3)"/>
+        <path d="M84 72 L84 132" stroke="#8a94a2" stroke-width="1.8" marker-end="url(#ah3)"/>
+        <path d="M118 158 L236 150" stroke="#8a94a2" stroke-width="1.8" marker-end="url(#ah3)"/>
+        <path d="M298 140 L390 128" stroke="#8a94a2" stroke-width="1.8" marker-end="url(#ah3)"/>
+        <path d="M542 120 L584 120" stroke="#8a94a2" stroke-width="1.8" marker-end="url(#ah3)"/>
+      </svg>
+    </div>
+    <figcaption>① 프롬프트 입력 → ② 문서 저장소에서 관련 문서 검색 → ③ 프롬프트에 문서를 덧붙여 생성기에 전달 → ④ 근거 기반 답변 생성.</figcaption>
+  </figure>
+
+  <div class="keybox">
+    <div class="kb-label">RAG의 4단계</div>
+    <ol style="margin-bottom:0">
+      <li><strong>프롬프트 입력</strong> — 사용자의 질문</li>
+      <li><strong>관련 문서 검색</strong> — 문서 저장소(주로 벡터 DB)에서 의미상 가까운 문서를 찾음</li>
+      <li><strong>프롬프트 + 문서</strong> — 검색 결과를 질문과 함께 모델 입력으로 결합</li>
+      <li><strong>답변 생성</strong> — 그 문맥을 근거로 응답 생성</li>
+    </ol>
+  </div>
+  <p>덕분에 모델을 재훈련하지 않고도 최신 지식을 반영하고, <strong>출처가 있는</strong> 답을 만들 수 있어 환각을 줄인다. 한계 3(context window)과도 맞물리는데, 필요한 문서만 골라 넣으므로 제한된 창을 효율적으로 쓴다.</p>
+</section>
+
+<!-- 08 COMPRESS -->
+<section id="compress">
+  <div class="sec-head"><span class="sec-num">08</span><h2>모델 경량화</h2></div>
+  <p class="sec-sub">너무 커진 LLM을 실전에서 굴리기 위한 네 가지 압축 전략</p>
+
+  <p>상용 LLM은 <strong>최저 크기가 70B 수준</strong>이다. 이 몸집은 곧 <strong>리소스·Latency·비용</strong> 문제로 이어진다. 그래서 성능을 최대한 지키며 크기를 줄이는 경량화가 필수다. 대표 기법은 <strong>Pruning · Knowledge Distillation · LoRA · Quantization</strong>이다.</p>
+
+  <div class="callout pit">
+    <div class="co-title">표기 바로잡기</div>
+    <p>슬라이드의 <code>RoLA</code>는 <strong><code>LoRA</code></strong>(Low-Rank Adaptation)의 오타다. 이름 그대로 <strong>저(low)-랭크(rank)</strong> 근사를 이용한다.</p>
+  </div>
+
+  <h3>Pruning — 가지치기</h3>
+  <p>중요도가 낮은 <strong>연결(시냅스)</strong>이나 <strong>뉴런</strong>을 잘라내 네트워크를 성기게 만든다. 대상 단위에 따라 <strong>뉴런 / 레이어 / 개별 가중치</strong> 수준으로 나뉜다. 잘라도 성능 손실이 작다면 그만큼 연산량과 메모리를 아낀다.</p>
+
+  <h3>Knowledge Distillation — 지식 증류</h3>
+  <p>큰 <strong>teacher</strong> 모델의 지식을 작은 <strong>student</strong> 모델로 옮긴다.</p>
+  <ul>
+    <li><strong>Response-based Distillation</strong> — teacher의 <em>확률 분포 자체</em>를 모방하도록 student를 학습(soft label)</li>
+    <li><strong>Data Distillation</strong> — teacher가 생성한 <em>합성 데이터</em>로 student를 학습</li>
+  </ul>
+
+  <h3>LoRA — Low-Rank Approximation</h3>
+  <p>가중치 행렬 $M$을 <strong>더 낮은 차원의 두 행렬 곱</strong>으로 근사한다. $M\;(m\times n)$을 랭크 $k$로 근사하면 $M \approx L_k R_k^{\top}$가 되고, 여기서 $L_k$는 $m\times k$, $R_k^{\top}$는 $k\times n$이다($k \ll \min(m,n)$).</p>
+
+  <figure>
+    <div class="fig-box">
+      <svg viewBox="0 0 480 200" role="img" aria-label="저랭크 근사 M ≈ L × Rᵀ">
+        <!-- M -->
+        <rect x="40" y="30" width="90" height="140" rx="6" fill="#cfe6cb" stroke="#7cc46f" stroke-width="1.5"/>
+        <text x="85" y="108" text-anchor="middle" fill="#2f6b28" font-size="26" font-style="italic" class="svg-t">M</text>
+        <text x="85" y="188" text-anchor="middle" fill="#6b7280" font-size="11" class="svg-s">m × n</text>
+        <text x="160" y="108" text-anchor="middle" fill="#3d434f" font-size="24">≈</text>
+        <!-- L -->
+        <rect x="196" y="30" width="44" height="140" rx="6" fill="#cfe0f5" stroke="#7f99e8" stroke-width="1.5"/>
+        <text x="218" y="105" text-anchor="middle" fill="#2f4ba8" font-size="22" font-style="italic" class="svg-t">L</text>
+        <text x="234" y="112" fill="#2f4ba8" font-size="12" class="svg-t">k</text>
+        <text x="218" y="188" text-anchor="middle" fill="#6b7280" font-size="11" class="svg-s">m × k</text>
+        <text x="266" y="108" text-anchor="middle" fill="#3d434f" font-size="22">×</text>
+        <!-- Rᵀ -->
+        <rect x="298" y="66" width="140" height="44" rx="6" fill="#f6ecc9" stroke="#dcc06a" stroke-width="1.5"/>
+        <text x="360" y="98" text-anchor="middle" fill="#8a6a12" font-size="22" font-style="italic" class="svg-t">Rᵀ</text>
+        <text x="368" y="130" text-anchor="middle" fill="#6b7280" font-size="11" class="svg-s">k × n</text>
+      </svg>
+    </div>
+    <figcaption>큰 행렬 $M$을 작은 두 행렬로 쪼갠다. 파라미터 수가 $m{\times}n$에서 $m{\times}k + k{\times}n$으로 줄어든다.</figcaption>
+  </figure>
+
+  <p>아래 계산기로 실제 절감 효과를 확인해 보자. LoRA는 특히 <strong>파인튜닝</strong>에서 위력적이다 — 원본 가중치 $W$는 얼려 두고 저랭크 행렬 $L, R$만 학습하면, 갱신할 파라미터가 극적으로 줄어든다.</p>
+
+  <div class="widget">
+    <div class="wg-head">
+      <div class="wg-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg></div>
+      <div><b>LoRA 파라미터 계산기</b><span>랭크 k를 줄이면 파라미터가 얼마나 절약되나</span></div>
+    </div>
+    <div class="wg-body">
+      <div class="wg-ctrl" style="gap:20px">
+        <div class="wg-slider"><span class="wg-label">m</span><input type="range" id="w4m" min="512" max="8192" step="512" value="4096" style="width:110px"><span class="wg-val" id="w4mv">4096</span></div>
+        <div class="wg-slider"><span class="wg-label">n</span><input type="range" id="w4n" min="512" max="8192" step="512" value="4096" style="width:110px"><span class="wg-val" id="w4nv">4096</span></div>
+        <div class="wg-slider"><span class="wg-label">rank&nbsp;k</span><input type="range" id="w4r" min="1" max="256" step="1" value="8" style="width:110px"><span class="wg-val" id="w4rv">8</span></div>
+      </div>
+      <div class="readout">
+        <div class="stat"><div class="s-lab">원본 W 파라미터</div><div class="s-val" id="w4full">–</div><div class="s-sub">m × n</div></div>
+        <div class="stat"><div class="s-lab">LoRA 파라미터</div><div class="s-val teal" id="w4lora">–</div><div class="s-sub">m·k + k·n</div></div>
+        <div class="stat"><div class="s-lab">절감률</div><div class="s-val flame" id="w4pct">–</div><div class="s-sub" id="w4ratio">–</div></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Quantization — 양자화</h3>
+  <p>일반적으로 가중치는 <strong>32비트 부동소수점(FP32)</strong>으로 저장한다. 이를 <strong>8비트 정수(INT8)</strong>로 바꾸면 <strong>파라미터 수는 그대로</strong>인 채 저장 크기를 <strong>¼</strong>로 줄인다. 핵심 아이디어는 실수 범위 $[\min, \max]$를 정수 격자에 매핑하는 것이다.</p>
+
+  <div class="code-cap"># FP32 → INT8 비대칭 양자화의 뼈대</div>
+  <pre><code class="language-python">levels = 2**8 - 1                     # 255
+scale  = (x.max() - x.min()) / levels
+q      = ((x - x.min()) / scale).round().clip(0, levels)  # 정수로
+x_hat  = q * scale + x.min()          # 역양자화(복원값) — 약간의 오차 발생</code></pre>
+
+  <p>아래 위젯은 위 식을 <strong>실제로 수행</strong>한다. 비트 수를 낮출수록 저장은 작아지지만 복원 오차(회색↔주황 막대의 차이)가 커지는 <strong>정확도–크기 트레이드오프</strong>가 눈에 보인다.</p>
+
+  <div class="widget">
+    <div class="wg-head">
+      <div class="wg-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M4 18L8 6l4 8 4-10 4 14"/></svg></div>
+      <div><b>Quantization 시뮬레이터</b><span>FP32 가중치를 정수로 — 오차와 크기를 동시에</span></div>
+    </div>
+    <div class="wg-body">
+      <div class="wg-ctrl">
+        <span class="wg-label">비트 폭:</span>
+        <div class="seg" id="w3bits">
+          <button data-b="8" class="on">8-bit</button>
+          <button data-b="4">4-bit</button>
+          <button data-b="2">2-bit</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--ink-3);margin-bottom:6px">
+        <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;background:var(--ink-3);border-radius:3px;display:inline-block"></span>원본 FP32</span>
+        <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:12px;background:var(--flame);border-radius:3px;display:inline-block"></span>양자화 복원값</span>
+      </div>
+      <div class="qbars" id="w3bars"></div>
+      <div class="readout">
+        <div class="stat"><div class="s-lab">저장 크기</div><div class="s-val flame" id="w3size">–</div><div class="s-sub">vs FP32</div></div>
+        <div class="stat"><div class="s-lab">표현 가능 레벨</div><div class="s-val" id="w3lv">–</div><div class="s-sub">2^bits − 1</div></div>
+        <div class="stat"><div class="s-lab">평균 제곱 오차</div><div class="s-val teal" id="w3mse">–</div><div class="s-sub">MSE</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 09 SUMMARY -->
+<section id="summary">
+  <div class="sec-head"><span class="sec-num">09</span><h2>핵심 정리</h2></div>
+  <p class="sec-sub">시험 직전 5분 복습 — 한 표로 보는 전체 계보</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>주제</th><th>한 줄 핵심</th><th>꼭 기억할 것</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Attention</strong></td><td>Q·K 유사도로 V를 가중합</td><td>$\mathrm{softmax}(QK^{\top}/\sqrt{d_k})V$, $\sqrt{d_k}$는 스케일 안정</td></tr>
+        <tr><td><strong>Multi-head</strong></td><td>여러 관점을 병렬로</td><td>split → 각 head attention → concat → linear</td></tr>
+        <tr><td><strong>Enc / Dec Block</strong></td><td>뼈대는 같고 attention이 다름</td><td>Residual + LayerNorm + FFN 공유, 디코더는 마스킹</td></tr>
+        <tr><td><strong>BERT</strong></td><td>인코더 · 양방향 · 이해</td><td>MLM(15%, 80/10/10) + NSP, 임베딩 3종 합</td></tr>
+        <tr><td><strong>GPT</strong></td><td>디코더 · 단방향 · 생성</td><td>Masked Attention, cross-attention 없음</td></tr>
+        <tr><td><strong>InstructGPT</strong></td><td>지시를 따르게 정렬</td><td>SFT → Reward Model → PPO(KL penalty ≠ clipping)</td></tr>
+        <tr><td><strong>LLM 한계</strong></td><td>구조에서 오는 6가지 제약</td><td>확률모델·지식고정·context·의미부재·추론·해석성</td></tr>
+        <tr><td><strong>RAG</strong></td><td>검색으로 근거를 붙임</td><td>프롬프트→검색→결합→생성, 한계 1·2 겨냥</td></tr>
+        <tr><td><strong>경량화</strong></td><td>성능 지키며 몸집 축소</td><td>Pruning · Distillation · LoRA · Quantization</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout note">
+    <div class="co-title">한 문장으로 꿰기</div>
+    <p>같은 Transformer에서 <strong>인코더 → BERT(이해)</strong>와 <strong>디코더 → GPT(생성)</strong>가 갈라지고, GPT는 <strong>RLHF</strong>로 지시를 따르는 <strong>LLM</strong>이 되며, 그 구조적 한계는 <strong>RAG</strong>(지식 보강)와 <strong>경량화</strong>(효율)로 메워진다.</p>
+  </div>
+
+  <div class="callout pit">
+    <div class="co-title">자주 헷갈리는 포인트 3가지</div>
+    <p><strong>① BERT의 마스킹 ≠ GPT의 마스킹.</strong> BERT는 <em>단어를 [MASK]로 가려 복원</em>(MLM)하고, GPT는 <em>미래 위치를 $-\infty$로 가려 다음 토큰 예측</em>(causal mask)한다. 목적이 다르다.</p>
+    <p><strong>② GPT는 디코더지만 cross-attention이 없다.</strong> 인코더가 없으니 참조할 대상도 없다. Masked Self-Attention + FFN만 쌓는다.</p>
+    <p><strong>③ PPO의 KL penalty와 clipping은 별개.</strong> KL penalty는 <em>기준 모델에서 멀어지지 않게</em>, clipping은 <em>업데이트 폭이 과격해지지 않게</em> 하는 서로 다른 안정화 장치다.</p>
+  </div>
+
+  <div class="foot">
+    <p><strong>학습용 자료</strong> · LikeLion NLP 부트캠프 강의(BERT / GPT / LLM &amp; RAG) 기반으로 하나의 흐름으로 재구성. 강의 자료의 표기 오류(<code>RoLA→LoRA</code>, <code>Retrueval→Retrieval</code>)와 PPO 설명(KL penalty vs clipping)은 본문에서 바로잡았다.</p>
+    <p style="margin-top:8px">위젯 4종(Attention 계산기 · Causal Mask · Quantization · LoRA)은 모두 <strong>실제 수식을 브라우저에서 계산</strong>한다. 값을 바꿔 가며 직접 확인해 보길.</p>
+  </div>
+</section>
+
+</main>
+
+<!-- ============ SCRIPTS ============ -->
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+<script>
+/* ---------- nav toggle (mobile) ---------- */
+const sidebar=document.getElementById('sidebar');
+const backdrop=document.getElementById('backdrop');
+const navToggle=document.getElementById('navToggle');
+function closeNav(){sidebar.classList.remove('open');backdrop.classList.remove('show');}
+navToggle.addEventListener('click',()=>{sidebar.classList.toggle('open');backdrop.classList.toggle('show');});
+backdrop.addEventListener('click',closeNav);
+document.querySelectorAll('.nav-link').forEach(a=>a.addEventListener('click',()=>{if(window.innerWidth<=1000)closeNav();}));
+
+/* ---------- progress bar ---------- */
+const pbar=document.getElementById('pbar');
+function onScroll(){
+  const h=document.documentElement;
+  const sc=h.scrollTop||document.body.scrollTop;
+  const max=(h.scrollHeight-h.clientHeight)||1;
+  pbar.style.width=(sc/max*100)+'%';
+}
+window.addEventListener('scroll',onScroll,{passive:true});onScroll();
+
+/* ---------- scroll-spy ---------- */
+const links=[...document.querySelectorAll('.nav-link')];
+const map={};links.forEach(l=>{const id=l.getAttribute('href').slice(1);map[id]=l;});
+const spy=new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      links.forEach(l=>l.classList.remove('active'));
+      const l=map[e.target.id];if(l)l.classList.add('active');
+    }
+  });
+},{rootMargin:'-45% 0px -50% 0px',threshold:0});
+document.querySelectorAll('section[id]').forEach(s=>spy.observe(s));
+
+/* ================= WIDGETS ================= */
+function softmax(a){const m=Math.max(...a);const e=a.map(x=>Math.exp(x-m));const s=e.reduce((p,q)=>p+q,0);return e.map(x=>x/s);}
+function dot(a,b){let s=0;for(let i=0;i<a.length;i++)s+=a[i]*b[i];return s;}
+function fmt(n){return n.toLocaleString('en-US');}
+
+/* ---- W1: Scaled Dot-Product Attention ---- */
+const W1={
+  tok:['나는','밥을','먹었다'],
+  Q:[[1,0,1],[0,2,0],[1,1,1]],
+  K:[[1,0,1],[0,2,0],[1,1,0]],
+  V:[[1,0,0],[0,1,0],[0,0,1]],
+  dk:3, sel:2
+};
+function w1Btns(){
+  const box=document.getElementById('w1btns');box.innerHTML='';
+  W1.tok.forEach((t,i)=>{
+    const b=document.createElement('button');b.textContent=t;
+    if(i===W1.sel)b.classList.add('on');
+    b.onclick=()=>{W1.sel=i;w1Btns();w1Render();};
+    box.appendChild(b);
+  });
+}
+function vecRow(label,arr,cls,digits){
+  let cells=arr.map(v=>`<div class="cell ${cls||''}">${digits!=null?v.toFixed(digits):v}</div>`).join('');
+  return `<div class="step"><span class="step-lab">${label}</span><div class="vec">${cells}</div></div>`;
+}
+function w1Render(){
+  const q=W1.Q[W1.sel];
+  const raw=W1.K.map(k=>dot(q,k));
+  const scaled=raw.map(s=>s/Math.sqrt(W1.dk));
+  const w=softmax(scaled);
+  const out=[0,0,0];
+  for(let j=0;j<3;j++)for(let d=0;d<3;d++)out[d]+=w[j]*W1.V[j][d];
+  let html='';
+  html+=vecRow(`Q ("${W1.tok[W1.sel]}")`,q,'',null);
+  html+=`<div style="height:6px"></div>`;
+  html+=vecRow('score = Q·Kⱼ',raw,'k',2);
+  html+=vecRow('÷ √d_k (√3)',scaled,'k',2);
+  html+='<div style="height:10px"></div>';
+  html+='<div style="font-family:var(--mono);font-size:11.5px;color:var(--ink-3);margin-bottom:4px">softmax → 어텐션 가중치 (각 토큰을 얼마나 볼까)</div>';
+  html+='<div class="wbar">';
+  W1.tok.forEach((t,j)=>{
+    html+=`<div class="wbar-row"><span class="wl">${t}</span><div class="wbar-track"><div class="wbar-fill" style="width:${(w[j]*100).toFixed(1)}%"></div></div><span class="wv">${w[j].toFixed(3)}</span></div>`;
+  });
+  html+='</div><div style="height:12px"></div>';
+  html+=vecRow('출력 = Σ wⱼ·Vⱼ',out,'',3);
+  html+=`<p style="font-size:12.5px;color:var(--ink-3);margin-top:12px">V가 단위벡터라 출력의 각 성분이 곧 "j번째 토큰을 본 비중"과 같다. 가장 큰 가중치를 받은 토큰의 정보가 출력에 가장 많이 섞인다.</p>`;
+  document.getElementById('w1steps').innerHTML=html;
+}
+
+/* ---- W2: Causal Mask heatmap ---- */
+const W2={n:5,mode:'enc'};
+function scoreMat(n){
+  const M=[];
+  for(let i=0;i<n;i++){const r=[];for(let j=0;j<n;j++){
+    r.push(Math.sin(i*1.3+0.6)*Math.cos(j*0.8+0.3)+(i===j?1.4:0)+0.4);
+  }M.push(r);}return M;
+}
+function tealShade(t){ // t in [0,1] -> interpolate #e6f5f3 -> #0f9d8f
+  const a=[230,245,243],b=[15,157,143];
+  const c=a.map((v,i)=>Math.round(v+(b[i]-v)*t));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+function w2Render(){
+  const n=W2.n,S=scoreMat(n);
+  const grid=document.getElementById('w2grid');
+  const rows=[];
+  for(let i=0;i<n;i++){
+    const masked=S[i].map((v,j)=>(W2.mode==='dec'&&j>i)?-Infinity:v);
+    rows.push(softmax(masked));
+  }
+  // build grid: header row (K0..) + label col (Q0..)
+  let cols=n+1;
+  let h=`<div class="hm" style="grid-template-columns:34px repeat(${n},1fr)">`;
+  h+=`<div class="hm-axis"></div>`;
+  for(let j=0;j<n;j++)h+=`<div class="hm-axis">K${j}</div>`;
+  for(let i=0;i<n;i++){
+    h+=`<div class="hm-axis">Q${i}</div>`;
+    for(let j=0;j<n;j++){
+      const isM=(W2.mode==='dec'&&j>i);
+      if(isM){h+=`<div class="hm-cell masked"></div>`;}
+      else{
+        const w=rows[i][j];
+        const bg=tealShade(Math.min(1,w*n*0.55+0.05));
+        const txt=w>0.42?'#fff':'#0a5c54';
+        h+=`<div class="hm-cell" style="background:${bg};color:${txt}">${w.toFixed(2)}</div>`;
+      }
+    }
+  }
+  h+='</div>';
+  grid.innerHTML=h;
+  const cap=document.getElementById('w2cap');
+  if(W2.mode==='enc'){
+    cap.innerHTML='<strong>Encoder(양방향):</strong> 모든 Q가 모든 K를 본다 — 문장 전체를 취합해 <em>이해</em>에 적합. 각 행의 합은 1.';
+  }else{
+    cap.innerHTML='<strong>Decoder(마스킹):</strong> Q<sub>i</sub>는 K<sub>0..i</sub>(자신과 과거)만 본다 — 미래(빗금)를 못 보므로 <em>생성</em>에 적합. 마스킹된 뒤에도 각 행의 합은 1.';
+  }
+}
+document.querySelectorAll('#w2mode button').forEach(b=>{
+  b.onclick=()=>{document.querySelectorAll('#w2mode button').forEach(x=>x.classList.remove('on'));b.classList.add('on');W2.mode=b.dataset.m;w2Render();};
+});
+document.getElementById('w2n').addEventListener('input',e=>{W2.n=+e.target.value;document.getElementById('w2nv').textContent=W2.n;w2Render();});
+
+/* ---- W3: Quantization ---- */
+const W3={bits:8,w:[-0.92,0.15,0.63,-0.31,0.88,-0.57,0.04,0.42,-0.20,0.71]};
+function w3Render(){
+  const b=W3.bits,levels=Math.pow(2,b)-1;
+  const mn=Math.min(...W3.w),mx=Math.max(...W3.w);
+  const scale=(mx-mn)/levels;
+  const q=W3.w.map(x=>Math.round((x-mn)/scale));
+  const deq=q.map(v=>v*scale+mn);
+  const mse=W3.w.reduce((a,x,i)=>a+Math.pow(x-deq[i],2),0)/W3.w.length;
+  // bars: map value range to height. domain [mn-.1, mx+.1]
+  const lo=mn-0.15,hi=mx+0.15,span=hi-lo;
+  const H=v=>((v-lo)/span*100);
+  const bars=document.getElementById('w3bars');
+  let h='';
+  W3.w.forEach((x,i)=>{
+    h+=`<div class="qbar-col" title="원본 ${x.toFixed(2)} → 복원 ${deq[i].toFixed(2)}"><div style="display:flex;gap:2px;align-items:flex-end;width:100%;height:100%;justify-content:center">`+
+       `<div class="qbar orig" style="height:${H(x)}%"></div>`+
+       `<div class="qbar deq" style="height:${H(deq[i])}%"></div>`+
+       `</div></div>`;
+  });
+  bars.innerHTML=h;
+  document.getElementById('w3size').textContent=(b/32).toFixed(3).replace(/0+$/,'')+'×';
+  document.getElementById('w3lv').textContent=fmt(levels);
+  document.getElementById('w3mse').textContent=mse.toFixed(5);
+}
+document.querySelectorAll('#w3bits button').forEach(b=>{
+  b.onclick=()=>{document.querySelectorAll('#w3bits button').forEach(x=>x.classList.remove('on'));b.classList.add('on');W3.bits=+b.dataset.b;w3Render();};
+});
+
+/* ---- W4: LoRA params ---- */
+const W4={m:4096,n:4096,r:8};
+function w4Render(){
+  const full=W4.m*W4.n;
+  const lora=W4.m*W4.r+W4.r*W4.n;
+  const pct=(1-lora/full)*100;
+  document.getElementById('w4full').textContent=fmt(full);
+  document.getElementById('w4lora').textContent=fmt(lora);
+  document.getElementById('w4pct').textContent=pct.toFixed(2)+'%';
+  document.getElementById('w4ratio').textContent='약 '+(full/lora).toFixed(0)+'배 적음';
+}
+[['w4m','m','w4mv'],['w4n','n','w4nv'],['w4r','r','w4rv']].forEach(([id,key,vid])=>{
+  document.getElementById(id).addEventListener('input',e=>{W4[key]=+e.target.value;document.getElementById(vid).textContent=e.target.value;w4Render();});
+});
+
+/* init all widgets */
+w1Btns();w1Render();w2Render();w3Render();w4Render();
+
+/* ---------- KaTeX + highlight ---------- */
+document.addEventListener('DOMContentLoaded',function(){
+  if(window.renderMathInElement){
+    renderMathInElement(document.body,{
+      delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],
+      throwOnError:false
+    });
+  }
+  if(window.hljs){hljs.highlightAll();}
+});
+</script>
+</body>
+</html>
