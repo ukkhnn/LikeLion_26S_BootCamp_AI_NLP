@@ -1,0 +1,1578 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NLP 입문 &amp; 모델 학습과 평가 — FUNDAMENTAL 학습 가이드</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+<style>
+:root{
+  --primary:#ee4c2c;          /* PyTorch flame orange */
+  --primary-deep:#c43a1e;
+  --primary-soft:#fdeee9;
+  --primary-line:#f6c9bc;
+  --teal:#0f766e;             /* 평가·보조 accent */
+  --teal-soft:#e7f4f2;
+  --ink:#1c1e26;
+  --ink-soft:#494f5c;
+  --ink-mute:#8a92a3;
+  --bg:#faf9f7;
+  --surface:#ffffff;
+  --line:#e7e3dc;
+  --line-soft:#f0ede7;
+  --side-bg:#15171d;
+  --side-ink:#b9bec9;
+  --code-bg:#16181f;
+  --warn:#b3400f;
+  --warn-soft:#fdf1e7;
+  --radius:14px;
+  --mono:'JetBrains Mono','Pretendard Variable',monospace;
+  --sans:'Pretendard Variable',Pretendard,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:70px}
+body{font-family:var(--sans);background:var(--bg);color:var(--ink);font-size:16.5px;line-height:1.78;letter-spacing:-0.011em;word-break:keep-all;overflow-wrap:break-word}
+
+/* ---------- 상단 진행 바 ---------- */
+#progress{position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,var(--primary),#ff8a5c);z-index:1000;transition:width .1s linear}
+
+/* ---------- 사이드바 ---------- */
+.sidebar{position:fixed;top:0;left:0;width:280px;height:100vh;background:var(--side-bg);color:var(--side-ink);overflow-y:auto;z-index:900;padding:28px 0 40px;scrollbar-width:thin;scrollbar-color:#3a3f4b transparent}
+.sidebar::-webkit-scrollbar{width:5px}
+.sidebar::-webkit-scrollbar-thumb{background:#3a3f4b;border-radius:3px}
+.side-logo{padding:0 26px 22px;border-bottom:1px solid #262a33}
+.side-logo .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.22em;color:var(--primary);font-weight:700}
+.side-logo h1{font-size:18.5px;font-weight:800;color:#f4f5f8;margin-top:8px;line-height:1.45;letter-spacing:-0.02em}
+.side-logo .sub{font-size:12px;color:#7d8494;margin-top:7px;font-family:var(--mono);letter-spacing:.02em}
+.side-nav{padding:14px 14px 0}
+.nav-part{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;color:#6b7280;padding:20px 12px 8px;font-weight:700}
+.nav-part b{color:var(--primary);font-weight:700}
+.nav-link{display:flex;gap:10px;align-items:baseline;padding:8px 12px;border-radius:9px;color:var(--side-ink);text-decoration:none;font-size:14px;line-height:1.5;transition:background .15s,color .15s}
+.nav-link .n{font-family:var(--mono);font-size:11px;color:#5d6472;min-width:18px;font-weight:500}
+.nav-link:hover{background:#20242d;color:#fff}
+.nav-link.active{background:linear-gradient(90deg,rgba(238,76,44,.16),rgba(238,76,44,.05));color:#fff}
+.nav-link.active .n{color:var(--primary)}
+.side-foot{padding:26px 26px 0;font-size:11.5px;color:#5d6472;line-height:1.7}
+
+/* ---------- 모바일 토글 ---------- */
+#menuBtn{display:none;position:fixed;top:14px;left:14px;z-index:950;width:42px;height:42px;border-radius:11px;border:1px solid var(--line);background:var(--surface);cursor:pointer;box-shadow:0 2px 10px rgba(20,22,30,.08);align-items:center;justify-content:center}
+#menuBtn span{display:block;width:17px;height:2px;background:var(--ink);border-radius:2px;position:relative}
+#menuBtn span::before,#menuBtn span::after{content:"";position:absolute;left:0;width:17px;height:2px;background:var(--ink);border-radius:2px}
+#menuBtn span::before{top:-5.5px}
+#menuBtn span::after{top:5.5px}
+#dim{display:none;position:fixed;inset:0;background:rgba(12,14,20,.45);z-index:880}
+
+/* ---------- 본문 레이아웃 ---------- */
+.main{margin-left:280px}
+.container{max-width:860px;margin:0 auto;padding:0 40px 110px}
+
+/* ---------- 히어로 ---------- */
+.hero{padding:88px 0 30px;border-bottom:1px solid var(--line)}
+.hero .eyebrow{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;letter-spacing:.16em;color:var(--primary);font-weight:700;background:var(--primary-soft);border:1px solid var(--primary-line);padding:6px 13px;border-radius:999px}
+.hero h2{font-size:clamp(30px,4.4vw,44px);font-weight:800;letter-spacing:-0.035em;line-height:1.24;margin:20px 0 14px}
+.hero h2 em{font-style:normal;color:var(--primary)}
+.hero p.lead{font-size:17.5px;color:var(--ink-soft);max-width:660px}
+.hero-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.tag{font-family:var(--mono);font-size:12px;padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft)}
+.tag.hot{border-color:var(--primary-line);background:var(--primary-soft);color:var(--primary-deep);font-weight:600}
+
+/* ---------- 파트 배너 ---------- */
+.part-banner{margin:74px 0 -14px;display:flex;align-items:center;gap:14px}
+.part-banner .pn{font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.2em;color:#fff;background:var(--ink);padding:7px 13px;border-radius:8px}
+.part-banner.p1 .pn{background:var(--primary)}
+.part-banner.p2 .pn{background:var(--teal)}
+.part-banner h3{font-size:21px;font-weight:800;letter-spacing:-0.02em}
+.part-banner .date{font-family:var(--mono);font-size:12px;color:var(--ink-mute);margin-left:auto}
+
+/* ---------- 섹션 ---------- */
+section.sec{padding-top:74px}
+.sec-head{display:flex;align-items:flex-end;gap:16px;margin-bottom:22px;border-bottom:2px solid var(--ink);padding-bottom:12px;position:relative}
+.sec-head::after{content:"";position:absolute;left:0;bottom:-2px;width:64px;height:2px;background:var(--primary)}
+.sec-num{font-family:var(--mono);font-size:34px;font-weight:700;color:var(--primary);line-height:1;opacity:.9}
+.sec-head h2{font-size:26px;font-weight:800;letter-spacing:-0.028em;line-height:1.3}
+.sec-head .src{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink-mute);white-space:nowrap;padding-bottom:3px}
+h3{font-size:19.5px;font-weight:750;margin:44px 0 12px;letter-spacing:-0.02em;display:flex;align-items:center;gap:9px}
+h3::before{content:"";width:7px;height:7px;border-radius:2px;background:var(--primary);flex:none}
+p{margin:0 0 15px;color:var(--ink)}
+p.dim,li.dim{color:var(--ink-soft)}
+strong{font-weight:700;color:var(--ink)}
+mark{background:linear-gradient(transparent 62%,#ffd9cc 62%);padding:0 1px;color:inherit}
+ul.plain{margin:6px 0 16px 4px;list-style:none}
+ul.plain li{padding-left:20px;position:relative;margin-bottom:9px;color:var(--ink)}
+ul.plain li::before{content:"";position:absolute;left:3px;top:.72em;width:6px;height:6px;border-radius:50%;background:var(--primary)}
+ol.steps{margin:6px 0 16px;padding-left:0;counter-reset:st;list-style:none}
+ol.steps li{counter-increment:st;position:relative;padding-left:36px;margin-bottom:10px}
+ol.steps li::before{content:counter(st);position:absolute;left:0;top:2px;width:23px;height:23px;border-radius:8px;background:var(--ink);color:#fff;font-family:var(--mono);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+
+/* ---------- 카드 ---------- */
+.cards{display:grid;gap:14px;margin:18px 0 22px}
+.cards.c3{grid-template-columns:repeat(3,1fr)}
+.cards.c2{grid-template-columns:repeat(2,1fr)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 19px}
+.card .ct{font-weight:750;font-size:15.5px;margin-bottom:7px;display:flex;align-items:center;gap:8px}
+.card .ct .ic{font-family:var(--mono);font-size:11px;color:var(--primary);background:var(--primary-soft);border:1px solid var(--primary-line);border-radius:6px;padding:2px 7px;font-weight:700}
+.card p{font-size:14.5px;color:var(--ink-soft);margin:0;line-height:1.72}
+.card .eg{margin-top:10px;font-size:13.5px;background:var(--bg);border:1px dashed var(--line);border-radius:9px;padding:9px 12px;color:var(--ink-soft);line-height:1.65}
+.card .eg b{color:var(--primary-deep)}
+
+/* ---------- 콜아웃 ---------- */
+.callout{border-radius:var(--radius);padding:16px 19px 15px;margin:20px 0;border:1px solid;font-size:15px;line-height:1.75}
+.callout .co-t{font-weight:800;font-size:13px;letter-spacing:.04em;display:flex;align-items:center;gap:7px;margin-bottom:7px;font-family:var(--mono)}
+.callout p{margin:0 0 8px;font-size:15px}
+.callout p:last-child{margin:0}
+.callout.core{background:var(--primary-soft);border-color:var(--primary-line)}
+.callout.core .co-t{color:var(--primary-deep)}
+.callout.note{background:var(--teal-soft);border-color:#bfdedb}
+.callout.note .co-t{color:var(--teal)}
+.callout.warn{background:var(--warn-soft);border-color:#f3d3b8}
+.callout.warn .co-t{color:var(--warn)}
+
+/* ---------- 수식 ---------- */
+.formula{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:12px;padding:16px 22px;margin:18px 0;overflow-x:auto;font-size:17px}
+.formula .fl{display:flex;align-items:center;gap:18px;padding:7px 0;flex-wrap:wrap}
+.formula .fl .lab{font-size:13.5px;color:var(--ink-mute);min-width:118px;font-family:var(--mono)}
+.katex{font-size:1.06em}
+
+/* ---------- 표 ---------- */
+.tbl-wrap{overflow-x:auto;margin:18px 0 24px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:560px}
+th{background:#1d2027;color:#eef0f4;text-align:left;padding:11px 15px;font-weight:700;font-size:13.5px;letter-spacing:.01em;white-space:nowrap}
+td{padding:11px 15px;border-top:1px solid var(--line-soft);vertical-align:top;color:var(--ink-soft);line-height:1.65}
+td b{color:var(--ink)}
+td .mono,.mono{font-family:var(--mono);font-size:.92em}
+tr:hover td{background:#fbfaf8}
+
+/* ---------- 그림 ---------- */
+.fig{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:22px 20px 14px;margin:20px 0}
+.fig svg{width:100%;height:auto;display:block}
+.fig .cap{text-align:center;font-size:13px;color:var(--ink-mute);margin-top:10px;font-family:var(--mono);letter-spacing:.01em}
+
+/* ---------- 코드 ---------- */
+pre{background:var(--code-bg);border-radius:12px;padding:18px 20px;overflow-x:auto;margin:16px 0 22px;border:1px solid #262a35}
+pre code{font-family:var(--mono);font-size:13.5px;line-height:1.75;background:none;padding:0}
+code:not(pre code){font-family:var(--mono);font-size:.87em;background:#edeae4;border-radius:5px;padding:2px 6px;color:var(--primary-deep)}
+
+/* ---------- 위젯 ---------- */
+.widget{background:linear-gradient(180deg,#fffdfb,#fdf8f4);border:1.5px solid var(--primary-line);border-radius:16px;margin:26px 0 30px;overflow:hidden;box-shadow:0 3px 16px rgba(238,76,44,.05)}
+.w-head{display:flex;align-items:center;gap:11px;padding:13px 20px;background:linear-gradient(90deg,var(--primary-soft),#fff6f1);border-bottom:1px solid var(--primary-line)}
+.w-head .w-chip{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.14em;color:#fff;background:var(--primary);padding:4px 9px;border-radius:6px}
+.w-head .w-title{font-weight:800;font-size:15.5px;letter-spacing:-0.01em}
+.w-head .w-hint{margin-left:auto;font-size:12px;color:var(--ink-mute);font-family:var(--mono)}
+.w-body{padding:20px}
+.w-note{font-size:13px;color:var(--ink-mute);padding:11px 20px;border-top:1px dashed var(--primary-line);background:#fffcfa;line-height:1.65}
+.ctl-row{display:flex;align-items:center;gap:12px;margin:9px 0;flex-wrap:wrap}
+.ctl-row label{font-size:13.5px;font-weight:600;min-width:132px;font-family:var(--mono)}
+.ctl-row .val{font-family:var(--mono);font-size:13px;min-width:56px;text-align:right;color:var(--primary-deep);font-weight:700}
+input[type=range]{-webkit-appearance:none;appearance:none;flex:1;min-width:130px;height:5px;border-radius:3px;background:#e8ddd6;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:17px;height:17px;border-radius:50%;background:var(--primary);border:2.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.25)}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--primary);border:2.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.25)}
+input[type=number],input[type=text].wtext{font-family:var(--mono);font-size:14px;padding:8px 11px;border:1.5px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);outline:none;transition:border .15s}
+input[type=number]:focus,input[type=text].wtext:focus{border-color:var(--primary)}
+.btn{font-family:var(--sans);font-size:13.5px;font-weight:700;padding:8px 15px;border-radius:9px;border:1.5px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer;transition:transform .1s,background .15s,border-color .15s}
+.btn:hover{background:#31353f;border-color:#31353f}
+.btn:active{transform:scale(.97)}
+.btn.pri{background:var(--primary);border-color:var(--primary)}
+.btn.pri:hover{background:var(--primary-deep);border-color:var(--primary-deep)}
+.btn.ghost{background:#fff;color:var(--ink);border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--ink);background:#fff}
+.btn:focus-visible,a:focus-visible,input:focus-visible{outline:2.5px solid var(--primary);outline-offset:2px}
+.chipset{display:flex;flex-wrap:wrap;gap:7px}
+.tok{font-family:var(--mono);font-size:13px;padding:5px 11px;border-radius:8px;border:1.5px solid var(--line);background:#fff;font-weight:500}
+.tok.orange{border-color:var(--primary-line);background:var(--primary-soft);color:var(--primary-deep);font-weight:700}
+.tok.unk{border-color:#f0b9a4;background:#fdece4;color:var(--warn);font-weight:700}
+.tok.idc{border-color:#d6d2ca;background:var(--bg);color:var(--ink-soft)}
+.stage{margin:16px 0 4px}
+.stage .st-t{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--ink-mute);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.stage .st-t .dot{width:8px;height:8px;border-radius:50%;background:var(--primary)}
+.vecrow{display:flex;gap:8px;flex-wrap:wrap}
+.veccell{display:flex;flex-direction:column;gap:3px;align-items:center}
+.veccell .vlab{font-family:var(--mono);font-size:11px;color:var(--ink-mute)}
+.vgrid{display:grid;grid-template-rows:repeat(4,20px);gap:2px}
+.vgrid span{width:46px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;border-radius:4px;color:#243;font-weight:600}
+.readout{font-family:var(--mono);font-size:13px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px 14px;display:flex;gap:18px;flex-wrap:wrap;margin-top:12px}
+.readout b{color:var(--primary-deep)}
+.pbar{position:relative;height:22px;background:#f2eee9;border-radius:6px;overflow:hidden;flex:1;min-width:120px}
+.pbar>i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--primary),#ff8a5c);border-radius:6px;transition:width .18s}
+.pbar>em{position:absolute;right:8px;top:0;bottom:0;display:flex;align-items:center;font-family:var(--mono);font-size:11.5px;font-style:normal;font-weight:700;color:var(--ink-soft)}
+.pbar.win>i{background:linear-gradient(90deg,var(--teal),#2aa79c)}
+
+/* ---------- 핵심 정리 ---------- */
+.keypoints{background:#1d2027;color:#dfe2e9;border-radius:var(--radius);padding:20px 24px;margin:30px 0 8px}
+.keypoints .kp-t{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.18em;color:var(--primary);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.keypoints ul{list-style:none}
+.keypoints li{padding-left:22px;position:relative;margin-bottom:9px;font-size:14.5px;line-height:1.72}
+.keypoints li::before{content:"✓";position:absolute;left:0;color:var(--primary);font-weight:800}
+.keypoints li:last-child{margin-bottom:0}
+.keypoints b{color:#fff}
+
+/* ---------- 푸터 ---------- */
+.footer{margin-top:96px;padding-top:28px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--ink-mute);font-family:var(--mono)}
+
+/* ---------- 반응형 ---------- */
+@media (max-width:1080px){
+  .sidebar{transform:translateX(-100%);transition:transform .25s ease}
+  .sidebar.open{transform:translateX(0);box-shadow:6px 0 30px rgba(10,12,18,.3)}
+  #menuBtn{display:flex}
+  #dim.show{display:block}
+  .main{margin-left:0}
+}
+@media (max-width:720px){
+  body{font-size:15.5px}
+  .container{padding:0 20px 90px}
+  .hero{padding-top:80px}
+  .cards.c3,.cards.c2{grid-template-columns:1fr}
+  .sec-head{flex-wrap:wrap;gap:8px 14px}
+  .sec-head .src{margin-left:0;width:100%;order:3}
+  .ctl-row label{min-width:110px;font-size:12.5px}
+  .formula{font-size:15px;padding:14px 15px}
+  .formula .fl .lab{min-width:100%;margin-bottom:-4px}
+  .part-banner{flex-wrap:wrap}
+  .part-banner .date{margin-left:0;width:100%}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{transition:none!important;animation:none!important}
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<button id="menuBtn" aria-label="목차 열기"><span></span></button>
+<div id="dim"></div>
+
+<nav class="sidebar" id="sidebar" aria-label="목차">
+  <div class="side-logo">
+    <div class="kicker">FUNDAMENTAL</div>
+    <h1>NLP 입문 &amp;<br>모델 학습과 평가</h1>
+    <div class="sub">LikeLion 26기 · 0629–0630</div>
+  </div>
+  <div class="side-nav">
+    <div class="nav-part"><b>PART 1</b> — NLP 입문 <span style="float:right">0629</span></div>
+    <a class="nav-link" href="#sec-nlp"><span class="n">01</span>NLP란 무엇인가</a>
+    <a class="nav-link" href="#sec-task"><span class="n">02</span>NLP Task와 생성 패러다임</a>
+    <a class="nav-link" href="#sec-pipeline"><span class="n">03</span>NLP 파이프라인</a>
+    <a class="nav-link" href="#sec-design"><span class="n">04</span>모델 출력 설계</a>
+    <a class="nav-link" href="#sec-rnn"><span class="n">05</span>RNN과 Next Token Prediction</a>
+    <a class="nav-link" href="#sec-lstm"><span class="n">06</span>LSTM — 장기 기억의 도입</a>
+    <div class="nav-part"><b>PART 2</b> — 모델 학습과 평가 <span style="float:right">0630</span></div>
+    <a class="nav-link" href="#sec-loop"><span class="n">07</span>모델 학습 프로세스</a>
+    <a class="nav-link" href="#sec-head"><span class="n">08</span>출력층 설계 — 왜 MLP인가</a>
+    <a class="nav-link" href="#sec-loss"><span class="n">09</span>손실 함수와 Surrogate Loss</a>
+    <a class="nav-link" href="#sec-metric"><span class="n">10</span>평가지표 (Metric)</a>
+    <a class="nav-link" href="#sec-gd"><span class="n">11</span>Gradient Descent</a>
+  </div>
+  <div class="side-foot">강의 슬라이드 2편을 하나의 흐름으로 재구성한 자습용 가이드. 인터랙티브 위젯 5개는 실제 수식으로 동작한다.</div>
+</nav>
+
+<div class="main">
+<div class="container">
+
+<!-- ==================== HERO ==================== -->
+<header class="hero">
+  <span class="eyebrow">FUNDAMENTAL · NLP GUIDE</span>
+  <h2>언어를 숫자로, 숫자를 다시 <em>언어로</em> —<br>그리고 그 사이의 학습</h2>
+  <p class="lead">0629 강의는 자연어가 모델에 들어가고 나오는 <strong>전 과정(파이프라인)</strong>과 <strong>생성 패러다임</strong>을, 0630 강의는 모델이 실제로 배우는 원리인 <strong>손실 함수 · 평가지표 · Gradient Descent</strong>를 다룬다. 두 강의를 이어 붙이면 "문장 → 텐서 → 학습 → 평가"라는 딥러닝 NLP의 뼈대가 완성된다.</p>
+  <div class="hero-tags">
+    <span class="tag hot">0629 · NLP 입문</span>
+    <span class="tag hot">0630 · 모델 학습과 평가</span>
+    <span class="tag">NLP 파이프라인</span>
+    <span class="tag">Next Token Prediction</span>
+    <span class="tag">LSTM</span>
+    <span class="tag">Surrogate Loss</span>
+    <span class="tag">Precision / Recall / F1</span>
+    <span class="tag">SGD</span>
+  </div>
+</header>
+
+<!-- ==================== PART 1 ==================== -->
+<div class="part-banner p1">
+  <span class="pn">PART 1</span>
+  <h3>NLP 입문</h3>
+  <span class="date">0629 · NLP5기</span>
+</div>
+
+<!-- ========== 01 NLP란 무엇인가 ========== -->
+<section class="sec" id="sec-nlp">
+  <div class="sec-head">
+    <span class="sec-num">01</span>
+    <h2>NLP란 무엇인가</h2>
+    <span class="src">0629 · slide 2–4</span>
+  </div>
+
+  <p><strong>NLP(Natural Language Processing, 자연어 처리)</strong>는 자연어를 컴퓨터가 이해하고 처리하는 과정 전체를 가리킨다. 반드시 AI에 한정된 개념은 아니다 — 규칙 기반 문법 검사기나 통계 기반 검색 엔진도 NLP다. 다만 오늘날 NLP라고 말하면 일반적으로 <mark>딥러닝 기반의 처리</mark>를 상정한다.</p>
+
+  <p>여기서 <strong>자연어(Natural Language)</strong>란 자연상에서 발생한 사람의 말이다. 한국어, 영어, 수어처럼 누가 설계하지 않았는데도 쓰이며 진화해 온 언어를 말한다. 반대편에는 <strong>인공어(Artificial Language)</strong>가 있다 — Python 같은 프로그래밍 언어, 에스페란토처럼 명시적 규칙으로 설계된 언어다. 인공어는 문법이 완전하고 모호함이 없지만, 자연어는 그렇지 않다. 그리고 바로 그 "그렇지 않음"이 NLP를 어렵게 만든다.</p>
+
+  <div class="callout core">
+    <div class="co-t">⬤ 더 넓은 정의</div>
+    <p>NLP는 <strong>"언어 형태(representation)로 표현 가능한 모든 의미를 모델링하고 변환하는 문제"</strong>다. 텍스트 → 텍스트뿐 아니라, 이미지 → 설명문(캡셔닝), 음성 → 텍스트, 요구사항 → 코드처럼 <mark>한쪽이 언어이기만 하면</mark> 모두 이 문제 틀 안에 들어온다. "번역기 만들기"가 아니라 "의미의 변환"이 NLP의 본질이라는 관점이다.</p>
+  </div>
+
+  <h3>자연어의 세 가지 특징</h3>
+  <p>인공어와 달리 자연어는 다음 세 성질 때문에 단순한 규칙으로는 처리할 수 없다. 딥러닝이 NLP의 표준이 된 이유가 여기에 있다.</p>
+
+  <div class="cards c3">
+    <div class="card">
+      <div class="ct"><span class="ic">특징 1</span>맥락 의존성</div>
+      <p>같은 문장이라도 맥락에 따라 의미가 변한다. 단어 하나만 봐서는 뜻을 확정할 수 없다.</p>
+      <div class="eg"><b>"배가 크다"</b> — 과일 배? 타는 배? 사람 배? 앞뒤 문장이 있어야만 결정된다.</div>
+    </div>
+    <div class="card">
+      <div class="ct"><span class="ic">특징 2</span>불완전성</div>
+      <p>실제 언어는 규범(맞춤법·문법)을 충족하지 않는 경우가 많다. 그래도 사람은 이해한다.</p>
+      <div class="eg"><b>"ㅋㅋ 낼 학교 감?"</b> — 문법적으로 불완전하지만 의미 전달에는 문제가 없다.</div>
+    </div>
+    <div class="card">
+      <div class="ct"><span class="ic">특징 3</span>다양성</div>
+      <p>언어, 방언, 은어, 신조어 등 형식과 표현이 무한히 다양하고 계속 새로 생겨난다.</p>
+      <div class="eg"><b>"밥 먹었어?" = "밥 뭇나?" = "식사하셨어요?"</b> — 같은 의미, 다른 표현.</div>
+    </div>
+  </div>
+
+  <div class="keypoints">
+    <div class="kp-t">■ 핵심 정리</div>
+    <ul>
+      <li>NLP = 자연어를 컴퓨터가 이해·처리하는 과정. AI 전용 개념은 아니지만 <b>현재는 딥러닝을 상정</b>한다.</li>
+      <li>넓게 보면 <b>언어로 표현 가능한 모든 의미의 모델링과 변환</b> 문제다.</li>
+      <li>자연어는 <b>맥락 의존성 · 불완전성 · 다양성</b> 때문에 규칙 기반으로는 한계가 명확하다.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ========== 02 NLP Task와 생성 패러다임 ========== -->
+<section class="sec" id="sec-task">
+  <div class="sec-head">
+    <span class="sec-num">02</span>
+    <h2>NLP Task와 생성 패러다임</h2>
+    <span class="src">0629 · slide 5–9</span>
+  </div>
+
+  <p>NLP는 오랫동안 문제를 잘게 쪼개서 풀어 왔다. task마다 전용 모델, 전용 데이터셋, 전용 평가 방법이 따로 있었다. 대표적인 task를 하나의 예문에 적용해 보면 각각이 무엇을 뽑아내는지 한눈에 보인다.</p>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Task</th><th>무엇을 하는가</th><th>예문: "손흥민은 어제 런던에서 골을 넣었다"</th></tr></thead>
+    <tbody>
+      <tr><td><b>품사 태깅</b><br><span class="mono">POS Tagging</span></td><td>각 단어에 품사를 붙인다</td><td class="mono">손흥민/고유명사 은/조사 어제/부사 …</td></tr>
+      <tr><td><b>개체명 인식</b><br><span class="mono">NER</span></td><td>사람·장소·기관 등 고유 개체를 찾는다</td><td class="mono">손흥민=PERSON, 런던=LOCATION</td></tr>
+      <tr><td><b>구문 분석</b><br><span class="mono">Parsing</span></td><td>문장의 문법 구조(트리)를 밝힌다</td><td class="mono">[손흥민은 [어제 [런던에서 [골을 넣었다]]]]</td></tr>
+      <tr><td><b>질의 응답</b><br><span class="mono">QA</span></td><td>질문에 대한 답을 찾는다</td><td>Q: 누가 골을 넣었나? → A: 손흥민</td></tr>
+      <tr><td><b>번역</b><br><span class="mono">Machine Translation</span></td><td>다른 언어로 옮긴다</td><td>Son scored a goal in London yesterday.</td></tr>
+      <tr><td><b>요약</b><br><span class="mono">Summarization</span></td><td>핵심만 남기고 줄인다</td><td>손흥민, 런던서 득점.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Transformer 이후의 변화 — 모든 것이 생성 문제로</h3>
+  <p>Transformer 등장 이후 판이 바뀌었다. 첫째, task마다 다르던 모델 구조가 <strong>동일한 구조(Transformer)</strong>로 수렴했다. 둘째, 위의 서로 다른 문제들이 전부 <strong>텍스트 생성 문제</strong> — 즉 <mark>다음 토큰 예측(Next Token Prediction)</mark> 하나로 통일됐다.</p>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>기존 방식</th><th>생성 방식 (프롬프트 → 다음 토큰 예측)</th></tr></thead>
+    <tbody>
+      <tr><td>감성 분류 전용 모델이 <span class="mono">[0.9, 0.1]</span> 출력</td><td>"이 리뷰의 감성은?" → 모델이 <b>"긍정"</b>이라는 토큰을 생성</td></tr>
+      <tr><td>번역 전용 seq2seq 모델</td><td>"다음을 영어로 번역: 안녕" → <b>"Hello"</b> 토큰들을 순서대로 생성</td></tr>
+      <tr><td>NER 전용 태거가 BIO 태그 출력</td><td>"인명을 모두 추출해줘" → <b>"손흥민"</b>을 생성</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>자연어는 왜 생성 문제인가</h3>
+  <p>이 통일이 억지가 아니라 자연스러운 귀결인 이유가 있다.</p>
+  <ul class="plain">
+    <li><strong>언어 자체가 생성 과정이다.</strong> 말은 단어–단어–단어로 이어지며 만들어진다. 다음 단어를 잘 고르는 능력이 곧 언어 능력이다.</li>
+    <li><strong>의미가 분포적으로 표현된다.</strong> 단어의 의미는 사전 정의가 아니라 "어떤 맥락에서 어떤 단어와 함께 나타나는가"라는 분포로 학습된다. 다음 토큰 예측은 이 분포를 직접 학습하는 방법이다.</li>
+    <li><strong>task들이 사실 동일 문제군이다.</strong> 분류·추출·번역·요약 모두 "입력 조건에 맞는 텍스트를 출력하라"의 특수 케이스다.</li>
+    <li><strong>NLG는 NLU를 전제한다.</strong> 좋은 요약을 생성(NLG)하려면 원문을 이해(NLU)해야만 한다. 생성을 잘하도록 학습하면 이해가 내부에 딸려 온다.</li>
+  </ul>
+
+  <h3>그러나 — 생성으로 처리했을 때의 문제점</h3>
+  <p>모든 것을 생성으로 풀 수 있다는 것이 모든 것을 생성으로 <em>풀어야 한다</em>는 뜻은 아니다. 생성 방식에는 뚜렷한 비용이 따른다.</p>
+  <div class="cards c2">
+    <div class="card"><div class="ct"><span class="ic">문제 1</span>출력 구조 불안정</div><p>"JSON으로만 답해"라고 해도 형식이 깨질 수 있다. 분류기는 무조건 5개 클래스 중 하나를 내지만, 생성 모델은 계약을 보장하지 않는다.</p></div>
+    <div class="card"><div class="ct"><span class="ic">문제 2</span>정밀도가 아닌 "그럴듯함"</div><p>생성 모델은 <b>가장 그럴듯한 다음 토큰</b>을 고르도록 학습됐다. 사실이 아니어도 유창하게 말할 수 있다(환각).</p></div>
+    <div class="card"><div class="ct"><span class="ic">문제 3</span>제약 조건 적용의 어려움</div><p>"정확히 10자", "이 단어는 반드시 포함" 같은 하드 제약을 확률적 생성 과정에 강제하기 어렵다.</p></div>
+    <div class="card"><div class="ct"><span class="ic">문제 4</span>효율성 및 비용</div><p>스팸 여부 하나 판단하는 데 거대 모델의 자기회귀 생성을 돌리는 것은 작은 분류기 대비 수백 배 비쌀 수 있다.</p></div>
+    <div class="card"><div class="ct"><span class="ic">문제 5</span>평가 가능성</div><p>분류는 정답과 비교하면 끝이지만, 생성은 정답이 여러 개라 <b>채점 자체가 어렵다</b>. (→ 10장 평가지표에서 다시 다룬다)</p></div>
+  </div>
+
+  <h3>그래서 task를 이해해야 한다</h3>
+  <p>"어차피 LLM이 다 해주는데 왜 옛날 task들을 배우나?"에 대한 답이다.</p>
+  <ol class="steps">
+    <li><strong>생성 모델도 각 task를 내부적으로 수행한다(내재화).</strong> 요약을 생성할 때 모델 내부에서는 개체 인식·구문 이해에 해당하는 계산이 암묵적으로 일어난다.</li>
+    <li><strong>잘하는지 못하는지의 판단은 task 단위로 이뤄진다.</strong> "이 모델은 한국어 NER이 약하다"처럼, 진단과 비교의 단위는 여전히 task다.</li>
+    <li><strong>실제 시스템은 완전한 end-to-end가 드물다.</strong> 검색 + 분류기 + 생성 모델을 조합하는 것이 현실의 파이프라인이다.</li>
+    <li><strong>task마다 요구사항이 다르다.</strong> 법률 검색은 정밀도, 안전 필터는 재현율이 생명이다. 요구사항을 정의하려면 task의 언어를 알아야 한다.</li>
+  </ol>
+
+  <div class="keypoints">
+    <div class="kp-t">■ 핵심 정리</div>
+    <ul>
+      <li>전통 NLP는 <b>task별 전용 모델</b>의 세계였다 — POS, NER, Parsing, QA, 번역, 요약.</li>
+      <li>Transformer 이후 <b>구조는 하나로, 문제는 "다음 토큰 예측"으로 통일</b>됐다.</li>
+      <li>생성 통일에는 근거가 있지만(언어 = 생성 과정, 분포적 의미), <b>구조 불안정 · 환각 · 제약 · 비용 · 평가</b>라는 비용이 따른다.</li>
+      <li>따라서 <b>task 단위의 이해</b>는 생성 시대에도 진단·설계·평가의 기본 언어다.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ========== 03 NLP 파이프라인 ========== -->
+<section class="sec" id="sec-pipeline">
+  <div class="sec-head">
+    <span class="sec-num">03</span>
+    <h2>NLP 파이프라인</h2>
+    <span class="src">0629 · slide 10–16</span>
+  </div>
+
+  <p>문장은 그대로 모델에 들어가지 못한다. 모델은 <strong>텐서(숫자 배열)</strong>만 계산할 수 있기 때문이다. 그래서 모든 NLP 시스템은 "문장 → 숫자 → 계산 → 다시 사람의 언어"라는 변환의 연쇄로 이뤄진다. 먼저 일반적인 인공지능 파이프라인부터 보자.</p>
+
+  <ol class="steps">
+    <li><strong>데이터 수집</strong> — 원천 데이터를 모은다.</li>
+    <li><strong>데이터 정제</strong> — 노이즈·중복·오류를 제거한다.</li>
+    <li><strong>표현 변환</strong> — 모델이 다룰 수 있는 형태(숫자)로 바꾼다.</li>
+    <li><strong>모델 입력</strong> — 배치 단위로 모델에 넣는다.</li>
+    <li><strong>텐서 계산</strong> — 모델이 순전파 연산을 수행한다.</li>
+    <li><strong>출력 후 디코딩</strong> — 계산 결과를 사람이 쓸 수 있는 형태로 되돌린다.</li>
+  </ol>
+
+  <p>이 일반 파이프라인을 NLP에 특화하면 다음 <strong>5단계</strong>가 된다. 3단계(표현 변환)가 NLP에서는 Tokenizing–Encoding–Vectorization 세 단계로 세분화되는 것이 핵심이다.</p>
+
+  <div class="fig">
+    <svg viewBox="0 0 760 150" role="img" aria-label="NLP 파이프라인 5단계">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8a92a3"/></marker>
+      </defs>
+      <g font-family="Pretendard Variable,sans-serif">
+        <!-- boxes -->
+        <g>
+          <rect x="8" y="34" width="128" height="58" rx="12" fill="#fdeee9" stroke="#ee4c2c" stroke-width="1.6"/>
+          <text x="72" y="59" text-anchor="middle" font-size="14.5" font-weight="700" fill="#1c1e26">Tokenizing</text>
+          <text x="72" y="79" text-anchor="middle" font-size="11" fill="#8a92a3">문장 → 토큰</text>
+        </g>
+        <g>
+          <rect x="164" y="34" width="128" height="58" rx="12" fill="#fdeee9" stroke="#ee4c2c" stroke-width="1.6"/>
+          <text x="228" y="59" text-anchor="middle" font-size="14.5" font-weight="700" fill="#1c1e26">Encoding</text>
+          <text x="228" y="79" text-anchor="middle" font-size="11" fill="#8a92a3">토큰 → 정수 ID</text>
+        </g>
+        <g>
+          <rect x="320" y="34" width="128" height="58" rx="12" fill="#fdeee9" stroke="#ee4c2c" stroke-width="1.6"/>
+          <text x="384" y="59" text-anchor="middle" font-size="14.5" font-weight="700" fill="#1c1e26">Vectorization</text>
+          <text x="384" y="79" text-anchor="middle" font-size="11" fill="#8a92a3">ID → 벡터</text>
+        </g>
+        <g>
+          <rect x="476" y="34" width="128" height="58" rx="12" fill="#eef1f5" stroke="#494f5c" stroke-width="1.6"/>
+          <text x="540" y="59" text-anchor="middle" font-size="14.5" font-weight="700" fill="#1c1e26">Inference</text>
+          <text x="540" y="79" text-anchor="middle" font-size="11" fill="#8a92a3">벡터 → 문맥 표현</text>
+        </g>
+        <g>
+          <rect x="632" y="34" width="122" height="58" rx="12" fill="#e7f4f2" stroke="#0f766e" stroke-width="1.6"/>
+          <text x="693" y="59" text-anchor="middle" font-size="14.5" font-weight="700" fill="#1c1e26">Decoding</text>
+          <text x="693" y="79" text-anchor="middle" font-size="11" fill="#8a92a3">결과 → 사람의 언어</text>
+        </g>
+        <!-- arrows -->
+        <line x1="138" y1="63" x2="160" y2="63" stroke="#8a92a3" stroke-width="1.8" marker-end="url(#arr)"/>
+        <line x1="294" y1="63" x2="316" y2="63" stroke="#8a92a3" stroke-width="1.8" marker-end="url(#arr)"/>
+        <line x1="450" y1="63" x2="472" y2="63" stroke="#8a92a3" stroke-width="1.8" marker-end="url(#arr)"/>
+        <line x1="606" y1="63" x2="628" y2="63" stroke="#8a92a3" stroke-width="1.8" marker-end="url(#arr)"/>
+        <!-- brace note -->
+        <path d="M 10 108 L 10 116 L 446 116 L 446 108" fill="none" stroke="#ee4c2c" stroke-width="1.4"/>
+        <text x="228" y="136" text-anchor="middle" font-size="11.5" fill="#c43a1e" font-weight="600">일반 AI 파이프라인의 "표현 변환"이 NLP에서는 세 단계로 세분화된다</text>
+      </g>
+    </svg>
+    <div class="cap">fig 3-1 · NLP 파이프라인 — Tokenizing → Encoding → Vectorization → Inference → Decoding</div>
+  </div>
+
+  <h3>1단계 — Tokenizing</h3>
+  <p>문장을 컴퓨터가 처리할 수 있는 <strong>작은 단위(토큰)로 분리</strong>하는 과정이다. 단위 선택이 곧 트레이드오프다: <strong>단어 단위</strong>는 의미가 또렷하지만 어휘 수가 폭발하고 처음 보는 단어(OOV)에 취약하다. <strong>문자 단위</strong>는 어휘가 작지만 의미가 흩어지고 시퀀스가 길어진다. 그래서 현재는 <mark>메모리를 절약하면서도 의미를 보존하는 subword 단위</mark>가 표준이다 — "먹었다"를 "먹" + "었다"로 쪼개는 식이다. 15장에서 다룬 BPE·SentencePiece가 바로 이 subword 분리 알고리즘이다.</p>
+
+  <h3>2단계 — Encoding</h3>
+  <p>각 토큰을 <strong>정수 ID로 매핑</strong>한다. 이 매핑표가 <strong>어휘 사전(vocabulary)</strong>이다. 정수 ID를 무한정 만들 수는 없으므로 <mark>어떤 토큰을 사전에 등록할지 결정</mark>해야 한다 — 보통 학습 코퍼스의 빈도순으로 상위 N개를 등록하고, 등록되지 않은 토큰은 특수 토큰 <code>&lt;unk&gt;</code>(unknown)로 처리한다. vocab을 키우면 표현이 정밀해지지만 임베딩 행렬과 출력층이 커진다.</p>
+
+  <h3>3단계 — Vectorization</h3>
+  <p>정수 ID 자체는 <strong>순서 이상의 의미를 갖지 못한다.</strong> ID 7("먹는다")이 ID 5("학교에")보다 크다는 사실에는 아무 의미가 없다. 그래서 각 ID를 <strong>벡터 공간 위의 점으로 분포</strong>시켜, 크기와 방향이 의미를 담는 데이터로 변환한다. 이것이 <strong>임베딩(embedding)</strong>이다. 학습이 진행되면 <mark>단어 간의 의미적·패턴적 관계가 벡터 공간의 기하 구조로 반영</mark>된다 — 비슷한 맥락에서 쓰이는 단어들은 가까운 곳에 모인다(12장 워드 임베딩에서 확인한 그 성질이다).</p>
+
+  <h3>4단계 — Inference</h3>
+  <p>모델(RNN, Transformer 등)이 임베딩 벡터 시퀀스를 받아 <strong>문맥적 특징을 계산</strong>한다. 같은 "배"라도 앞뒤 단어에 따라 다른 표현이 되는 것은 이 단계 덕분이다. 참고로 실무에서는 <mark>임베딩 변환 자체를 모델 내부에 포함</mark>시키는 것이 일반적이다 — PyTorch에서 <code>nn.Embedding</code>이 모델의 첫 번째 층으로 들어가고, 임베딩 행렬도 역전파로 함께 학습된다. 즉 3단계와 4단계의 경계는 개념적 구분이지 물리적 구분이 아니다.</p>
+
+  <h3>5단계 — Decoding</h3>
+  <p>추론 결과(숫자)를 <strong>사람이 해석할 수 있는 형태로 되돌리는</strong> 과정이다. 분류라면 각 class별 확률로, 생성이라면 확률 분포에서 고른 ID를 다시 자연어 단어로 변환한다. Encoding의 역방향이라고 생각하면 된다.</p>
+
+  <!-- ===== 위젯 1: 파이프라인 체험 ===== -->
+  <div class="widget" id="pipe-widget">
+    <div class="w-head">
+      <span class="w-chip">INTERACTIVE</span>
+      <span class="w-title">파이프라인 체험 — 문장이 텐서가 되기까지</span>
+      <span class="w-hint">widget 01</span>
+    </div>
+    <div class="w-body">
+      <div class="ctl-row" style="gap:8px">
+        <input type="text" class="wtext" id="pipeInput" value="나는 밥을 먹는다" style="flex:1;min-width:200px" aria-label="입력 문장">
+        <button class="btn pri" id="pipeRun">변환 실행</button>
+      </div>
+      <div class="ctl-row" style="gap:7px;margin-top:2px">
+        <span style="font-size:12.5px;color:var(--ink-mute);font-family:var(--mono)">예문:</span>
+        <button class="btn ghost pipe-preset" data-s="나는 밥을 먹는다">나는 밥을 먹는다</button>
+        <button class="btn ghost pipe-preset" data-s="너는 오늘 책을 읽는다">너는 오늘 책을 읽는다</button>
+        <button class="btn ghost pipe-preset" data-s="고양이가 물을 마신다">고양이가 물을 마신다</button>
+      </div>
+
+      <div class="stage">
+        <div class="st-t"><span class="dot"></span>STEP 1 · TOKENIZING — 어절 단위 분리</div>
+        <div class="chipset" id="pipeTok"></div>
+      </div>
+      <div class="stage">
+        <div class="st-t"><span class="dot"></span>STEP 2 · ENCODING — vocab 조회 (미등록 토큰은 &lt;unk&gt;=1)</div>
+        <div class="chipset" id="pipeIds"></div>
+      </div>
+      <div class="stage">
+        <div class="st-t"><span class="dot"></span>STEP 3 · VECTORIZATION — ID → 4차원 임베딩 벡터</div>
+        <div class="vecrow" id="pipeVec"></div>
+      </div>
+      <div class="readout" id="pipeRead"></div>
+    </div>
+    <div class="w-note">토큰화는 실제 어절 분리, 인코딩은 14개짜리 장난감 vocab에서의 실제 조회다. 임베딩 벡터는 ID로부터 결정적으로 생성한 고정 난수 — 실제 모델에서는 이 값들이 <b>학습으로 갱신되는 파라미터</b>라는 점만 다르다. 이후는 Inference(모델 연산)와 Decoding(사람의 언어로 복원)이 이어진다.</div>
+  </div>
+
+  <div class="keypoints">
+    <div class="kp-t">■ 핵심 정리</div>
+    <ul>
+      <li>NLP 파이프라인: <b>Tokenizing → Encoding → Vectorization → Inference → Decoding</b>.</li>
+      <li>Tokenizing은 현재 <b>subword가 표준</b> — 메모리 절약과 의미 보존의 절충.</li>
+      <li>정수 ID는 순서 이상의 의미가 없으므로 <b>벡터 공간에 분포시켜(임베딩)</b> 의미 관계를 담는다.</li>
+      <li>임베딩은 보통 <b>모델 내부에 포함되어 함께 학습</b>된다 (<span class="mono">nn.Embedding</span>).</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ========== 04 모델 출력 설계 ========== -->
+<section class="sec" id="sec-design">
+  <div class="sec-head">
+    <span class="sec-num">04</span>
+    <h2>모델 출력 설계</h2>
+    <span class="src">0629 · slide 17–19</span>
+  </div>
+
+  <p>초심자는 "어떤 모델을 쓸까"부터 고민하지만, 설계의 올바른 순서는 정반대다. <strong>무엇을 출력해야 하는지(Y)를 먼저 확정</strong>하고, 그 출력 형태가 손실 함수를 결정하고, 마지막에야 모델 구조를 고른다. 출력에서 거꾸로 설계하는 것이다.</p>
+
+  <div class="fig">
+    <svg viewBox="0 0 760 128" role="img" aria-label="설계 순서 5단계">
+      <g font-family="Pretendard Variable,sans-serif">
+        <g>
+          <rect x="8" y="30" width="130" height="52" rx="11" fill="#1d2027"/>
+          <text x="73" y="61" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">task 정의</text>
+        </g>
+        <g>
+          <rect x="164" y="30" width="130" height="52" rx="11" fill="#ee4c2c"/>
+          <text x="229" y="61" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">Y 설계</text>
+        </g>
+        <g>
+          <rect x="320" y="30" width="130" height="52" rx="11" fill="#ee4c2c"/>
+          <text x="385" y="55" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">모델 출력 설계</text>
+          <text x="385" y="72" text-anchor="middle" font-size="10.5" fill="#ffd9cc">형태·범위·확률성</text>
+        </g>
+        <g>
+          <rect x="476" y="30" width="130" height="52" rx="11" fill="#3c414d"/>
+          <text x="541" y="61" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">손실 함수 설계</text>
+        </g>
+        <g>
+          <rect x="632" y="30" width="122" height="52" rx="11" fill="#3c414d"/>
+          <text x="693" y="61" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">모델 설계</text>
+        </g>
+        <line x1="140" y1="56" x2="160" y2="56" stroke="#8a92a3" stroke-width="1.8" marker-end="url(#arr)"/>
+        <line x1="296" y1="56" x2="316" y2="56" stroke="#8a92a3" stroke-width="1.8" marker-end="url(#arr)"/>
+        <line x1="452" y1="56" x2="472" y2="56" stroke="#8a92a3" stroke-width="1.8" marker-end="url(#arr)"/>
+        <line x1="608" y1="56" x2="628" y2="56" stroke="#8a92a3" stroke-width="1.8" marker-end="url(#arr)"/>
+        <text x="380" y="112" text-anchor="middle" font-size="12" fill="#8a92a3">모델은 마지막이다 — 출력이 손실을, 손실이 구조를 결정한다</text>
+      </g>
+    </svg>
+    <div class="cap">fig 4-1 · 설계 순서 — task 정의 → Y 설계 → 모델 출력 설계 → 손실 함수 설계 → 모델 설계</div>
+  </div>
+
+  <h3>출력값의 두 기본형</h3>
+  <div class="cards c2">
+    <div class="card">
+      <div class="ct"><span class="ic">유형 1</span>Classification — Discrete Label</div>
+      <p>출력이 <b>이산적인 라벨</b>이다. 유한한 선택지 중 하나를 고른다.</p>
+      <div class="eg">스팸 / 정상 · 긍정 / 중립 / 부정 · vocab 중 다음 토큰 1개</div>
+    </div>
+    <div class="card">
+      <div class="ct"><span class="ic">유형 2</span>Regression — Continuous Value</div>
+      <p>출력이 <b>연속적인 실수 값</b>이다. 크기 자체가 의미를 가진다.</p>
+      <div class="eg">평점 예측 4.2점 · 내일 기온 23.7°C · 문장 유사도 0.87</div>
+    </div>
+  </div>
+
+  <h3>설계 예시 — Summarization</h3>
+  <p>"요약"이라는 task를 위의 순서대로 밀어 보면 이렇게 전개된다.</p>
+  <ol class="steps">
+    <li><strong>task 정의</strong> — 긴 원문을 짧은 요약문으로 변환한다.</li>
+    <li><strong>Y 설계</strong> — Y는 요약문. 요구사항: <mark>원문의 고유 명사가 보존</mark>되어야 하고, <mark>길이가 원문보다 짧아야</mark> 한다.</li>
+    <li><strong>모델 출력 설계</strong> — 요약문 전체를 한 번에 낼 수 없으니 <strong>다음 단어 예측을 반복</strong>하는 구조로 분해한다. 매 스텝의 출력은 <strong>vocab 전체에 대한 확률 분포</strong>다.</li>
+    <li><strong>손실 함수 설계</strong> — 매 스텝이 "vocab 중 정답 단어 고르기"라는 분류 문제이므로 스텝별 cross-entropy를 쓴다.</li>
+    <li><strong>모델 설계</strong> — 이 출력 구조를 낼 수 있는 모델: seq2seq(16장), Transformer(18장).</li>
+  </ol>
+
+  <div class="callout core">
+    <div class="co-t">⬤ 관점의 전환</div>
+    <p>"요약문 출력"처럼 복잡해 보이는 Y도 결국 <strong>"각 단어별 확률 분포"라는 단순한 출력의 반복</strong>으로 환원된다. 어떤 거창한 생성 task든 매 순간의 출력은 분류(vocab 위의 discrete label 선택)라는 사실 — 이것이 다음 섹션 Next Token Prediction의 출발점이다.</p>
+  </div>
+
+  <div class="keypoints">
+    <div class="kp-t">■ 핵심 정리</div>
+    <ul>
+      <li>설계는 <b>출력(Y)에서 거꾸로</b>: task 정의 → Y 설계 → 모델 출력 설계 → 손실 함수 설계 → 모델 설계.</li>
+      <li>출력의 기본형은 둘: <b>Classification(이산 라벨)</b>과 <b>Regression(연속 값)</b>.</li>
+      <li>요약 같은 생성 task도 <b>"다음 단어 확률 분포"의 반복</b>으로 분해된다.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ========== 05 RNN과 Next Token Prediction ========== -->
+<section class="sec" id="sec-rnn">
+  <div class="sec-head">
+    <span class="sec-num">05</span>
+    <h2>RNN과 Next Token Prediction</h2>
+    <span class="src">0629 · slide 20–26</span>
+  </div>
+
+  <p>앞 섹션에서 "생성 = 다음 토큰 예측의 반복"이라는 결론에 도달했다. 그렇다면 <strong>이전 단어들을 기억하면서 다음 단어를 예측하는 구조</strong>가 필요하다. 그 최초의 답이 <strong>RNN(Recurrent Neural Network, 순환 신경망)</strong>이다.</p>
+
+  <h3>RNN의 구조 — 하나의 셀을 계속 재사용한다</h3>
+  <p>RNN의 핵심은 <strong>같은 셀(파라미터)을 시간축을 따라 반복 적용</strong>한다는 것이다. 매 시점 <em>t</em>에서 셀은 두 개를 입력받는다: <mark>현재 입력 x<sub>t</sub></mark>와 <mark>직전 시점의 은닉 상태 h<sub>t−1</sub></mark>. 이 둘을 합쳐 tanh를 통과시키면 새 은닉 상태 h<sub>t</sub>가 나오고, 이것이 다음 시점으로 전달되는 동시에 출력 y<sub>t</sub>를 만든다.</p>
+
+  <div class="fig">
+    <svg viewBox="0 0 720 210" role="img" aria-label="RNN 셀 펼친 구조">
+      <defs>
+        <marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#1c1e26"/></marker>
+      </defs>
+      <g font-family="Pretendard Variable,sans-serif">
+        <!-- three cells -->
+        <g>
+          <rect x="60" y="70" width="150" height="72" rx="14" fill="#e9f5df" stroke="#7fae5f" stroke-width="1.5"/>
+          <text x="135" y="115" text-anchor="middle" font-size="26" font-weight="800" fill="#40632a">A</text>
+        </g>
+        <g>
+          <rect x="285" y="70" width="150" height="72" rx="14" fill="#e9f5df" stroke="#7fae5f" stroke-width="1.5"/>
+          <rect x="345" y="98" width="34" height="18" rx="4" fill="#ffe9a8" stroke="#d8a93a" stroke-width="1"/>
+          <text x="362" y="111" text-anchor="middle" font-size="10.5" fill="#8a6d1a">tanh</text>
+        </g>
+        <g>
+          <rect x="510" y="70" width="150" height="72" rx="14" fill="#e9f5df" stroke="#7fae5f" stroke-width="1.5"/>
+          <text x="585" y="115" text-anchor="middle" font-size="26" font-weight="800" fill="#40632a">A</text>
+        </g>
+        <!-- horizontal h flow -->
+        <line x1="210" y1="106" x2="285" y2="106" stroke="#1c1e26" stroke-width="2" marker-end="url(#arr2)"/>
+        <line x1="435" y1="106" x2="510" y2="106" stroke="#1c1e26" stroke-width="2" marker-end="url(#arr2)"/>
+        <line x1="10" y1="106" x2="58" y2="106" stroke="#1c1e26" stroke-width="2" marker-end="url(#arr2)"/>
+        <line x1="660" y1="106" x2="710" y2="106" stroke="#1c1e26" stroke-width="2" marker-end="url(#arr2)"/>
+        <!-- x inputs -->
+        <circle cx="135" cy="185" r="17" fill="#bfe0f5" stroke="#5b9bc9" stroke-width="1.3"/>
+        <text x="135" y="190" text-anchor="middle" font-size="13" font-weight="700" fill="#1c3a52">x</text><text x="146" y="193" font-size="9" fill="#1c3a52">t-1</text>
+        <line x1="135" y1="168" x2="135" y2="144" stroke="#1c1e26" stroke-width="2" marker-end="url(#arr2)"/>
+        <circle cx="360" cy="185" r="17" fill="#bfe0f5" stroke="#5b9bc9" stroke-width="1.3"/>
+        <text x="360" y="190" text-anchor="middle" font-size="13" font-weight="700" fill="#1c3a52">x</text><text x="371" y="193" font-size="9" fill="#1c3a52">t</text>
+        <line x1="360" y1="168" x2="360" y2="144" stroke="#1c1e26" stroke-width="2" marker-end="url(#arr2)"/>
+        <circle cx="585" cy="185" r="17" fill="#bfe0f5" stroke="#5b9bc9" stroke-width="1.3"/>
+        <text x="585" y="190" text-anchor="middle" font-size="13" font-weight="700" fill="#1c3a52">x</text><text x="596" y="193" font-size="9" fill="#1c3a52">t+1</text>
+        <line x1="585" y1="168" x2="585" y2="144" stroke="#1c1e26" stroke-width="2" marker-end="url(#arr2)"/>
+        <!-- h outputs -->
+        <circle cx="135" cy="30" r="17" fill="#e6d3f5" stroke="#a877cf" stroke-width="1.3"/>
+        <text x="132" y="35" text-anchor="middle" font-size="13" font-weight="700" fill="#4a2a63">h</text><text x="143" y="38" font-size="9" fill="#4a2a63">t-1</text>
+        <line x1="135" y1="70" x2="135" y2="48" stroke="#1c1e26" stroke-width="2" marker-end="url(#arr2)"/>
+        <circle cx="360" cy="30" r="17" fill="#e6d3f5" stroke="#a877cf" stroke-width="1.3"/>
+        <text x="357" y="35" text-anchor="middle" font-size="13" font-weight="700" fill="#4a2a63">h</text><text x="368" y="38" font-size="9" fill="#4a2a63">t</text>
+        <line x1="360" y1="70" x2="360" y2="48" stroke="#1c1e26" stroke-width="2" marker-end="url(#arr2)"/>
+        <circle cx="585" cy="30" r="17" fill="#e6d3f5" stroke="#a877cf" stroke-width="1.3"/>
+        <text x="582" y="35" text-anchor="middle" font-size="13" font-weight="700" fill="#4a2a63">h</text><text x="593" y="38" font-size="9" fill="#4a2a63">t+1</text>
+        <line x1="585" y1="70" x2="585" y2="48" stroke="#1c1e26" stroke-width="2" marker-end="url(#arr2)"/>
+      </g>
+    </svg>
+    <div class="cap">fig 5-1 · 동일한 셀 A가 시간축을 따라 반복된다 — h가 왼쪽에서 오른쪽으로 흐르며 과거를 전달한다</div>
+  </div>
+
+  <p>중요한 오해 하나를 짚자. 그림에 셀이 세 개 그려져 있지만 <mark>이것은 서로 다른 세 셀이 아니라 같은 셀 하나를 시간에 따라 펼쳐 그린 것</mark>이다. 파라미터는 W<sub>h</sub>, W<sub>x</sub> 한 벌뿐이고 모든 시점이 이를 공유한다(가중치 공유). 덕분에 임의 길이의 시퀀스를 같은 파라미터로 처리할 수 있다.</p>
+
+  <h3>수식으로 보는 RNN</h3>
+  <div class="formula" style="text-align:center;font-size:19px;padding:22px">
+    $$ h_t = \tanh\!\big(W_h \cdot h_{t-1} + W_x \cdot x_t\big) $$
+  </div>
+  <ul class="plain">
+    <li><b>W<sub>x</sub> · x<sub>t</sub></b> — 현재 입력을 은닉 공간으로 변환.</li>
+    <li><b>W<sub>h</sub> · h<sub>t−1</sub></b> — 직전까지의 요약(기억)을 은닉 공간으로 변환.</li>
+    <li><b>더한 뒤 tanh</b> — 둘을 합쳐 −1~1로 눌러 새 은닉 상태를 만든다. tanh는 비선형성을 주고 값이 발산하지 않게 잡아 준다.</li>
+  </ul>
+
+  <h3>Next Token Prediction — 모든 생성의 공통 출력</h3>
+  <p>은닉 상태 h<sub>t</sub>가 나오면, 여기에 출력 가중치를 곱하고 softmax를 씌워 <strong>vocab 전체에 대한 확률 분포</strong>를 만든다. 이것이 다음 토큰 예측의 최종 형태다.</p>
+  <div class="formula" style="text-align:center;padding:22px">
+    $$ \hat{y} = P(w_t \mid \text{context}) = \mathrm{softmax}(Wx + b) $$
+  </div>
+  <p>흐름은 세 단계다: 모델이 <strong>Logits</strong>(정규화 안 된 점수 벡터)를 내면 → <strong>Softmax</strong>가 이를 확률로 바꾸고 → <strong>Probability Distribution</strong>(vocab 위의 확률 분포)이 완성된다. RNN이든 Transformer든, 요약이든 번역이든 — <mark>모든 생성은 결국 vocab 위의 확률 분포를 예측하는 문제</mark>로 귀결된다.</p>
+
+  <div class="fig">
+    <svg viewBox="0 0 700 96" role="img" aria-label="Logits에서 확률 분포까지">
+      <defs><marker id="arr3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#7fae5f"/></marker></defs>
+      <g font-family="Pretendard Variable,sans-serif">
+        <rect x="30" y="28" width="150" height="46" rx="9" fill="#8ec177"/>
+        <text x="105" y="56" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">Logits</text>
+        <rect x="272" y="28" width="150" height="46" rx="9" fill="#8ec177"/>
+        <text x="347" y="56" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">Softmax</text>
+        <rect x="512" y="20" width="160" height="62" rx="9" fill="#8ec177"/>
+        <text x="592" y="46" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">Probability</text>
+        <text x="592" y="65" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">Distribution</text>
+        <line x1="188" y1="51" x2="266" y2="51" stroke="#7fae5f" stroke-width="2.4" marker-end="url(#arr3)"/>
+        <line x1="430" y1="51" x2="506" y2="51" stroke="#7fae5f" stroke-width="2.4" marker-end="url(#arr3)"/>
+      </g>
+    </svg>
+    <div class="cap">fig 5-2 · Logits → Softmax → Probability Distribution</div>
+  </div>
+
+  <!-- ===== 위젯 2: Next Token Prediction ===== -->
+  <div class="widget" id="ntp-widget">
+    <div class="w-head">
+      <span class="w-chip">INTERACTIVE</span>
+      <span class="w-title">Next Token Prediction — Logits에서 확률까지</span>
+      <span class="w-hint">widget 02</span>
+    </div>
+    <div class="w-body">
+      <p style="font-size:14px;color:var(--ink-soft);margin:0 0 14px">문맥 <b>"나는 밥을 ___"</b> 다음에 올 5개 후보의 <b>logit</b>을 직접 조절해 보자. softmax가 이를 확률로 바꾸는 과정과, <b>temperature</b>가 분포를 어떻게 날카롭게/평평하게 만드는지 실시간으로 보인다.</p>
+      <div id="ntpRows"></div>
+      <div class="ctl-row" style="margin-top:16px;border-top:1px dashed var(--primary-line);padding-top:14px">
+        <label for="ntpTemp">temperature τ</label>
+        <input type="range" id="ntpTemp" min="0.2" max="2.5" step="0.1" value="1.0">
+        <span class="val" id="ntpTempV">1.0</span>
+      </div>
+      <div class="readout" id="ntpRead"></div>
+    </div>
+    <div class="w-note">확률은 실제 softmax 계산이다: <span class="mono">pᵢ = exp(zᵢ/τ) / Σ exp(zⱼ/τ)</span>. τ가 낮으면 분포가 뾰족해져(greedy에 가까움) 늘 최고 logit만 뽑고, τ가 높으면 평평해져 다양성이 커진다 — 생성의 창의성/안정성 트레이드오프의 핵심 손잡이다.</div>
+  </div>
+
+  <div class="callout warn">
+    <div class="co-t">⚠ RNN의 한계 — 장기 의존성</div>
+    <p>RNN은 과거를 h 하나에 눌러 담아 전달한다. 그런데 시퀀스가 길어지면 앞쪽 정보가 tanh를 반복 통과하며 <strong>희미해지거나(기울기 소실) 폭발</strong>한다. "그 사람은 … (30단어) … <u>이었다/였다</u>" 같은 먼 거리 일치를 잡기 어렵다. 이 문제를 <b>게이트</b>로 정면 돌파한 것이 다음의 LSTM이다.</p>
+  </div>
+
+  <div class="keypoints">
+    <div class="kp-t">■ 핵심 정리</div>
+    <ul>
+      <li>RNN은 <b>하나의 셀을 시간축으로 반복</b>하며 h로 과거를 전달한다 (가중치 공유).</li>
+      <li>핵심 수식: <span class="mono">hₜ = tanh(Wₕ·hₜ₋₁ + Wₓ·xₜ)</span>.</li>
+      <li>출력은 <b>Logits → Softmax → 확률 분포</b> — 모든 생성의 공통 형태.</li>
+      <li>긴 시퀀스에서 <b>장기 의존성(기울기 소실)</b>이 근본 한계다.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ========== 06 LSTM ========== -->
+<section class="sec" id="sec-lstm">
+  <div class="sec-head">
+    <span class="sec-num">06</span>
+    <h2>LSTM — 장기 기억의 도입</h2>
+    <span class="src">0629 · slide 27–30</span>
+  </div>
+
+  <p><strong>LSTM(Long Short-Term Memory)</strong>은 RNN의 장기 의존성 문제를 해결하기 위해 <mark>두 개의 상태</mark>와 <mark>세 개의 게이트</mark>를 도입한다. 이름 그대로 "긴 단기 기억" — 짧은 기억(hidden state)에 더해, 정보를 오래 실어 나르는 별도의 고속도로(cell state)를 얹은 구조다.</p>
+
+  <h3>두 개의 상태 — 장기 기억과 단기 기억</h3>
+  <div class="formula">
+    <div class="fl"><span class="lab">word vector</span><span>$x_t$</span></div>
+    <div class="fl"><span class="lab">cell state</span><span>$c_{t-1}$</span> <span style="font-size:14px;color:var(--ink-mute)">— 장기 기억. 시퀀스를 관통하는 정보의 고속도로.</span></div>
+    <div class="fl"><span class="lab">hidden state</span><span>$h_{t-1}$</span> <span style="font-size:14px;color:var(--ink-mute)">— 단기 기억. 현재 시점의 출력이자 게이트 계산의 입력.</span></div>
+  </div>
+  <p><strong>cell state는 장기 기억, hidden state는 단기 기억</strong>이다. 그리고 세 개의 게이트가 "지금 이 순간의 입력(단기 상황)"을 보고 장기 기억을 얼마나 지울지·채울지·꺼낼지를 결정한다. 즉 <mark>각 제어(gate)는 단기 기억의 영향을 받는다</mark>.</p>
+
+  <div class="fig">
+    <svg viewBox="0 0 720 180" role="img" aria-label="LSTM 셀 내부 게이트 구조">
+      <g font-family="Pretendard Variable,sans-serif">
+        <rect x="40" y="24" width="640" height="130" rx="16" fill="#e9f5df" stroke="#7fae5f" stroke-width="1.5"/>
+        <!-- cell state top highway -->
+        <line x1="40" y1="52" x2="680" y2="52" stroke="#c43a1e" stroke-width="2.6"/>
+        <text x="58" y="44" font-size="11" font-weight="700" fill="#c43a1e">cell state Cₜ (장기 기억 · 고속도로)</text>
+        <circle cx="250" cy="52" r="13" fill="#fde0d7" stroke="#e08a72" stroke-width="1.2"/>
+        <text x="250" y="57" text-anchor="middle" font-size="14" fill="#c43a1e">×</text>
+        <circle cx="420" cy="52" r="13" fill="#fde0d7" stroke="#e08a72" stroke-width="1.2"/>
+        <text x="420" y="57" text-anchor="middle" font-size="14" fill="#c43a1e">+</text>
+        <!-- hidden bottom -->
+        <line x1="40" y1="128" x2="680" y2="128" stroke="#a877cf" stroke-width="2.2"/>
+        <text x="58" y="147" font-size="11" font-weight="700" fill="#7a4aa0">hidden state hₜ (단기 기억) → 모든 게이트로 입력</text>
+        <!-- gates -->
+        <g font-size="10.5" font-weight="700">
+          <rect x="205" y="82" width="42" height="20" rx="4" fill="#ffe9a8" stroke="#d8a93a"/><text x="226" y="96" text-anchor="middle" fill="#8a6d1a">σ f</text>
+          <rect x="300" y="82" width="42" height="20" rx="4" fill="#ffe9a8" stroke="#d8a93a"/><text x="321" y="96" text-anchor="middle" fill="#8a6d1a">σ i</text>
+          <rect x="358" y="82" width="52" height="20" rx="4" fill="#ffe9a8" stroke="#d8a93a"/><text x="384" y="96" text-anchor="middle" fill="#8a6d1a">tanh C̃</text>
+          <rect x="510" y="82" width="42" height="20" rx="4" fill="#ffe9a8" stroke="#d8a93a"/><text x="531" y="96" text-anchor="middle" fill="#8a6d1a">σ o</text>
+        </g>
+        <!-- labels -->
+        <text x="226" y="118" text-anchor="middle" font-size="9.5" fill="#8a92a3">forget</text>
+        <text x="321" y="118" text-anchor="middle" font-size="9.5" fill="#8a92a3">input</text>
+        <text x="384" y="118" text-anchor="middle" font-size="9.5" fill="#8a92a3">후보</text>
+        <text x="531" y="118" text-anchor="middle" font-size="9.5" fill="#8a92a3">output</text>
+        <!-- connectors up -->
+        <line x1="226" y1="82" x2="245" y2="63" stroke="#94a0ad" stroke-width="1.2"/>
+        <line x1="321" y1="82" x2="411" y2="63" stroke="#94a0ad" stroke-width="1.2"/>
+      </g>
+    </svg>
+    <div class="cap">fig 6-1 · LSTM 셀 — 위쪽 붉은 선(cell state)은 게이트로만 조금씩 수정되며 멀리까지 정보를 나른다</div>
+  </div>
+
+  <h3>세 게이트 + 후보 — 수식으로 보는 LSTM</h3>
+  <div class="formula">
+    <div class="fl"><span class="lab">forget gate</span><span>$f_t = \sigma(W_f[h_{t-1}, x_t] + b_f)$</span></div>
+    <div class="fl"><span class="lab">input gate</span><span>$i_t = \sigma(W_i[h_{t-1}, x_t] + b_i)$</span></div>
+    <div class="fl"><span class="lab">후보 cell</span><span>$\tilde{C}_t = \tanh(W_C[h_{t-1}, x_t] + b_C)$</span></div>
+    <div class="fl"><span class="lab">최종 cell</span><span>$C_t = f_t \odot C_{t-1} + i_t \odot \tilde{C}_t$</span></div>
+    <div class="fl"><span class="lab">output gate</span><span>$o_t = \sigma(W_o[h_{t-1}, x_t] + b_o)$</span></div>
+    <div class="fl"><span class="lab">hidden state</span><span>$h_t = o_t \odot \tanh(C_t)$</span></div>
+  </div>
+
+  <p>각 게이트는 σ(시그모이드)를 써서 <strong>0~1 사이의 "밸브 개폐율"</strong>을 낸다. 이 값을 원소별 곱(⊙)으로 적용하면 "얼마나 통과시킬지"가 정해진다.</p>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>구성요소</th><th>역할</th><th>직관</th></tr></thead>
+    <tbody>
+      <tr><td><b>forget gate</b> <span class="mono">fₜ</span></td><td>과거 cell state를 <b>얼마나 지울지</b></td><td>"이전 주어 정보는 이제 필요 없다" → 0에 가깝게</td></tr>
+      <tr><td><b>input gate</b> <span class="mono">iₜ</span></td><td>새 후보를 <b>얼마나 받아들일지</b></td><td>"새 주어가 등장했다" → 1에 가깝게 열어 저장</td></tr>
+      <tr><td><b>후보</b> <span class="mono">C̃ₜ</span></td><td>이번에 저장할 <b>새 정보 후보</b></td><td>현재 입력에서 뽑아낸 기억 재료 (tanh)</td></tr>
+      <tr><td><b>최종 cell</b> <span class="mono">Cₜ</span></td><td>지운 과거 + 받은 새 정보 = <b>갱신된 장기 기억</b></td><td><span class="mono">fₜ⊙Cₜ₋₁ + iₜ⊙C̃ₜ</span></td></tr>
+      <tr><td><b>output gate</b> <span class="mono">oₜ</span></td><td>장기 기억 중 <b>지금 꺼내 쓸 부분</b></td><td>"현재 출력에 필요한 만큼만" 노출</td></tr>
+      <tr><td><b>hidden</b> <span class="mono">hₜ</span></td><td>output gate로 걸러낸 <b>현재 출력</b></td><td><span class="mono">oₜ⊙tanh(Cₜ)</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout core">
+    <div class="co-t">⬤ 왜 게이트가 장기 의존성을 해결하나</div>
+    <p>핵심은 최종 cell 식 <span class="mono">Cₜ = fₜ⊙Cₜ₋₁ + iₜ⊙C̃ₜ</span>의 <strong>덧셈 구조</strong>다. RNN은 매 시점 tanh 곱셈으로 기억이 지수적으로 희미해졌지만, LSTM의 cell state는 forget gate가 열려 있는 한(fₜ≈1) <mark>과거 정보가 곱셈 감쇠 없이 덧셈으로 이월</mark>된다. 정보의 고속도로가 뚫려 있어 기울기가 멀리까지 살아남는다. GRU는 이 아이디어를 게이트 2개로 단순화한 사촌이다(7장).</p>
+  </div>
+
+  <div class="keypoints">
+    <div class="kp-t">■ 핵심 정리</div>
+    <ul>
+      <li>LSTM은 <b>cell state(장기 기억) + hidden state(단기 기억)</b> 두 상태를 쓴다.</li>
+      <li>세 게이트 <b>forget · input · output</b>이 σ로 0~1 밸브를 만들어 기억을 제어한다.</li>
+      <li>최종 cell의 <b>덧셈 갱신</b> 덕분에 정보가 곱셈 감쇠 없이 멀리 이월 → 장기 의존성 해결.</li>
+      <li>모든 게이트는 <b>단기 기억(hₜ₋₁)의 영향</b>을 받아 열리고 닫힌다.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ==================== PART 2 ==================== -->
+<div class="part-banner p2">
+  <span class="pn">PART 2</span>
+  <h3>모델 학습과 평가</h3>
+  <span class="date">0630 · NLP5기</span>
+</div>
+
+<!-- ========== 07 모델 학습 프로세스 ========== -->
+<section class="sec" id="sec-loop">
+  <div class="sec-head">
+    <span class="sec-num">07</span>
+    <h2>모델 학습 프로세스</h2>
+    <span class="src">0630 · slide 2</span>
+  </div>
+
+  <p>Part 1에서 "모델이 벡터를 받아 확률 분포를 낸다"까지 봤다. 그런데 <strong>처음에는 그 예측이 엉망</strong>이다 — 파라미터가 무작위이기 때문이다. 학습이란 이 파라미터를 조금씩 고쳐 예측을 정답에 맞춰 가는 과정이고, 그 절차는 매 배치마다 도는 <strong>6단계 루프</strong>다.</p>
+
+  <div class="fig">
+    <svg viewBox="0 0 760 132" role="img" aria-label="모델 학습 6단계 루프">
+      <defs><marker id="arr4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8a92a3"/></marker></defs>
+      <g font-family="Pretendard Variable,sans-serif" font-size="12.5" font-weight="700">
+        <g><rect x="6" y="30" width="112" height="50" rx="10" fill="#fdeee9" stroke="#ee4c2c" stroke-width="1.4"/><text x="62" y="52" text-anchor="middle" fill="#1c1e26">배치 호출</text><text x="62" y="69" text-anchor="middle" font-size="10" font-weight="500" fill="#8a92a3">데이터 로드</text></g>
+        <g><rect x="140" y="30" width="112" height="50" rx="10" fill="#fdeee9" stroke="#ee4c2c" stroke-width="1.4"/><text x="196" y="52" text-anchor="middle" fill="#1c1e26">모델 추론</text><text x="196" y="69" text-anchor="middle" font-size="10" font-weight="500" fill="#8a92a3">순전파 ŷ</text></g>
+        <g><rect x="274" y="30" width="112" height="50" rx="10" fill="#fdeee9" stroke="#ee4c2c" stroke-width="1.4"/><text x="330" y="52" text-anchor="middle" fill="#1c1e26">손실 계산</text><text x="330" y="69" text-anchor="middle" font-size="10" font-weight="500" fill="#8a92a3">L(ŷ, y)</text></g>
+        <g><rect x="408" y="30" width="112" height="50" rx="10" fill="#eef1f5" stroke="#494f5c" stroke-width="1.4"/><text x="464" y="52" text-anchor="middle" fill="#1c1e26">기울기 계산</text><text x="464" y="69" text-anchor="middle" font-size="10" font-weight="500" fill="#8a92a3">역전파 ∇L</text></g>
+        <g><rect x="542" y="30" width="112" height="50" rx="10" fill="#eef1f5" stroke="#494f5c" stroke-width="1.4"/><text x="598" y="52" text-anchor="middle" fill="#1c1e26">가중치 갱신</text><text x="598" y="69" text-anchor="middle" font-size="10" font-weight="500" fill="#8a92a3">optimizer</text></g>
+        <g><rect x="676" y="30" width="80" height="50" rx="10" fill="#e7f4f2" stroke="#0f766e" stroke-width="1.4"/><text x="716" y="52" text-anchor="middle" fill="#1c1e26">성능 평가</text><text x="716" y="69" text-anchor="middle" font-size="10" font-weight="500" fill="#8a92a3">metric</text></g>
+        <line x1="118" y1="55" x2="138" y2="55" stroke="#8a92a3" stroke-width="1.6" marker-end="url(#arr4)"/>
+        <line x1="252" y1="55" x2="272" y2="55" stroke="#8a92a3" stroke-width="1.6" marker-end="url(#arr4)"/>
+        <line x1="386" y1="55" x2="406" y2="55" stroke="#8a92a3" stroke-width="1.6" marker-end="url(#arr4)"/>
+        <line x1="520" y1="55" x2="540" y2="55" stroke="#8a92a3" stroke-width="1.6" marker-end="url(#arr4)"/>
+        <line x1="654" y1="55" x2="674" y2="55" stroke="#8a92a3" stroke-width="1.6" marker-end="url(#arr4)"/>
+        <!-- loop back -->
+        <path d="M 598 80 L 598 106 L 62 106 L 62 82" fill="none" stroke="#ee4c2c" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arr4)"/>
+        <text x="330" y="122" text-anchor="middle" font-size="11" fill="#c43a1e" font-weight="600">배치마다 1~5 반복 → 에폭이 끝나면 평가</text>
+      </g>
+    </svg>
+    <div class="cap">fig 7-1 · 배치 호출 → 모델 추론 → 손실 계산 → 기울기 계산 → 가중치 갱신 → (반복) → 성능 평가</div>
+  </div>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>단계</th><th>하는 일</th><th>PyTorch 대응</th></tr></thead>
+    <tbody>
+      <tr><td><b>1. 배치 호출</b></td><td>데이터셋에서 미니배치를 꺼낸다</td><td class="mono">for xb, yb in dataloader:</td></tr>
+      <tr><td><b>2. 모델 추론</b></td><td>순전파로 예측 ŷ를 만든다</td><td class="mono">pred = model(xb)</td></tr>
+      <tr><td><b>3. 손실 값 계산</b></td><td>예측과 정답의 차이를 수치화</td><td class="mono">loss = criterion(pred, yb)</td></tr>
+      <tr><td><b>4. 기울기 계산</b></td><td>손실을 줄이는 방향(미분)을 구함</td><td class="mono">loss.backward()</td></tr>
+      <tr><td><b>5. 가중치 업데이트</b></td><td>기울기 방향으로 파라미터 이동</td><td class="mono">optimizer.step()</td></tr>
+      <tr><td><b>6. 성능 평가</b></td><td>학습과 별개로 metric으로 검증</td><td class="mono">accuracy, f1 등</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout note">
+    <div class="co-t">◆ 3~5단계가 이 섹션 이후의 지도</div>
+    <p>이 루프에서 <strong>3단계(손실)는 9장</strong>, <strong>4·5단계(기울기·갱신)는 11장 Gradient Descent</strong>, <strong>6단계(평가)는 10장 Metric</strong>에서 각각 깊게 다룬다. 그 전에, 애초에 이 예측 ŷ를 만드는 <strong>출력층은 왜 대부분 MLP인지</strong>부터 짚는다.</p>
+  </div>
+</section>
+
+<!-- ========== 08 출력층 설계 ========== -->
+<section class="sec" id="sec-head">
+  <div class="sec-head">
+    <span class="sec-num">08</span>
+    <h2>출력층 설계 — 왜 MLP인가</h2>
+    <span class="src">0630 · slide 3–5</span>
+  </div>
+
+  <p>CNN이든 RNN이든 Transformer든, 백본(backbone) 뒤에 붙는 <strong>출력층(head)은 거의 항상 MLP(다층 퍼셉트론)</strong>다. CNN이 이미지를 압축해 마지막에 <code>fc6·fc7·fc8</code> 같은 완전연결층으로 클래스 확률을 내고, RNN이 h<sub>t</sub>를 뽑아 선형층으로 다음 토큰 분포를 내는 것 — 모두 같은 패턴이다. 왜 그럴까?</p>
+
+  <h3>Representation vs Decision</h3>
+  <p>딥러닝 모델은 두 부분으로 나뉜다. 백본은 입력을 <strong>좋은 표현(representation) 벡터</strong>로 바꾸는 일을 하고, 출력층은 그 벡터로부터 <strong>결정(decision) 값</strong>을 뽑는 일을 한다.</p>
+  <ul class="plain">
+    <li><strong>대부분의 task는 결국 "벡터 → 값"의 문제다.</strong> 표현이 잘 만들어졌다면, 그 벡터를 라벨/실수로 사상하는 마지막 단계는 단순한 선형 변환(+비선형)이면 충분하다.</li>
+    <li><strong>표현 공간에서 이미 선형 분리되도록 학습된다.</strong> 백본이 열심히 표현을 학습하는 이유가 바로 이것 — 마지막에 <mark>선형 경계로 나눌 수 있는 공간</mark>을 만들어 두면 출력층은 가벼워도 된다.</li>
+    <li><strong>일반화 성능과 안정성.</strong> 단순한 출력층은 과적합 위험이 작고 학습이 안정적이다.</li>
+    <li><strong>확률 해석과 loss 함수.</strong> 선형층 + softmax 조합은 출력을 확률로 해석할 수 있게 하고, cross-entropy 같은 확률 기반 손실과 수학적으로 잘 맞물린다.</li>
+  </ul>
+
+  <div class="callout core">
+    <div class="co-t">⬤ 한 줄 요약</div>
+    <p>백본이 <strong>"분리 가능한 표현"</strong>을 만드는 어려운 일을 하고, 출력층은 <strong>"선형으로 자르기"</strong>라는 쉬운 일만 한다. 그래서 출력층은 복잡할 필요가 없고, 단순한 MLP가 표준이 된다.</p>
+  </div>
+
+  <h3>출력층이 MLP가 아닌 경우</h3>
+  <p>물론 "벡터 → 단일 값"이라는 틀을 벗어나는 task도 있다. 이럴 때는 출력 설계 자체가 달라진다.</p>
+  <div class="cards c2">
+    <div class="card"><div class="ct"><span class="ic">예외 1</span>Metric Learning</div><p>단일 라벨이 아니라 <b>샘플 간 거리</b>를 학습한다. Triplet loss로 "같은 것은 가깝게, 다른 것은 멀게" 임베딩을 배치 — 출력이 값이 아니라 <b>거리 구조</b>다.</p></div>
+    <div class="card"><div class="ct"><span class="ic">예외 2</span>Diffusion</div><p>이미지 생성 모델. 출력이 클래스가 아니라 <b>제거해야 할 노이즈(noise prediction)</b> 그 자체다 — 입력과 같은 차원의 텐서를 낸다.</p></div>
+    <div class="card"><div class="ct"><span class="ic">예외 3</span>Reinforcement Learning</div><p>강화학습은 보통 <b>정책(policy) + 가치(value)</b> 두 갈래 출력(head)을 동시에 낸다. 단일 head로는 표현되지 않는다.</p></div>
+    <div class="card"><div class="ct"><span class="ic">예외 4</span>Multi-modal Alignment</div><p>이미지·텍스트를 같은 공간에 맞추는 정렬 task. 모달리티별 <b>여러 projection</b> head로 서로 다른 입력을 공통 임베딩으로 사상한다.</p></div>
+  </div>
+
+  <div class="keypoints">
+    <div class="kp-t">■ 핵심 정리</div>
+    <ul>
+      <li>모델 = <b>백본(표현 생성) + 출력층(결정)</b>. 대부분 task는 "벡터 → 값" 문제.</li>
+      <li>백본이 <b>선형 분리 가능한 표현</b>을 만들어 두므로 출력층은 단순한 MLP로 충분하다.</li>
+      <li>단순 출력층은 <b>일반화·안정성·확률 해석·loss 정합성</b>에서 유리하다.</li>
+      <li>예외: <b>Metric Learning · Diffusion · RL · Multi-modal</b>은 출력 형태 자체가 다르다.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ========== 09 손실 함수와 Surrogate Loss ========== -->
+<section class="sec" id="sec-loss">
+  <div class="sec-head">
+    <span class="sec-num">09</span>
+    <h2>손실 함수와 Surrogate Loss</h2>
+    <span class="src">0630 · slide 6–10</span>
+  </div>
+
+  <p><strong>손실 함수(loss function)</strong>는 모델이 예측한 값과 실제 값의 차이를 <strong>하나의 수치로 표현한 함수</strong>다. 이 수치가 작을수록 좋은 예측이다. 학습이란 결국 이 손실을 최소화하는 일이고(11장), 그러려면 손실이 <mark>미분 가능</mark>해야 한다 — 방향을 알아야 내려갈 수 있기 때문이다.</p>
+
+  <h3>두 가지 기본 손실</h3>
+  <div class="cards c2">
+    <div class="card">
+      <div class="ct"><span class="ic">Regression</span>MSE</div>
+      <p>연속 값 예측의 표준. 예측과 정답의 <b>제곱 오차 평균</b>. 큰 오차에 더 크게 벌점을 준다.</p>
+      <div class="eg" style="text-align:center">$\text{MSE}=\frac{1}{n}\sum (y_i-\hat{y}_i)^2$</div>
+    </div>
+    <div class="card">
+      <div class="ct"><span class="ic">Classification</span>Cross-Entropy</div>
+      <p>분류의 표준. <b>정답 클래스에 배정한 확률의 −log</b>. 정답을 확신하면 손실 0, 틀리게 확신하면 손실 폭증.</p>
+      <div class="eg" style="text-align:center">$\text{CE}=-\sum y_i \log \hat{y}_i$</div>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <div class="co-t">⚠ 반복 확인된 함정 — softmax 이중 적용</div>
+    <p>PyTorch의 <code>nn.CrossEntropyLoss</code>는 <strong>내부에 softmax를 이미 포함</strong>한다(정확히는 <span class="mono">LogSoftmax + NLLLoss</span>). 그래서 이 손실에는 <mark>softmax를 거치지 않은 raw logits를 그대로</mark> 넣어야 한다. 모델 출력에 <code>F.softmax</code>를 씌운 뒤 이 손실에 넣으면 softmax가 두 번 적용돼 그래디언트가 뭉개지고 학습이 느려진다 — 노트북 전반에서 계속 강조돼 온 바로 그 실수다.</p>
+  </div>
+
+  <!-- ===== 위젯 3: Cross-Entropy ===== -->
+  <div class="widget" id="ce-widget">
+    <div class="w-head">
+      <span class="w-chip">INTERACTIVE</span>
+      <span class="w-title">Cross-Entropy — 확신과 벌점의 관계</span>
+      <span class="w-hint">widget 03</span>
+    </div>
+    <div class="w-body">
+      <p style="font-size:14px;color:var(--ink-soft);margin:0 0 14px">3-클래스 분류에서 <b>정답은 클래스 A</b>다. 모델이 세 클래스에 부여한 logit을 조절하면, softmax 확률과 <b>cross-entropy 손실</b>이 어떻게 변하는지 보인다. 정답 A에 확신할수록 손실이 0으로, 엉뚱한 곳에 확신할수록 손실이 치솟는다.</p>
+      <div id="ceRows"></div>
+      <div class="readout" id="ceRead" style="margin-top:14px"></div>
+      <div style="margin-top:14px">
+        <div style="font-family:var(--mono);font-size:12px;color:var(--ink-mute);margin-bottom:6px">손실 곡선 — 정답 A에 배정한 확률 p(A) vs 손실 −log p(A)</div>
+        <svg id="ceCurve" viewBox="0 0 640 150" style="width:100%;height:auto;background:#fff;border:1px solid var(--line);border-radius:10px"></svg>
+      </div>
+    </div>
+    <div class="w-note">손실은 실제 계산이다: <span class="mono">CE = −log p(정답)</span>. p(정답)이 1에 가까우면 손실 → 0, 0에 가까우면 손실 → ∞. 이 가파른 페널티가 모델을 "정답에 확신하도록" 밀어붙인다.</div>
+  </div>
+
+  <h3>우리가 정말 풀고 싶은 문제 — 그런데 미분이 안 된다</h3>
+  <p>여기서 미묘하지만 중요한 간극이 드러난다. <strong>우리가 실제로 원하는 목표</strong>와 <strong>학습에 쓸 수 있는 손실</strong>이 다르다는 것이다.</p>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>task</th><th>우리가 정말 원하는 것</th><th>문제</th></tr></thead>
+    <tbody>
+      <tr><td><b>Classification</b></td><td>Accuracy 최대화</td><td>정확도는 계단 함수 — <b>미분 불가</b></td></tr>
+      <tr><td><b>Machine Translation</b></td><td>정확한 문장 생성</td><td>"좋은 번역" 자체가 미분 가능한 수식이 아님</td></tr>
+      <tr><td><b>Retrieval</b></td><td>Ranking 품질</td><td>순위 정렬은 이산적 — <b>미분 불가</b></td></tr>
+    </tbody>
+  </table></div>
+  <p>세 목표 모두 <mark>대부분 미분 불가능</mark>하다. 미분이 안 되면 Gradient Descent를 쓸 수 없다. 그래서 <strong>Surrogate Loss(대리 손실)</strong>를 도입한다 — 진짜 목표를 직접 최적화하는 대신, 그와 상관관계가 높으면서 <mark>미분 가능한 대리 함수</mark>를 최소화한다.</p>
+
+  <div class="callout note">
+    <div class="co-t">◆ Surrogate Loss의 예</div>
+    <p>Accuracy(미분 불가)를 직접 못 올리니, 대신 <strong>Cross-Entropy(미분 가능)</strong>를 내린다. "정답 확률을 높이면 대개 정확도도 오른다"는 상관을 믿고 우회하는 것이다. Cross-Entropy는 그 자체가 목표가 아니라 <strong>Accuracy를 위한 대리자</strong>다.</p>
+  </div>
+
+  <h3>Surrogate Loss의 한계 — 목표와의 괴리</h3>
+  <p>대리자는 학습에는 유리하지만, 진짜 목표와 <strong>완벽히 일치하지는 않는다</strong>. 이 괴리가 실제 문제를 일으킨다.</p>
+  <div class="cards c2">
+    <div class="card">
+      <div class="ct"><span class="ic">괴리 1</span>Classification</div>
+      <p><b>Accuracy는 decision boundary만 중요</b>하다 — 정답 쪽으로 넘기만 하면 된다. 그런데 <b>Cross-Entropy는 확률 분포 전체를 맞추려</b> 한다. 이미 맞힌 샘플의 확률을 0.9→0.99로 올리는 데도 손실을 쓴다. 정확도에는 무의미한 노력일 수 있다.</p>
+    </div>
+    <div class="card">
+      <div class="ct"><span class="ic">괴리 2</span>Next Token Prediction</div>
+      <p><b>token 단위로는 잘 맞춰도 전체 문장이 어색</b>할 수 있다. 손실은 매 토큰의 국소 확률만 보지, "문장이 자연스러운가"라는 전역 품질은 보지 않는다. 각 단어는 그럴듯한데 이어 놓으면 이상한 문장 — 2장에서 본 "그럴듯함" 문제의 학습적 뿌리다.</p>
+    </div>
+  </div>
+
+  <div class="callout core">
+    <div class="co-t">⬤ 그래서 loss와 metric을 분리한다</div>
+    <p>손실만 보고 있으면 "손실은 내려가는데 실제 성능은 그대로"인 상황을 놓친다. 그래서 <strong>학습용 손실(loss)과 평가용 지표(metric)를 분리</strong>해서 봐야 한다. 이것이 바로 다음 섹션의 주제다.</p>
+  </div>
+
+  <div class="keypoints">
+    <div class="kp-t">■ 핵심 정리</div>
+    <ul>
+      <li>손실 함수 = 예측과 정답의 차이를 <b>미분 가능한 하나의 수치</b>로. Regression은 MSE, Classification은 Cross-Entropy.</li>
+      <li><span class="mono">nn.CrossEntropyLoss</span>는 <b>softmax를 내장</b> — raw logits를 넣어야 한다 (이중 적용 금지).</li>
+      <li>우리가 원하는 목표(Accuracy·번역 품질·Ranking)는 대개 <b>미분 불가</b> → <b>Surrogate Loss</b>로 우회.</li>
+      <li>대리 손실은 <b>목표와 완벽히 일치하지 않는다</b> → loss와 metric을 분리해 봐야 한다.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ========== 10 평가지표 (Metric) ========== -->
+<section class="sec" id="sec-metric">
+  <div class="sec-head">
+    <span class="sec-num">10</span>
+    <h2>평가지표 (Metric)</h2>
+    <span class="src">0630 · slide 11–20</span>
+  </div>
+
+  <p>앞 섹션의 결론을 한 줄로 못 박으면: <strong>loss는 학습용, metric은 평가용</strong>이다. 둘은 요구 조건부터 다르다.</p>
+  <div class="cards c2">
+    <div class="card"><div class="ct"><span class="ic">loss</span>핵심 요건: 미분 가능</div><p>Gradient Descent로 최적화해야 하므로 <b>매끄럽고 미분 가능</b>해야 한다. 실제 성능과 다소 어긋나도 감수한다.</p></div>
+    <div class="card"><div class="ct"><span class="ic">metric</span>핵심 요건: 실제 성능 반영</div><p>사람이 원하는 성능을 <b>정직하게 측정</b>하면 된다. 미분 가능할 필요가 없어 계단 함수·순위 지표도 자유롭게 쓴다.</p></div>
+  </div>
+
+  <h3>Classification Metric</h3>
+  <p>가장 기본이면서 오해가 잦은 영역이다. <strong>Accuracy(정확도)</strong>는 직관적이지만 <mark>클래스 불균형에 취약</mark>하다 — 99%가 정상인 데이터에서 "무조건 정상"이라 답해도 정확도 99%가 나온다. 그래서 <strong>Precision·Recall·F1</strong>이 필요하다.</p>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>지표</th><th>정의</th><th>질문</th><th>중요한 상황</th></tr></thead>
+    <tbody>
+      <tr><td><b>Accuracy</b></td><td class="mono">(TP+TN)/전체</td><td>전체 중 몇 개나 맞혔나?</td><td>클래스가 균형일 때</td></tr>
+      <tr><td><b>Precision</b><br>정밀도</td><td class="mono">TP/(TP+FP)</td><td>양성이라 한 것 중 진짜 양성 비율?</td><td>오탐이 치명적 (스팸함에 중요 메일)</td></tr>
+      <tr><td><b>Recall</b><br>재현율</td><td class="mono">TP/(TP+FN)</td><td>진짜 양성 중 몇 개나 잡았나?</td><td>놓침이 치명적 (암 진단, 안전 필터)</td></tr>
+      <tr><td><b>F1</b></td><td class="mono">2PR/(P+R)</td><td>정밀도와 재현율의 조화평균</td><td>둘의 균형이 필요할 때</td></tr>
+      <tr><td><b>AUROC</b></td><td>ROC 곡선 아래 면적</td><td>임계값과 무관한 분류 성능?</td><td>임계값을 정하기 전 전반 평가</td></tr>
+    </tbody>
+  </table></div>
+
+  <!-- ===== 위젯 4: Precision / Recall ===== -->
+  <div class="widget" id="pr-widget">
+    <div class="w-head">
+      <span class="w-chip">INTERACTIVE</span>
+      <span class="w-title">Precision · Recall — 임계값을 움직여 보자</span>
+      <span class="w-hint">widget 04</span>
+    </div>
+    <div class="w-body">
+      <p style="font-size:14px;color:var(--ink-soft);margin:0 0 12px">20명의 환자가 있다(실제 양성 ●, 실제 음성 ○). 모델은 각자에게 "양성 점수"를 매겼다. <b>판정 임계값</b>을 움직이면 오른쪽 사람들이 "양성"으로 분류된다. Precision·Recall·F1이 어떻게 <b>서로 반대로</b> 움직이는지 관찰하자.</p>
+      <div style="margin:8px 0 4px;font-family:var(--mono);font-size:12px;color:var(--ink-mute)">← 낮은 점수 &nbsp;&nbsp;|&nbsp;&nbsp; 높은 점수 →</div>
+      <div id="prStrip" style="display:flex;gap:4px;flex-wrap:wrap;padding:12px;background:#fff;border:1px solid var(--line);border-radius:10px;position:relative"></div>
+      <div class="ctl-row" style="margin-top:16px">
+        <label for="prThresh">판정 임계값</label>
+        <input type="range" id="prThresh" min="0" max="100" step="1" value="50">
+        <span class="val" id="prThreshV">0.50</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px">
+        <div style="text-align:center;background:var(--primary-soft);border:1px solid var(--primary-line);border-radius:10px;padding:12px 8px">
+          <div style="font-family:var(--mono);font-size:11px;color:var(--ink-mute)">PRECISION</div>
+          <div id="prP" style="font-family:var(--mono);font-size:22px;font-weight:800;color:var(--primary-deep)">–</div>
+          <div id="prPd" style="font-size:11px;color:var(--ink-mute)"></div>
+        </div>
+        <div style="text-align:center;background:var(--teal-soft);border:1px solid #bfdedb;border-radius:10px;padding:12px 8px">
+          <div style="font-family:var(--mono);font-size:11px;color:var(--ink-mute)">RECALL</div>
+          <div id="prR" style="font-family:var(--mono);font-size:22px;font-weight:800;color:var(--teal)">–</div>
+          <div id="prRd" style="font-size:11px;color:var(--ink-mute)"></div>
+        </div>
+        <div style="text-align:center;background:#1d2027;border-radius:10px;padding:12px 8px">
+          <div style="font-family:var(--mono);font-size:11px;color:#8a92a3">F1</div>
+          <div id="prF" style="font-family:var(--mono);font-size:22px;font-weight:800;color:#fff">–</div>
+          <div id="prFd" style="font-size:11px;color:#8a92a3"></div>
+        </div>
+      </div>
+      <div class="readout" id="prConf" style="margin-top:12px"></div>
+    </div>
+    <div class="w-note">모두 실제 계산이다. 임계값을 <b>낮추면</b> 더 많이 양성으로 판정 → Recall↑ Precision↓ (마구 잡으니 오탐 증가). <b>높이면</b> 확실한 것만 → Precision↑ Recall↓ (놓침 증가). 이 <b>trade-off</b>가 Precision/Recall을 함께 봐야 하는 이유다.</div>
+  </div>
+
+  <h3>Regression Metric</h3>
+  <ul class="plain">
+    <li><strong>MAE / MSE / RMSE</strong> — 오차의 크기를 재는 세 방식. MAE는 절대 오차 평균(이상치에 둔감), MSE는 제곱 오차 평균(이상치에 민감), RMSE는 MSE의 제곱근(단위가 원래 값과 같아 해석이 쉬움).</li>
+    <li><strong>R²(결정계수)</strong> — 모델이 데이터의 분산을 얼마나 설명하는지. 1에 가까울수록 좋고, 0이면 "평균으로 찍기"와 동급, 음수면 그보다 못하다.</li>
+  </ul>
+
+  <h3>Ranking / Retrieval Metric</h3>
+  <p>검색·추천처럼 <strong>순위가 중요한</strong> task의 지표다. "정답을 얼마나 위에 놓았는가"를 잰다.</p>
+  <ul class="plain">
+    <li><strong>MRR(Mean Reciprocal Rank)</strong> — 첫 정답이 몇 번째에 나오는지의 역수 평균. 정답이 1위면 1, 2위면 1/2. 첫 정답 위치에 민감.</li>
+    <li><strong>NDCG</strong> — 순위에 따라 가중치를 주되, 관련도 등급까지 반영하는 정교한 랭킹 지표.</li>
+    <li><strong>Recall@K</strong> — 상위 K개 안에 정답이 몇 개나 들어왔는가. "Top-10 안에 원하는 것이 있나"를 잰다.</li>
+  </ul>
+
+  <h3>이미지 task Metric</h3>
+  <ul class="plain">
+    <li><strong>IoU(Intersection over Union)</strong> — 예측 영역과 정답 영역의 겹침 비율. 객체 탐지·분할의 기본 척도.</li>
+    <li><strong>mAP(mean Average Precision)</strong> — 여러 클래스·여러 임계값에 걸친 Precision을 종합한, 객체 탐지의 표준 지표.</li>
+  </ul>
+
+  <h3>NLG Metric — 답이 여러 개인 세계</h3>
+  <p>생성(NLG) 평가가 특히 어려운 이유는 <mark>정답이 하나가 아니기</mark> 때문이다. "고맙습니다"와 "감사해요"는 둘 다 옳은 번역이다. 그래서 <strong>exact match(정확히 일치)보다 의미 유사성</strong>이 중요하다.</p>
+  <ul class="plain">
+    <li><strong>BLEU</strong> — 생성문과 참조문의 n-gram 겹침을 재는 번역 표준 지표. 정밀도 계열.</li>
+    <li><strong>ROUGE</strong> — 요약에서 주로 쓰는 n-gram 겹침 지표. 재현율 계열.</li>
+  </ul>
+  <div class="callout note">
+    <div class="co-t">◆ BLEU·ROUGE의 한계</div>
+    <p>둘 다 <strong>표면적 단어 겹침</strong>에 기반하므로, 단어는 다르지만 의미가 같은 좋은 문장을 낮게 평가할 수 있다. 이 한계가 LLM 시대에 새로운 평가 방식을 부른다.</p>
+  </div>
+
+  <h3>LLM에서의 Metric</h3>
+  <p>LLM의 출력은 길고 개방적이라 자동 지표만으로는 부족하다. 그래서 여러 층위의 평가를 조합한다.</p>
+  <div class="cards c2">
+    <div class="card"><div class="ct"><span class="ic">방법 1</span>Human Evaluation</div><p>사람이 직접 응답 품질을 평가한다. 가장 신뢰도 높지만 <b>느리고 비싸다</b>.</p></div>
+    <div class="card"><div class="ct"><span class="ic">방법 2</span>LLM-as-a-judge</div><p>강력한 LLM에게 채점을 맡긴다. 사람 평가를 <b>확장·자동화</b>하지만 심판 모델의 편향이 스며들 수 있다.</p></div>
+    <div class="card"><div class="ct"><span class="ic">방법 3</span>Preference Modeling</div><p>"A와 B 중 무엇이 더 나은가"라는 <b>선호 비교</b>를 학습·측정한다. RLHF의 보상 모델과 직결된다.</p></div>
+    <div class="card"><div class="ct"><span class="ic">방법 4</span>Embedding-based</div><p>생성문과 참조문을 <b>임베딩 벡터로 바꿔 의미 유사도</b>를 측정한다(예: BERTScore). 단어가 달라도 의미가 가까우면 높게 준다.</p></div>
+  </div>
+
+  <h3>Benchmark — 표준화된 시험지</h3>
+  <p>개별 metric을 넘어, 모델의 일반 능력을 비교하려면 <strong>벤치마크</strong>가 필요하다. 벤치마크가 하는 일은 넷이다: <strong>문제 정의</strong>(무엇을 평가할지 규정) · <strong>표준화된 평가 기준</strong>(모두 같은 잣대) · <strong>모델 간 비교</strong>(공정한 리더보드) · <strong>간접적인 일반 능력 측정</strong>(특정 시험 점수로 전반 능력을 추정). 다만 벤치마크는 어디까지나 <mark>간접 측정</mark>이라, 벤치마크에 과적합된 모델이 실사용에서 실망을 주기도 한다.</p>
+
+  <div class="keypoints">
+    <div class="kp-t">■ 핵심 정리</div>
+    <ul>
+      <li><b>loss는 학습용(미분 가능이 요건), metric은 평가용(실제 성능 반영이 요건)</b> — 요구 조건이 다르다.</li>
+      <li>Accuracy는 불균형에 약함 → <b>Precision(오탐 억제) / Recall(누락 억제) / F1</b>을 상황에 맞게.</li>
+      <li>task별 전용 지표: Regression(MAE·RMSE·R²), Ranking(MRR·NDCG·Recall@K), 이미지(IoU·mAP).</li>
+      <li>NLG는 정답이 여럿 → <b>의미 유사성</b> 중심(BLEU·ROUGE·임베딩), LLM은 Human·LLM-judge·선호·임베딩 조합.</li>
+      <li><b>Benchmark</b>는 표준화된 비교의 장이지만 일반 능력의 <b>간접</b> 측정임을 잊지 말 것.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ========== 11 Gradient Descent ========== -->
+<section class="sec" id="sec-gd">
+  <div class="sec-head">
+    <span class="sec-num">11</span>
+    <h2>Gradient Descent</h2>
+    <span class="src">0630 · slide 21–24</span>
+  </div>
+
+  <p>7장 학습 루프의 4·5단계 — <strong>"기울기 계산 → 가중치 갱신"</strong> — 의 정체가 <strong>Gradient Descent(경사하강법)</strong>다. 손실 함수라는 지형에서 가장 낮은 골짜기를 찾아 내려가는 방법이다.</p>
+
+  <h3>모델 학습이란 — 손실을 최소화하는 θ 찾기</h3>
+  <p>학습을 한 문장으로 정의하면 이렇다: <mark>loss function을 최소화하는 파라미터 θ를 찾는 문제</mark>. 수식으로는</p>
+  <div class="formula" style="text-align:center;font-size:19px;padding:22px">
+    $$ \theta^{*} = \arg\min_{\theta} L(\theta) $$
+  </div>
+  <p>여기서 θ는 모델의 모든 가중치를 뭉뚱그린 것이고, L(θ)는 그 가중치로 계산한 손실이다. 우리가 원하는 것은 손실을 가장 작게 만드는 θ*다. 문제는 θ가 수백만~수십억 차원이라 <strong>수식으로 한 번에 풀 수 없다</strong>는 것 — 그래서 조금씩 내려가는 반복법을 쓴다.</p>
+
+  <h3>Gradient Descent — 손실이 줄어드는 방향으로 조금씩</h3>
+  <p>기울기(gradient) ∇L은 손실이 <strong>가장 가파르게 증가하는 방향</strong>을 가리킨다. 우리는 손실을 줄이고 싶으니 <mark>그 반대 방향으로 조금씩 이동</mark>한다.</p>
+  <div class="formula" style="text-align:center;font-size:19px;padding:22px">
+    $$ \theta_{t+1} = \theta_{t} - \eta \, \nabla_{\theta} L(\theta_{t}) $$
+  </div>
+  <ul class="plain">
+    <li><b>∇<sub>θ</sub>L(θ<sub>t</sub>)</b> — 현재 위치에서 손실이 가장 커지는 방향(오르막).</li>
+    <li><b>− (마이너스)</b> — 그 반대인 내리막으로 방향을 뒤집는다.</li>
+    <li><b>η (learning rate, 학습률)</b> — 한 걸음의 크기. 너무 크면 골짜기를 건너뛰어 발산하고, 너무 작으면 수렴이 한없이 느리다.</li>
+  </ul>
+
+  <!-- ===== 위젯 5: Gradient Descent ===== -->
+  <div class="widget" id="gd-widget">
+    <div class="w-head">
+      <span class="w-chip">INTERACTIVE</span>
+      <span class="w-title">Gradient Descent — 학습률이 전부다</span>
+      <span class="w-hint">widget 05</span>
+    </div>
+    <div class="w-body">
+      <p style="font-size:14px;color:var(--ink-soft);margin:0 0 12px">손실 지형 <span class="mono">L(θ)=θ⁴/4 − θ²·1.2 + θ·0.3</span> 위에서 공을 굴려 보자. <b>학습률 η</b>와 <b>시작점</b>을 바꾸며 실행하면, 매 스텝 <span class="mono">θ ← θ − η·∇L</span>이 실제로 계산되어 공이 이동한다. η가 작으면 느리게, 크면 튀거나 발산한다.</p>
+      <div class="ctl-row">
+        <label for="gdLr">학습률 η</label>
+        <input type="range" id="gdLr" min="0.01" max="0.75" step="0.01" value="0.10">
+        <span class="val" id="gdLrV">0.10</span>
+      </div>
+      <div class="ctl-row">
+        <label for="gdStart">시작 위치 θ₀</label>
+        <input type="range" id="gdStart" min="-1.9" max="1.9" step="0.05" value="-1.75">
+        <span class="val" id="gdStartV">-1.75</span>
+      </div>
+      <div class="ctl-row" style="gap:8px;margin-top:4px">
+        <button class="btn pri" id="gdStep">한 스텝 ▸</button>
+        <button class="btn" id="gdRun">자동 실행 ▶</button>
+        <button class="btn ghost" id="gdReset">초기화 ↺</button>
+      </div>
+      <svg id="gdCanvas" viewBox="0 0 640 260" style="width:100%;height:auto;background:#fff;border:1px solid var(--line);border-radius:10px;margin-top:12px"></svg>
+      <div class="readout" id="gdRead"></div>
+    </div>
+    <div class="w-note">공의 이동은 실제 미분 <span class="mono">∇L = θ³ − 2.4θ + 0.3</span>으로 계산된다. 이 지형에는 <b>골짜기가 둘</b> — 시작점에 따라 다른 곳에 수렴하는 것이 곧 <b>local minimum</b> 문제다. η를 0.6 이상으로 키우면 갱신이 튀며 발산하는 것도 볼 수 있다.</div>
+  </div>
+
+  <h3>GD 대신 SGD를 쓰는 이유</h3>
+  <p>위 수식의 ∇L을 정확히 계산하려면 <strong>전체 데이터셋</strong>에 대한 손실을 매 스텝 계산해야 한다(Batch Gradient Descent). 데이터가 수백만 건이면 한 걸음 떼는 데만 엄청난 비용이 든다. 그래서 실무는 <strong>SGD(Stochastic Gradient Descent)</strong> — 매 스텝 <mark>미니배치(일부 샘플)로 기울기를 근사</mark>하는 방식 — 를 쓴다. 7장 학습 루프가 "배치 호출"로 시작했던 이유가 바로 이것이다.</p>
+  <div class="cards c3">
+    <div class="card"><div class="ct"><span class="ic">이유 1</span>계산 효율</div><p>전체가 아닌 일부만 보므로 <b>한 스텝이 훨씬 빠르다</b>. 같은 시간에 더 많이 갱신할 수 있다.</p></div>
+    <div class="card"><div class="ct"><span class="ic">이유 2</span>메모리 절약</div><p>전체 데이터를 한 번에 올릴 필요가 없어 <b>큰 데이터셋도 처리</b> 가능하다.</p></div>
+    <div class="card"><div class="ct"><span class="ic">이유 3</span>안장점에 강건</div><p>미니배치의 <b>노이즈가 오히려 도움</b>이 된다 — local minimum이나 saddle point에 갇혔을 때 흔들림이 빠져나갈 힘을 준다.</p></div>
+  </div>
+
+  <div class="callout core">
+    <div class="co-t">⬤ 두 강의를 잇는 마지막 매듭</div>
+    <p>이제 전체 그림이 닫힌다. <strong>Part 1</strong>: 문장이 토큰→ID→벡터로 변환되어 모델(RNN/LSTM)을 통과하고, 출력은 vocab 위 확률 분포(Next Token Prediction)가 된다. <strong>Part 2</strong>: 그 예측과 정답의 차이를 <strong>손실</strong>로 재고(미분 가능한 Surrogate), <strong>SGD</strong>로 θ를 갱신하며, 진짜 성능은 별도의 <strong>metric</strong>으로 평가한다. "언어 → 텐서 → 학습 → 평가"라는 딥러닝 NLP의 한 사이클이 여기서 완성된다.</p>
+  </div>
+
+  <div class="keypoints">
+    <div class="kp-t">■ 핵심 정리</div>
+    <ul>
+      <li>학습 = <b>손실을 최소화하는 θ 찾기</b>: <span class="mono">θ* = argmin L(θ)</span>.</li>
+      <li>Gradient Descent: 기울기 반대 방향으로 <span class="mono">θ ← θ − η∇L</span>. <b>학습률 η</b>가 수렴/발산을 좌우.</li>
+      <li>손실 지형의 <b>골짜기가 여럿</b>이면 시작점에 따라 다른 곳에 수렴(local minimum).</li>
+      <li>전체 대신 미니배치로 근사하는 <b>SGD</b>: 계산 효율·메모리 절약·안장점 강건성.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ==================== 마무리 요약 ==================== -->
+<section class="sec" id="sec-wrap">
+  <div class="sec-head">
+    <span class="sec-num">✦</span>
+    <h2>한눈에 정리 — 두 강의의 지도</h2>
+  </div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>단계</th><th>핵심 개념</th><th>한 줄 요약</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">P1·01</td><td>NLP란</td><td>맥락 의존·불완전·다양한 자연어를 컴퓨터가 처리 (현재는 딥러닝)</td></tr>
+      <tr><td class="mono">P1·02</td><td>생성 패러다임</td><td>Transformer 이후 모든 task가 다음 토큰 예측으로 통일 (비용: 환각·구조 불안정)</td></tr>
+      <tr><td class="mono">P1·03</td><td>파이프라인</td><td>Tokenizing→Encoding→Vectorization→Inference→Decoding</td></tr>
+      <tr><td class="mono">P1·04</td><td>출력 설계</td><td>Y에서 거꾸로 설계 · 생성도 "단어별 확률 분포"의 반복</td></tr>
+      <tr><td class="mono">P1·05</td><td>RNN / NTP</td><td>hₜ=tanh(Wₕhₜ₋₁+Wₓxₜ) · Logits→Softmax→확률 분포</td></tr>
+      <tr><td class="mono">P1·06</td><td>LSTM</td><td>cell state(장기)+3게이트로 장기 의존성 해결</td></tr>
+      <tr><td class="mono">P2·07</td><td>학습 루프</td><td>배치→추론→손실→기울기→갱신→평가</td></tr>
+      <tr><td class="mono">P2·08</td><td>출력층</td><td>백본이 표현을, MLP head가 결정을 — 대부분 "벡터→값"</td></tr>
+      <tr><td class="mono">P2·09</td><td>손실 함수</td><td>미분 가능해야 · Surrogate Loss는 목표와 괴리 존재</td></tr>
+      <tr><td class="mono">P2·10</td><td>평가지표</td><td>loss는 학습용·metric은 평가용 · Precision/Recall trade-off</td></tr>
+      <tr><td class="mono">P2·11</td><td>Gradient Descent</td><td>θ←θ−η∇L · SGD로 효율·메모리·강건성 확보</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<footer class="footer">
+  <span>FUNDAMENTAL · NLP 입문 &amp; 모델 학습과 평가</span>
+  <span>LikeLion 26기 · 0629–0630 강의 재구성 · 자습용 가이드</span>
+</footer>
+
+</div><!-- /container -->
+</div><!-- /main -->
+
+<script>
+/* ================= 네비게이션 · 진행바 · 스크롤스파이 ================= */
+(function(){
+  var sidebar=document.getElementById('sidebar');
+  var menuBtn=document.getElementById('menuBtn');
+  var dim=document.getElementById('dim');
+  function toggle(o){sidebar.classList.toggle('open',o);dim.classList.toggle('show',o);}
+  menuBtn.addEventListener('click',function(){toggle(!sidebar.classList.contains('open'));});
+  dim.addEventListener('click',function(){toggle(false);});
+  document.querySelectorAll('.nav-link').forEach(function(a){
+    a.addEventListener('click',function(){if(window.innerWidth<=1080)toggle(false);});
+  });
+  var prog=document.getElementById('progress');
+  var links=Array.prototype.slice.call(document.querySelectorAll('.nav-link'));
+  var secs=links.map(function(l){return document.querySelector(l.getAttribute('href'));});
+  function onScroll(){
+    var st=window.scrollY||document.documentElement.scrollTop;
+    var h=document.documentElement.scrollHeight-window.innerHeight;
+    prog.style.width=(h>0?(st/h*100):0)+'%';
+    var idx=0;
+    for(var i=0;i<secs.length;i++){if(secs[i]&&secs[i].offsetTop-90<=st)idx=i;}
+    links.forEach(function(l,i){l.classList.toggle('active',i===idx);});
+  }
+  window.addEventListener('scroll',onScroll,{passive:true});
+  window.addEventListener('resize',onScroll);
+  onScroll();
+})();
+
+/* ================= KaTeX · highlight ================= */
+window.addEventListener('DOMContentLoaded',function(){
+  function tryRender(){
+    if(window.renderMathInElement){
+      renderMathInElement(document.body,{delimiters:[
+        {left:'$$',right:'$$',display:true},
+        {left:'$',right:'$',display:false}
+      ],throwOnError:false});
+    } else { setTimeout(tryRender,60); }
+  }
+  tryRender();
+  if(window.hljs){document.querySelectorAll('pre code').forEach(function(b){hljs.highlightElement(b);});}
+});
+
+/* ================= 위젯 1: 파이프라인 ================= */
+(function(){
+  var vocab={'<pad>':0,'<unk>':1,'나는':2,'밥을':3,'먹는다':4,'너는':5,'오늘':6,'책을':7,'읽는다':8,'고양이가':9,'물을':10,'마신다':11,'우유를':12,'사과를':13};
+  var input=document.getElementById('pipeInput');
+  var tokEl=document.getElementById('pipeTok'), idsEl=document.getElementById('pipeIds'), vecEl=document.getElementById('pipeVec'), readEl=document.getElementById('pipeRead');
+  function h32(s){var h=2166136261>>>0;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}return h>>>0;}
+  function emb(id){var v=[],s=(id*2654435761)>>>0;for(var k=0;k<4;k++){s=(Math.imul(s^(s>>>15),2246822519))>>>0;v.push(((s%1000)/1000*2-1));}return v;}
+  function col(x){var t=(x+1)/2;var r=Math.round(253-(253-238)*t),g=Math.round(238-(238-140)*t),b=Math.round(233-(233-100)*t);return 'rgb('+r+','+g+','+b+')';}
+  function run(){
+    var txt=(input.value||'').trim();
+    var toks=txt.length?txt.split(/\s+/):[];
+    tokEl.innerHTML=''; idsEl.innerHTML=''; vecEl.innerHTML='';
+    var known=0;
+    toks.forEach(function(t){
+      var isK=vocab.hasOwnProperty(t);
+      var sp=document.createElement('span'); sp.className='tok '+(isK?'orange':'unk'); sp.textContent=t; tokEl.appendChild(sp);
+      var id=isK?vocab[t]:1; if(isK)known++;
+      var ip=document.createElement('span'); ip.className='tok idc'; ip.textContent=id+(isK?'':' <unk>'); idsEl.appendChild(ip);
+      var vv=emb(id);
+      var cell=document.createElement('div'); cell.className='veccell';
+      var lab=document.createElement('div'); lab.className='vlab'; lab.textContent=t.length>4?t.slice(0,4)+'…':t; cell.appendChild(lab);
+      var grid=document.createElement('div'); grid.className='vgrid';
+      vv.forEach(function(x){var c=document.createElement('span');c.style.background=col(x);c.textContent=x.toFixed(1);grid.appendChild(c);});
+      cell.appendChild(grid); vecEl.appendChild(cell);
+    });
+    readEl.innerHTML='<span>토큰 수: <b>'+toks.length+'</b></span><span>vocab 등록: <b>'+known+'</b></span><span>&lt;unk&gt; 처리: <b>'+(toks.length-known)+'</b></span><span>임베딩 차원: <b>4</b></span>';
+  }
+  document.getElementById('pipeRun').addEventListener('click',run);
+  input.addEventListener('keydown',function(e){if(e.key==='Enter')run();});
+  document.querySelectorAll('.pipe-preset').forEach(function(b){b.addEventListener('click',function(){input.value=b.getAttribute('data-s');run();});});
+  run();
+})();
+
+/* ================= 위젯 2: Next Token Prediction ================= */
+(function(){
+  var cands=[{w:'먹는다',z:3.2},{w:'먹었다',z:2.1},{w:'좋아한다',z:0.8},{w:'던졌다',z:-0.6},{w:'파랗다',z:-1.4}];
+  var rowsEl=document.getElementById('ntpRows'), tEl=document.getElementById('ntpTemp'), tvEl=document.getElementById('ntpTempV'), readEl=document.getElementById('ntpRead');
+  cands.forEach(function(c,i){
+    var row=document.createElement('div'); row.className='ctl-row';
+    row.innerHTML='<label style="min-width:96px">'+c.w+'</label>'+
+      '<span style="font-size:12px;color:var(--ink-mute);font-family:var(--mono);min-width:54px">logit</span>'+
+      '<input type="range" min="-3" max="5" step="0.1" value="'+c.z+'" data-i="'+i+'">'+
+      '<div class="pbar" data-bar="'+i+'"><i style="width:0"></i><em>0%</em></div>';
+    rowsEl.appendChild(row);
+  });
+  var sliders=rowsEl.querySelectorAll('input[type=range]');
+  function render(){
+    var T=parseFloat(tEl.value); tvEl.textContent=T.toFixed(1);
+    var zs=[]; sliders.forEach(function(s){zs[+s.dataset.i]=parseFloat(s.value);});
+    var m=Math.max.apply(null,zs);
+    var ex=zs.map(function(z){return Math.exp((z-m)/T);});
+    var sum=ex.reduce(function(a,b){return a+b;},0);
+    var ps=ex.map(function(e){return e/sum;});
+    var best=0; ps.forEach(function(p,i){if(p>ps[best])best=i;});
+    ps.forEach(function(p,i){
+      var bar=rowsEl.querySelector('[data-bar="'+i+'"]');
+      bar.querySelector('i').style.width=(p*100)+'%';
+      bar.querySelector('em').textContent=(p*100).toFixed(1)+'%';
+      bar.classList.toggle('win',i===best);
+    });
+    readEl.innerHTML='<span>예측 토큰: <b>'+cands[best].w+'</b></span><span>최고 확률: <b>'+(ps[best]*100).toFixed(1)+'%</b></span><span>temperature: <b>'+T.toFixed(1)+'</b></span><span>'+(T<0.6?'뾰족함(greedy에 가까움)':T>1.6?'평평함(다양성↑)':'중간')+'</span>';
+  }
+  sliders.forEach(function(s){s.addEventListener('input',render);});
+  tEl.addEventListener('input',render);
+  render();
+})();
+
+/* ================= 위젯 3: Cross-Entropy ================= */
+(function(){
+  var cls=[{n:'A (정답)',z:2.0,ans:true},{n:'B',z:0.5,ans:false},{n:'C',z:-0.5,ans:false}];
+  var rowsEl=document.getElementById('ceRows'), readEl=document.getElementById('ceRead'), svg=document.getElementById('ceCurve');
+  cls.forEach(function(c,i){
+    var row=document.createElement('div'); row.className='ctl-row';
+    row.innerHTML='<label style="min-width:96px'+(c.ans?';color:var(--primary-deep)':'')+'">'+c.n+'</label>'+
+      '<span style="font-size:12px;color:var(--ink-mute);font-family:var(--mono);min-width:44px">logit</span>'+
+      '<input type="range" min="-3" max="5" step="0.1" value="'+c.z+'" data-i="'+i+'">'+
+      '<div class="pbar" data-bar="'+i+'"><i style="width:0"></i><em>0%</em></div>';
+    rowsEl.appendChild(row);
+  });
+  var sliders=rowsEl.querySelectorAll('input[type=range]');
+  function softmax(zs){var m=Math.max.apply(null,zs);var ex=zs.map(function(z){return Math.exp(z-m);});var s=ex.reduce(function(a,b){return a+b;},0);return ex.map(function(e){return e/s;});}
+  // draw curve once
+  (function(){
+    var W=640,H=150,pad=32;
+    var ns='http://www.w3.org/2000/svg';
+    function X(p){return pad+p*(W-pad-12);}
+    function Y(l){var lm=4.6;return H-20-Math.min(l,lm)/lm*(H-40);}
+    var g='';
+    // axes
+    g+='<line x1="'+pad+'" y1="'+(H-20)+'" x2="'+(W-8)+'" y2="'+(H-20)+'" stroke="#d8d3cc" stroke-width="1"/>';
+    g+='<line x1="'+pad+'" y1="10" x2="'+pad+'" y2="'+(H-20)+'" stroke="#d8d3cc" stroke-width="1"/>';
+    var d='';
+    for(var i=1;i<=100;i++){var p=i/100;var l=-Math.log(p);var x=X(p),y=Y(l);d+=(i===1?'M':'L')+x.toFixed(1)+' '+y.toFixed(1)+' ';}
+    g+='<path d="'+d+'" fill="none" stroke="#ee4c2c" stroke-width="2.4"/>';
+    g+='<text x="'+(W/2)+'" y="'+(H-4)+'" text-anchor="middle" font-size="10.5" fill="#8a92a3" font-family="JetBrains Mono">p(정답 A) →</text>';
+    g+='<text x="8" y="18" font-size="10.5" fill="#8a92a3" font-family="JetBrains Mono">손실</text>';
+    g+='<circle id="ceDot" cx="0" cy="0" r="5.5" fill="#c43a1e" stroke="#fff" stroke-width="2"/>';
+    g+='<line id="ceGx" x1="0" y1="0" x2="0" y2="'+(H-20)+'" stroke="#ee4c2c" stroke-width="1" stroke-dasharray="3 3" opacity="0.5"/>';
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    svg.innerHTML=g;
+    svg._X=X;svg._Y=Y;
+  })();
+  function render(){
+    var zs=[]; sliders.forEach(function(s){zs[+s.dataset.i]=parseFloat(s.value);});
+    var ps=softmax(zs);
+    var best=0; ps.forEach(function(p,i){if(p>ps[best])best=i;});
+    ps.forEach(function(p,i){
+      var bar=rowsEl.querySelector('[data-bar="'+i+'"]');
+      bar.querySelector('i').style.width=(p*100)+'%';
+      bar.querySelector('em').textContent=(p*100).toFixed(1)+'%';
+      bar.classList.toggle('win',cls[i].ans);
+    });
+    var pAns=ps[0];
+    var loss=-Math.log(Math.max(pAns,1e-9));
+    var correct=cls[best].ans;
+    readEl.innerHTML='<span>p(정답 A): <b>'+(pAns*100).toFixed(1)+'%</b></span><span>Cross-Entropy 손실: <b>'+loss.toFixed(3)+'</b></span><span>예측: <b style="color:'+(correct?'var(--teal)':'var(--warn)')+'">'+cls[best].n.replace(' (정답)','')+(correct?' ✓':' ✗')+'</b></span>';
+    var dot=svg.querySelector('#ceDot'), gx=svg.querySelector('#ceGx');
+    var x=svg._X(pAns), y=svg._Y(loss);
+    dot.setAttribute('cx',x);dot.setAttribute('cy',y);
+    gx.setAttribute('x1',x);gx.setAttribute('x2',x);gx.setAttribute('y1',y);
+  }
+  sliders.forEach(function(s){s.addEventListener('input',render);});
+  render();
+})();
+
+/* ================= 위젯 4: Precision / Recall ================= */
+(function(){
+  // 20 patients: score(0-100), label(1=pos ●,0=neg ○). 살짝 겹치도록 배치.
+  var data=[
+    {s:8,y:0},{s:15,y:0},{s:20,y:1},{s:24,y:0},{s:30,y:0},{s:35,y:1},{s:39,y:0},{s:44,y:1},
+    {s:48,y:0},{s:52,y:1},{s:56,y:0},{s:60,y:1},{s:64,y:1},{s:68,y:0},{s:72,y:1},{s:77,y:1},
+    {s:81,y:0},{s:85,y:1},{s:90,y:1},{s:95,y:1}
+  ].sort(function(a,b){return a.s-b.s;});
+  var strip=document.getElementById('prStrip'), th=document.getElementById('prThresh'), thv=document.getElementById('prThreshV');
+  data.forEach(function(d,i){
+    var el=document.createElement('div'); el.dataset.i=i;
+    el.style.cssText='width:30px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;border:2px solid;transition:all .15s;font-family:JetBrains Mono';
+    el.textContent=d.y?'●':'○';
+    d.el=el; strip.appendChild(el);
+  });
+  function render(){
+    var t=parseInt(th.value); thv.textContent=(t/100).toFixed(2);
+    var TP=0,FP=0,FN=0,TN=0;
+    data.forEach(function(d){
+      var pred=d.s>=t;
+      if(pred&&d.y){TP++;} else if(pred&&!d.y){FP++;} else if(!pred&&d.y){FN++;} else {TN++;}
+      var e=d.el;
+      if(pred){ // 양성 판정
+        e.style.borderColor=d.y?'#0f766e':'#ee4c2c';
+        e.style.background=d.y?'#e7f4f2':'#fdeee9';
+        e.style.color=d.y?'#0f766e':'#c43a1e';
+      } else { // 음성 판정
+        e.style.borderColor='#e0dbd3';
+        e.style.background='#faf9f7';
+        e.style.color='#b4bac6';
+      }
+    });
+    var P=TP+FP>0?TP/(TP+FP):0;
+    var R=TP+FN>0?TP/(TP+FN):0;
+    var F=P+R>0?2*P*R/(P+R):0;
+    document.getElementById('prP').textContent=(P*100).toFixed(0)+'%';
+    document.getElementById('prR').textContent=(R*100).toFixed(0)+'%';
+    document.getElementById('prF').textContent=(F*100).toFixed(0)+'%';
+    document.getElementById('prPd').textContent='TP '+TP+' / 판정양성 '+(TP+FP);
+    document.getElementById('prRd').textContent='TP '+TP+' / 실제양성 '+(TP+FN);
+    document.getElementById('prFd').textContent='조화평균';
+    document.getElementById('prConf').innerHTML='<span>TP: <b>'+TP+'</b></span><span>FP: <b style="color:var(--warn)">'+FP+'</b></span><span>FN: <b style="color:var(--warn)">'+FN+'</b></span><span>TN: <b>'+TN+'</b></span><span style="color:var(--ink-mute)">임계값 '+(t/100).toFixed(2)+' 이상을 양성으로 판정</span>';
+  }
+  th.addEventListener('input',render);
+  render();
+})();
+
+/* ================= 위젯 5: Gradient Descent ================= */
+(function(){
+  function L(t){return t*t*t*t/4 - t*t*1.2 + t*0.3;}
+  function dL(t){return t*t*t - 2.4*t + 0.3;}
+  var lr=document.getElementById('gdLr'), lrv=document.getElementById('gdLrV');
+  var st=document.getElementById('gdStart'), stv=document.getElementById('gdStartV');
+  var svg=document.getElementById('gdCanvas'), readEl=document.getElementById('gdRead');
+  var theta=parseFloat(st.value), steps=0, timer=null, path=[theta];
+  var W=640,H=260,padX=30,padTop=16,padBot=30;
+  var tMin=-2.1,tMax=2.1;
+  var lMin=Infinity,lMax=-Infinity;
+  for(var t=tMin;t<=tMax;t+=0.02){var v=L(t);if(v<lMin)lMin=v;if(v>lMax)lMax=v;}
+  function X(t){return padX+(t-tMin)/(tMax-tMin)*(W-padX-14);}
+  function Y(v){return padTop+(1-(v-lMin)/(lMax-lMin))*(H-padTop-padBot);}
+  function draw(){
+    var g='';
+    g+='<line x1="'+padX+'" y1="'+(H-padBot)+'" x2="'+(W-8)+'" y2="'+(H-padBot)+'" stroke="#e5e0d8" stroke-width="1"/>';
+    // curve
+    var d='';
+    for(var t=tMin;t<=tMax+0.001;t+=0.02){var x=X(t),y=Y(L(t));d+=(d===''?'M':'L')+x.toFixed(1)+' '+y.toFixed(1)+' ';}
+    g+='<path d="'+d+'" fill="none" stroke="#c9c3ba" stroke-width="2"/>';
+    // path trail
+    if(path.length>1){
+      path.forEach(function(pt,i){
+        if(i===0)return;
+        var x1=X(path[i-1]),y1=Y(L(path[i-1])),x2=X(pt),y2=Y(L(pt));
+        g+='<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'" stroke="#f6a385" stroke-width="1.5" opacity="0.7"/>';
+        g+='<circle cx="'+x2.toFixed(1)+'" cy="'+y2.toFixed(1)+'" r="3" fill="#f6a385"/>';
+      });
+    }
+    // gradient arrow at current
+    var cx=X(theta),cy=Y(L(theta));
+    var grad=dL(theta);
+    var dir=grad>0?-1:1; // downhill direction
+    var ax=cx+dir*26;
+    g+='<line x1="'+cx.toFixed(1)+'" y1="'+cy.toFixed(1)+'" x2="'+ax.toFixed(1)+'" y2="'+cy.toFixed(1)+'" stroke="#0f766e" stroke-width="2"/>';
+    g+='<path d="M '+ax.toFixed(1)+' '+(cy-4)+' L '+(ax+dir*6).toFixed(1)+' '+cy+' L '+ax.toFixed(1)+' '+(cy+4)+' z" fill="#0f766e"/>';
+    // current ball
+    g+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="8" fill="#ee4c2c" stroke="#fff" stroke-width="2.5"/>';
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    svg.innerHTML=g;
+    readEl.innerHTML='<span>step: <b>'+steps+'</b></span><span>θ: <b>'+theta.toFixed(3)+'</b></span><span>L(θ): <b>'+L(theta).toFixed(3)+'</b></span><span>∇L: <b>'+dL(theta).toFixed(3)+'</b></span>';
+  }
+  function step(){
+    var eta=parseFloat(lr.value);
+    var g=dL(theta);
+    theta=theta-eta*g;
+    if(theta>tMax)theta=tMax; if(theta<tMin)theta=tMin;
+    steps++; path.push(theta);
+    if(path.length>60)path.shift();
+    draw();
+  }
+  function reset(){
+    if(timer){clearInterval(timer);timer=null;document.getElementById('gdRun').textContent='자동 실행 ▶';}
+    theta=parseFloat(st.value); steps=0; path=[theta]; draw();
+  }
+  lr.addEventListener('input',function(){lrv.textContent=parseFloat(lr.value).toFixed(2);});
+  st.addEventListener('input',function(){stv.textContent=parseFloat(st.value).toFixed(2);reset();});
+  document.getElementById('gdStep').addEventListener('click',function(){if(timer)return;step();});
+  document.getElementById('gdReset').addEventListener('click',reset);
+  document.getElementById('gdRun').addEventListener('click',function(){
+    var btn=this;
+    if(timer){clearInterval(timer);timer=null;btn.textContent='자동 실행 ▶';return;}
+    btn.textContent='정지 ⏸';
+    timer=setInterval(function(){
+      var before=theta; step();
+      if(Math.abs(theta-before)<1e-4||steps>200){clearInterval(timer);timer=null;btn.textContent='자동 실행 ▶';}
+    },140);
+  });
+  draw();
+})();
+</script>
+</body>
+</html>
