@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attention &amp; Transformer — FUNDAMENTAL Guide</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<style>
+:root{
+  --orange:#ee4c2c; --orange-deep:#c93d20; --orange-soft:#fdeae5; --orange-faint:#fef5f2;
+  --teal:#0d9488; --teal-soft:#e6f5f3; --blue:#3b82f6; --purple:#a855f7; --pink:#ec4899;
+  --ink:#1c1917; --ink-soft:#57534e; --ink-faint:#a8a29e;
+  --paper:#faf9f7; --card:#ffffff; --line:#e7e5e4; --line-soft:#f0efed;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:'Pretendard Variable',Pretendard,-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:76px}
+body{margin:0;font-family:var(--sans);background:var(--paper);color:var(--ink);
+  font-size:16.5px;line-height:1.85;-webkit-font-smoothing:antialiased;word-break:keep-all}
+::selection{background:var(--orange-soft)}
+
+/* ── progress & topbar ─────────────────────────── */
+#progress{position:fixed;top:0;left:0;height:3px;width:0%;z-index:1200;
+  background:linear-gradient(90deg,var(--teal),var(--orange))}
+.topbar{display:none;position:fixed;top:0;left:0;right:0;height:56px;z-index:1000;
+  background:rgba(250,249,247,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
+  align-items:center;gap:12px;padding:0 16px}
+.topbar .tb-title{font-weight:800;font-size:15px}
+#navToggle{border:1px solid var(--line);background:#fff;border-radius:9px;width:38px;height:38px;
+  font-size:17px;cursor:pointer;line-height:1}
+#backdrop{display:none;position:fixed;inset:0;background:rgba(28,25,23,.35);z-index:1050}
+#backdrop.show{display:block}
+
+/* ── sidebar ───────────────────────────────────── */
+#sidebar{position:fixed;top:0;left:0;width:268px;height:100vh;z-index:1100;
+  background:#fff;border-right:1px solid var(--line);padding:30px 18px 40px;overflow-y:auto}
+.brand{padding:0 10px 20px;border-bottom:1px solid var(--line-soft);margin-bottom:16px}
+.brand .b-series{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.14em;
+  color:var(--orange);text-transform:uppercase}
+.brand .b-title{font-size:18px;font-weight:800;line-height:1.35;margin:6px 0 4px}
+.brand .b-sub{font-size:12.5px;color:var(--ink-faint)}
+#toc a{display:flex;align-items:baseline;gap:10px;padding:8px 10px;border-radius:9px;
+  color:var(--ink-soft);font-size:14px;text-decoration:none;line-height:1.4;margin:2px 0}
+#toc a .num{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--ink-faint);
+  min-width:20px}
+#toc a:hover{background:var(--line-soft);color:var(--ink)}
+#toc a.active{background:var(--orange-soft);color:var(--orange-deep);font-weight:700}
+#toc a.active .num{color:var(--orange)}
+.side-note{margin-top:22px;padding:12px 12px;border:1px dashed var(--line);border-radius:10px;
+  font-size:12px;color:var(--ink-faint);line-height:1.7}
+
+/* ── layout ────────────────────────────────────── */
+main{margin-left:268px;padding:60px 48px 130px}
+.wrap{max-width:800px;margin:0 auto}
+section{margin:0 0 96px;scroll-margin-top:40px}
+footer{border-top:1px solid var(--line);padding:34px 0 0;font-size:13px;color:var(--ink-faint)}
+
+/* ── hero ──────────────────────────────────────── */
+.hero{padding:8px 0 20px;margin-bottom:64px;border-bottom:1px solid var(--line)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 20px}
+.chip{font-family:var(--mono);font-size:11px;font-weight:600;padding:4px 11px;border-radius:99px;
+  border:1px solid var(--line);color:var(--ink-soft);background:#fff}
+.chip.hot{background:var(--orange);border-color:var(--orange);color:#fff}
+.hero h1{font-size:clamp(30px,5vw,44px);font-weight:800;letter-spacing:-.02em;line-height:1.2;margin:0 0 6px}
+.hero h1 .amp{color:var(--orange);font-style:italic;font-weight:700}
+.hero .route{font-family:var(--mono);font-size:13px;color:var(--ink-soft);margin:10px 0 18px;
+  display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.hero .route .hop{background:#fff;border:1px solid var(--line);border-radius:8px;padding:3px 10px}
+.hero .route .hop.end{background:var(--ink);color:#fff;border-color:var(--ink)}
+.hero .route .arr{color:var(--orange);font-weight:700}
+.lead{font-size:17.5px;color:var(--ink-soft);max-width:62ch}
+
+/* ── typography ────────────────────────────────── */
+h2{font-size:27px;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;gap:13px;
+  margin:0 0 8px}
+h2 .badge{font-family:var(--mono);font-size:12px;font-weight:700;color:#fff;background:var(--ink);
+  border-radius:8px;padding:4px 9px;letter-spacing:.05em}
+.sec-src{font-family:var(--mono);font-size:11.5px;color:var(--ink-faint);margin:0 0 26px}
+h3{font-size:19.5px;font-weight:750;margin:44px 0 14px;padding-left:13px;
+  border-left:3.5px solid var(--orange);line-height:1.4;scroll-margin-top:76px}
+p{margin:0 0 17px}
+b,strong{font-weight:700}
+em{font-style:normal;font-weight:600;color:var(--orange-deep)}
+code:not(.hljs){font-family:var(--mono);font-size:.86em;background:#f1eeec;border-radius:5px;
+  padding:2px 6px;color:var(--ink)}
+a{color:var(--teal);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+
+/* ── callouts ──────────────────────────────────── */
+.callout{border-radius:13px;padding:16px 19px;margin:24px 0;font-size:15.3px;line-height:1.8;
+  border:1px solid}
+.callout .ct{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:700;
+  letter-spacing:.1em;padding:2px 9px;border-radius:99px;margin:0 0 8px;color:#fff}
+.callout p:last-child{margin-bottom:0}
+.co-def{background:var(--teal-soft);border-color:#b9e5df}.co-def .ct{background:var(--teal)}
+.co-key{background:var(--orange-faint);border-color:#f7d4c9}.co-key .ct{background:var(--orange)}
+.co-warn{background:#fefce8;border-color:#f2e9ac}.co-warn .ct{background:#b45309}
+.co-link{background:#fff;border-color:var(--line)}.co-link .ct{background:var(--ink-soft)}
+
+/* ── figures / tables / code ───────────────────── */
+.figure{background:var(--card);border:1px solid var(--line);border-radius:15px;
+  padding:24px 20px 16px;margin:28px 0;overflow-x:auto}
+.figure svg{display:block;margin:0 auto;max-width:100%;height:auto}
+.figure figcaption{font-size:13.2px;color:var(--ink-soft);text-align:center;margin-top:14px;
+  line-height:1.7}
+.figure figcaption .fno{font-family:var(--mono);font-weight:700;color:var(--orange);font-size:11.5px;
+  margin-right:6px}
+.tblwrap{overflow-x:auto;margin:24px 0;border:1px solid var(--line);border-radius:13px;background:#fff}
+table.tbl{border-collapse:collapse;width:100%;font-size:14.3px;min-width:520px}
+.tbl th{background:#f6f5f3;font-weight:700;text-align:left;font-size:13.3px}
+.tbl th,.tbl td{border-bottom:1px solid var(--line-soft);padding:10px 15px;vertical-align:top}
+.tbl tr:last-child td{border-bottom:0}
+.tbl td:first-child,.tbl th:first-child{border-right:1px solid var(--line-soft)}
+pre{background:#211d1b;border-radius:13px;padding:19px 21px;overflow-x:auto;margin:24px 0;
+  font-size:13.3px;line-height:1.75}
+pre code{font-family:var(--mono);background:transparent;padding:0;color:#e9e5e2}
+.hljs{background:transparent;color:#e9e5e2}
+.hljs-keyword{color:#fb923c}.hljs-string{color:#5eead4}.hljs-comment{color:#8d857f;font-style:italic}
+.hljs-number{color:#fbbf24}.hljs-title,.hljs-title.function_{color:#93c5fd}
+.hljs-built_in{color:#c4b5fd}.hljs-params{color:#e9e5e2}.hljs-operator{color:#e9e5e2}
+.katex-display{overflow-x:auto;overflow-y:hidden;padding:6px 2px;margin:20px 0}
+.katex{font-size:1.06em}
+
+/* ── widgets ───────────────────────────────────── */
+.widget{background:var(--card);border:1px solid var(--line);border-radius:17px;padding:24px;
+  margin:32px 0;box-shadow:0 1px 3px rgba(28,25,23,.04)}
+.widget h4{margin:0 0 6px;font-size:16.5px;font-weight:800;display:flex;align-items:center;gap:9px;
+  flex-wrap:wrap}
+.wtag{font-family:var(--mono);font-size:10.5px;font-weight:700;background:var(--teal);color:#fff;
+  padding:3px 9px;border-radius:99px;letter-spacing:.08em}
+.whint{font-size:13.8px;color:var(--ink-soft);margin:0 0 18px;line-height:1.75}
+.w-flex{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start}
+.w-side{flex:1 1 260px;min-width:250px}
+.ctrls{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:0 0 18px}
+.ctrl-label{font-family:var(--mono);font-size:11.5px;font-weight:600;color:var(--ink-faint)}
+.btn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px 13px;cursor:pointer;
+  font-family:var(--sans);font-size:13.3px;font-weight:650;color:var(--ink-soft);transition:all .12s}
+.btn:hover{border-color:var(--orange);color:var(--orange)}
+.btn.on{background:var(--orange);border-color:var(--orange);color:#fff}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff}
+.seg button{border:0;background:transparent;padding:7px 13px;cursor:pointer;
+  font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--ink-soft)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--orange);color:#fff}
+.chk{display:inline-flex;align-items:center;gap:7px;font-size:13.5px;font-weight:600;cursor:pointer;
+  color:var(--ink-soft)}
+.chk input{width:16px;height:16px;accent-color:var(--orange);cursor:pointer}
+.abar{display:grid;grid-template-columns:56px 52px 1fr 52px;gap:9px;align-items:center;
+  margin:8px 0;font-size:13px}
+.abar .tk{font-weight:700;display:flex;align-items:center;gap:6px}
+.abar .tk i{width:9px;height:9px;border-radius:3px;display:inline-block}
+.abar .sc{font-family:var(--mono);font-size:11.5px;color:var(--ink-faint);text-align:right}
+.abar .track{background:var(--line-soft);border-radius:99px;height:15px;overflow:hidden}
+.abar .fill{height:100%;border-radius:99px;background:var(--orange);transition:width .16s ease}
+.abar .av{font-family:var(--mono);font-size:12px;font-weight:700;text-align:right}
+.mono-read{font-family:var(--mono);font-size:12px;background:var(--paper);border:1px solid var(--line-soft);
+  border-radius:9px;padding:10px 13px;margin-top:14px;line-height:1.9;color:var(--ink-soft);overflow-x:auto}
+.mono-read b{color:var(--orange-deep)}
+table.mtx{border-collapse:collapse;font-family:var(--mono);font-size:12px;margin:4px auto}
+.mtx th,.mtx td{border:1px solid var(--line);min-width:58px;height:38px;text-align:center;padding:0 5px}
+.mtx th{background:#f6f5f3;font-weight:600;font-size:11px;color:var(--ink-soft)}
+.mtx td.minf{background:#292524;color:#78716c;font-size:13px}
+.mtx-title{font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--ink-soft);
+  text-align:center;margin:0 0 9px;letter-spacing:.04em}
+.metrics{font-family:var(--mono);font-size:12.3px;background:var(--teal-soft);border-radius:9px;
+  padding:11px 14px;margin-top:16px;line-height:2;color:#0b6b62}
+.metrics b{color:#065f56}
+.wnote{font-size:13px;color:var(--ink-soft);margin:16px 0 0;padding-top:14px;
+  border-top:1px dashed var(--line);line-height:1.75}
+
+/* ── quiz ──────────────────────────────────────── */
+.qcard{border:1px solid var(--line);border-radius:13px;padding:17px 19px;margin:16px 0;background:#fff}
+.qcard .qq{font-weight:700;margin:0 0 12px;font-size:15.3px}
+.qcard .qq .qn{font-family:var(--mono);color:var(--orange);font-size:12.5px;margin-right:8px}
+.opt{display:block;width:100%;text-align:left;margin:7px 0;padding:10px 13px;border:1px solid var(--line);
+  border-radius:9px;background:var(--paper);cursor:pointer;font-family:var(--sans);font-size:14.3px;
+  color:var(--ink);transition:border-color .1s;line-height:1.6}
+.opt:hover:not(:disabled){border-color:var(--orange)}
+.opt:disabled{cursor:default}
+.opt.ok{background:#e8f8ee;border-color:#34c268;font-weight:700}
+.opt.no{background:#feecec;border-color:#f07575}
+.qexp{display:none;margin-top:12px;font-size:13.5px;background:var(--teal-soft);border-radius:9px;
+  padding:11px 14px;line-height:1.75}
+.qexp.show{display:block}
+#quizScore{font-family:var(--mono);font-size:13.5px;font-weight:700;margin-top:20px;
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+
+/* ── misc ──────────────────────────────────────── */
+.notation{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin:24px 0}
+.notation .nt{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px;
+  font-size:13.5px;line-height:1.65}
+.notation .nt .sym{font-family:var(--mono);font-weight:700;color:var(--orange-deep);margin-right:4px}
+.recap{counter-reset:rc;list-style:none;padding:0;margin:24px 0}
+.recap li{counter-increment:rc;position:relative;padding:0 0 20px 46px;font-size:15.3px;line-height:1.8}
+.recap li::before{content:counter(rc,decimal-leading-zero);position:absolute;left:0;top:2px;
+  font-family:var(--mono);font-size:12px;font-weight:700;color:var(--orange);border:1.5px solid var(--orange);
+  border-radius:9px;padding:2px 7px}
+.recap li::after{content:"";position:absolute;left:16px;top:32px;bottom:4px;width:1.5px;
+  background:var(--line)}
+.recap li:last-child::after{display:none}
+svg a{cursor:pointer}
+svg a:hover rect{filter:brightness(.96)}
+:focus-visible{outline:2.5px solid var(--orange);outline-offset:2px;border-radius:6px}
+/* 넓은 display 수식은 컨테이너 내부에서 가로 스크롤 (페이지 오버플로 방지) */
+.katex-display{overflow-x:auto;overflow-y:hidden;max-width:100%;padding:3px 1px}
+.katex-display::-webkit-scrollbar{height:5px}
+.katex-display::-webkit-scrollbar-thumb{background:#d6d3d1;border-radius:4px}
+/* KaTeX MathML(스크린리더용) 레이어를 원점에 고정·클리핑 — 접근성 유지하되 모바일 가로 오버플로 차단 */
+.katex-mathml{position:absolute!important;left:0;top:0;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}
+  html{scroll-behavior:auto}}
+
+/* ── responsive ────────────────────────────────── */
+@media (max-width:1080px){
+  .topbar{display:flex}
+  #backdrop{z-index:1050}
+  #sidebar{transform:translateX(-102%);transition:transform .22s ease;box-shadow:8px 0 30px rgba(0,0,0,.08)}
+  #sidebar.open{transform:none}
+  main{margin-left:0;padding:82px 20px 100px}
+  h2{font-size:23px}
+  body{font-size:16px}
+  .figure{padding:16px 12px 12px}
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div class="topbar">
+  <button id="navToggle" aria-label="목차 열기">☰</button>
+  <span class="tb-title">Attention &amp; Transformer</span>
+</div>
+<div id="backdrop"></div>
+
+<nav id="sidebar" aria-label="목차">
+  <div class="brand">
+    <div class="b-series">Fundamental</div>
+    <div class="b-title">Attention &amp;<br>Transformer</div>
+    <div class="b-sub">LikeLion 26기 · AI/NLP<br>0701 · 0702 강의 정리</div>
+  </div>
+  <div id="toc">
+    <a href="#intro"><span class="num">00</span>오리엔테이션</a>
+    <a href="#sec-seq2seq"><span class="num">01</span>Seq2Seq와 병목</a>
+    <a href="#sec-attn"><span class="num">02</span>Attention의 탄생</a>
+    <a href="#sec-sdpa"><span class="num">03</span>Scaled Dot-Product</a>
+    <a href="#sec-three"><span class="num">04</span>Self · Cross · Masked</a>
+    <a href="#sec-parts"><span class="num">05</span>블록의 나머지 부품</a>
+    <a href="#sec-arch"><span class="num">06</span>전체 아키텍처</a>
+    <a href="#sec-wrap"><span class="num">07</span>정리 &amp; 퀴즈</a>
+  </div>
+  <div class="side-note">위젯 4개는 전부 실제 계산 로직으로 동작한다. 숫자를 직접 움직여 보며 읽는 것을 권장.</div>
+</nav>
+
+<!-- 공용 화살촉 정의 -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="mI" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#57534e"/></marker>
+    <marker id="mO" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#ee4c2c"/></marker>
+    <marker id="mT" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#0d9488"/></marker>
+    <marker id="mG" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#a8a29e"/></marker>
+  </defs>
+</svg>
+
+<main>
+<div class="wrap">
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<header class="hero" id="intro">
+  <div class="chips">
+    <span class="chip hot">FUNDAMENTAL</span>
+    <span class="chip">0701 · seq2seq with attention</span>
+    <span class="chip">0702 · transformer</span>
+    <span class="chip">읽기 ≈ 30분</span>
+  </div>
+  <h1>Attention <span class="amp">&amp;</span> Transformer</h1>
+  <div class="route">
+    <span class="hop">RNN Seq2Seq</span><span class="arr">→</span>
+    <span class="hop">병목 발견</span><span class="arr">→</span>
+    <span class="hop">Attention</span><span class="arr">→</span>
+    <span class="hop">행렬화 · QKV</span><span class="arr">→</span>
+    <span class="hop end">Transformer</span>
+  </div>
+  <p class="lead">이 가이드는 하나의 질문을 따라간다 — <b>"긴 문장의 정보를 어떻게 잃지 않고 전달할 것인가?"</b> RNN seq2seq의 고정 벡터 병목에서 출발해, attention이 그 병목을 어떻게 뚫었는지, 그리고 Transformer가 어떻게 attention <em>만으로</em> 시퀀스 변환을 해내는지를 이틀치 강의 흐름 그대로 정리한다.</p>
+
+  <div class="callout co-link">
+    <span class="ct">함께 보기</span>
+    <p>이 가이드는 <b>"왜 이런 구조인가"</b>를 담당한다. <b>"코드로 어떻게 만드는가"</b>는 이미 완성한 <code>FUNDAMENTAL_day10-13_TransformerWithoutMagic.ipynb</code>가 담당한다 — 각 섹션의 수식이 노트북의 어떤 <code>def</code>에 대응하는지 떠올리며 읽으면 두 자료가 하나로 붙는다.</p>
+  </div>
+
+  <h3 style="margin-top:36px">표기 정리</h3>
+  <div class="notation">
+    <div class="nt"><span class="sym">$h_i$</span> 인코더 $i$번째 시점의 hidden state</div>
+    <div class="nt"><span class="sym">$H$</span> 인코더 hidden state 전체 $[h_1;\dots;h_T]$</div>
+    <div class="nt"><span class="sym">$s_t$</span> 디코더 $t$번째 시점의 hidden state</div>
+    <div class="nt"><span class="sym">$e$</span> 유사도 점수 (attention score)</div>
+    <div class="nt"><span class="sym">$\alpha$</span> softmax를 거친 attention 가중치</div>
+    <div class="nt"><span class="sym">$d_k$</span> Key(Query) 벡터의 차원 수</div>
+  </div>
+</header>
+
+<!-- ═══════════════ 01 SEQ2SEQ ═══════════════ -->
+<section id="sec-seq2seq">
+  <h2><span class="badge">01</span>Seq2Seq와 병목</h2>
+  <p class="sec-src">source · 0701 seq2seq_with_attention (전반부)</p>
+
+  <p><b>Seq2Seq</b>는 시퀀스를 입력받아 시퀀스를 생성하는 <b>시퀀스 변환 모델</b>이다. 기계 번역, QA, 요약처럼 "문장이 들어가서 문장이 나오는" 문제가 전부 이 틀에 들어간다. 핵심 설계는 하나 — 입력을 이해하는 <b>인코더</b>와 출력을 생성하는 <b>디코더</b>로 역할을 쪼갠 것이다.</p>
+
+  <div class="callout co-def">
+    <span class="ct">왜 둘로 나누나</span>
+    <p>① 입력과 출력의 <b>길이가 달라도</b> 대응할 수 있다 (한국어 3어절 → 영어 4단어). ② 이해(NLU)와 생성(NLG)의 <b>역할이 분리</b>되어 각자 최적화할 수 있다. ③ 인코더·디코더를 갈아 끼우기 쉬워 <b>모델 설계가 유연</b>해진다.</p>
+  </div>
+
+  <figure class="figure">
+    <svg viewBox="0 0 820 200" role="img" aria-label="Seq2Seq 개요: 입력, 인코더, Context, 디코더, 출력">
+      <rect x="10" y="62" width="150" height="66" rx="11" fill="#f6f5f3" stroke="#e7e5e4"/>
+      <text x="85" y="90" text-anchor="middle" font-size="14.5" font-weight="700" fill="#1c1917">나는 사과를</text>
+      <text x="85" y="112" text-anchor="middle" font-size="14.5" font-weight="700" fill="#1c1917">좋아해</text>
+      <path d="M164 95 L196 95" stroke="#57534e" stroke-width="1.8" marker-end="url(#mI)"/>
+      <rect x="200" y="50" width="132" height="90" rx="12" fill="#e6f5f3" stroke="#0d9488" stroke-width="1.5"/>
+      <text x="266" y="90" text-anchor="middle" font-size="17" font-weight="800" fill="#0b6b62">Encoder</text>
+      <text x="266" y="112" text-anchor="middle" font-size="11.5" fill="#0b6b62">입력을 이해 · NLU</text>
+      <path d="M336 95 L366 95" stroke="#57534e" stroke-width="1.8" marker-end="url(#mI)"/>
+      <rect x="370" y="72" width="86" height="46" rx="9" fill="#ee4c2c"/>
+      <text x="413" y="100" text-anchor="middle" font-size="14" font-weight="800" fill="#fff">Context</text>
+      <text x="413" y="146" text-anchor="middle" font-size="11.5" fill="#c93d20" font-weight="600">고정 길이 벡터</text>
+      <path d="M460 95 L490 95" stroke="#57534e" stroke-width="1.8" marker-end="url(#mI)"/>
+      <rect x="494" y="50" width="132" height="90" rx="12" fill="#fdeae5" stroke="#ee4c2c" stroke-width="1.5"/>
+      <text x="560" y="90" text-anchor="middle" font-size="17" font-weight="800" fill="#c93d20">Decoder</text>
+      <text x="560" y="112" text-anchor="middle" font-size="11.5" fill="#c93d20">출력을 생성 · NLG</text>
+      <path d="M630 95 L660 95" stroke="#57534e" stroke-width="1.8" marker-end="url(#mI)"/>
+      <rect x="664" y="62" width="146" height="66" rx="11" fill="#f6f5f3" stroke="#e7e5e4"/>
+      <text x="737" y="90" text-anchor="middle" font-size="14.5" font-weight="700" fill="#1c1917">I love</text>
+      <text x="737" y="112" text-anchor="middle" font-size="14.5" font-weight="700" fill="#1c1917">an apple</text>
+    </svg>
+    <figcaption><span class="fno">그림 1</span>Seq2Seq의 뼈대 — 인코더가 이해한 모든 것이 Context 하나에 담겨 디코더로 넘어간다.</figcaption>
+  </figure>
+
+  <h3>RNN으로 구현하면</h3>
+  <p>인코더 RNN이 토큰을 한 개씩 읽으며 hidden state를 갱신하고, <b>마지막 hidden state를 Context</b>로 삼아 디코더의 초기 상태로 넘긴다. 디코더는 시작 토큰 <code>&lt;s&gt;</code>에서 출발해 "직전에 자신이 뱉은 단어"를 다음 입력으로 받으며 한 단어씩 생성한다 — 이것이 <b>자기회귀(auto-regressive)</b> 생성이다.</p>
+
+  <figure class="figure">
+    <svg viewBox="0 0 860 320" role="img" aria-label="RNN seq2seq 펼친 구조와 병목">
+      <!-- encoder cells -->
+      <g font-size="13.5" font-weight="700" fill="#1c1917" text-anchor="middle">
+        <rect x="40" y="180" width="64" height="64" rx="10" fill="#e6f5f3" stroke="#0d9488" stroke-width="1.4"/>
+        <rect x="140" y="180" width="64" height="64" rx="10" fill="#e6f5f3" stroke="#0d9488" stroke-width="1.4"/>
+        <rect x="240" y="180" width="64" height="64" rx="10" fill="#e6f5f3" stroke="#0d9488" stroke-width="1.4"/>
+        <text x="72" y="288">나는</text><text x="172" y="288">사과를</text><text x="272" y="288">좋아해</text>
+      </g>
+      <path d="M72 272 L72 250" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <path d="M172 272 L172 250" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <path d="M272 272 L272 250" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <path d="M104 212 L134 212" stroke="#ee4c2c" stroke-width="2.4" marker-end="url(#mO)"/>
+      <path d="M204 212 L234 212" stroke="#ee4c2c" stroke-width="2.4" marker-end="url(#mO)"/>
+      <!-- context -->
+      <path d="M290 176 C300 150 316 142 326 140" stroke="#ee4c2c" stroke-width="2.4" fill="none" marker-end="url(#mO)"/>
+      <rect x="330" y="118" width="96" height="44" rx="9" fill="#ee4c2c"/>
+      <text x="378" y="146" text-anchor="middle" font-size="14" font-weight="800" fill="#fff">Context</text>
+      <text x="378" y="104" text-anchor="middle" font-size="12.5" font-weight="800" fill="#ee4c2c">⚠ 병목 지점</text>
+      <path d="M430 140 L462 140" stroke="#ee4c2c" stroke-width="2.4" marker-end="url(#mO)"/>
+      <!-- decoder cells -->
+      <g>
+        <rect x="466" y="110" width="64" height="64" rx="10" fill="#fdeae5" stroke="#ee4c2c" stroke-width="1.4"/>
+        <rect x="566" y="110" width="64" height="64" rx="10" fill="#fdeae5" stroke="#ee4c2c" stroke-width="1.4"/>
+        <rect x="666" y="110" width="64" height="64" rx="10" fill="#fdeae5" stroke="#ee4c2c" stroke-width="1.4"/>
+        <rect x="766" y="110" width="64" height="64" rx="10" fill="#fdeae5" stroke="#ee4c2c" stroke-width="1.4"/>
+      </g>
+      <path d="M530 142 L560 142" stroke="#ee4c2c" stroke-width="2.4" marker-end="url(#mO)"/>
+      <path d="M630 142 L660 142" stroke="#ee4c2c" stroke-width="2.4" marker-end="url(#mO)"/>
+      <path d="M730 142 L760 142" stroke="#ee4c2c" stroke-width="2.4" marker-end="url(#mO)"/>
+      <!-- decoder inputs -->
+      <g font-size="13.5" font-weight="700" fill="#57534e" text-anchor="middle" font-family="JetBrains Mono,monospace">
+        <text x="498" y="232">&lt;s&gt;</text><text x="598" y="232">I</text><text x="698" y="232">love</text><text x="798" y="232">an</text>
+      </g>
+      <path d="M498 216 L498 180" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <path d="M598 216 L598 180" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <path d="M698 216 L698 180" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <path d="M798 216 L798 180" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <!-- outputs -->
+      <g font-size="14" font-weight="800" fill="#1c1917" text-anchor="middle" font-family="JetBrains Mono,monospace">
+        <text x="498" y="66">I</text><text x="598" y="66">love</text><text x="698" y="66">an</text><text x="798" y="66">apple</text>
+      </g>
+      <path d="M498 106 L498 76" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <path d="M598 106 L598 76" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <path d="M698 106 L698 76" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <path d="M798 106 L798 76" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <!-- output -> next input curves -->
+      <path d="M510 72 C556 130 578 178 592 210" stroke="#a8a29e" stroke-width="1.5" fill="none" marker-end="url(#mG)"/>
+      <path d="M610 72 C656 130 678 178 692 210" stroke="#a8a29e" stroke-width="1.5" fill="none" marker-end="url(#mG)"/>
+      <path d="M710 72 C756 130 778 178 792 210" stroke="#a8a29e" stroke-width="1.5" fill="none" marker-end="url(#mG)"/>
+      <text x="72" y="168" text-anchor="middle" font-size="11.5" fill="#78716c" font-family="JetBrains Mono,monospace">h₁</text>
+      <text x="172" y="168" text-anchor="middle" font-size="11.5" fill="#78716c" font-family="JetBrains Mono,monospace">h₂</text>
+      <text x="272" y="168" text-anchor="middle" font-size="11.5" fill="#78716c" font-family="JetBrains Mono,monospace">h₃</text>
+    </svg>
+    <figcaption><span class="fno">그림 2</span>RNN seq2seq. 회색 곡선은 "직전 출력이 다음 입력이 되는" 자기회귀 흐름. 문장 전체의 정보가 Context 벡터 하나를 통과해야 한다.</figcaption>
+  </figure>
+
+  <h3>RNN seq2seq의 두 가지 한계</h3>
+  <p><b>① Gradient Vanishing.</b> 시퀀스가 길어질수록 역전파 경로가 길어져 기울기가 소실된다. LSTM·GRU의 게이트 구조로 <em>완화</em>는 했지만 근본 해결은 아니다.</p>
+  <p><b>② Long-term Dependency — 정보 소실(Information Vanishing).</b> 이쪽이 더 치명적이다. 입력이 10단어든 100단어든 디코더에게 전달되는 것은 <b>고정 크기 벡터 하나</b>뿐이다. 문장이 길어질수록 앞쪽 단어의 정보는 뒤로 갈수록 덮어써지며 흐려진다. 아무리 좋은 RNN 셀을 써도, "모든 것을 벡터 하나에 압축하라"는 구조 자체가 병목이다.</p>
+
+  <div class="callout co-key">
+    <span class="ct">핵심</span>
+    <p>문제는 RNN 셀의 성능이 아니라 <b>인터페이스</b>다. 인코더는 매 시점 $h_1, h_2, \dots, h_T$라는 풍부한 정보를 만들어 놓고도, 디코더에게는 마지막 $h_T$ 하나만 건넨다. <em>"버리지 말고 전부 보여주면 안 되나?"</em> — 이 질문이 다음 섹션의 출발점이다.</p>
+  </div>
+</section>
+
+<!-- ═══════════════ 02 ATTENTION ═══════════════ -->
+<section id="sec-attn">
+  <h2><span class="badge">02</span>Attention의 탄생</h2>
+  <p class="sec-src">source · 0701 seq2seq_with_attention (후반부)</p>
+
+  <p>해법은 의외로 단순하다. Context를 <b>한 번 만들어 고정</b>하지 말고, 디코더가 <b>단어를 하나 생성할 때마다</b> 인코더의 모든 hidden state $h_1,\dots,h_T$를 다시 돌아보게 하자. 단, 전부 똑같이 보는 게 아니라 — <em>지금 생성하려는 단어와 관련 있는 것에 가중치를 실어서</em> 본다. 이렇게 매 시점 새로 합성되는 벡터가 <b>동적 context vector</b>이고, 이 메커니즘이 <b>Attention</b>이다.</p>
+
+  <h3>검색으로 이해하는 Q · K · V</h3>
+  <p>Attention은 본질적으로 <b>검색</b>이다. 고객센터 문서 검색에 비유하면 세 역할이 선명해진다.</p>
+
+  <figure class="figure">
+    <svg viewBox="0 0 760 290" role="img" aria-label="Query Key Value 문서 검색 비유">
+      <!-- query card -->
+      <rect x="20" y="95" width="228" height="104" rx="13" fill="#fff" stroke="#ee4c2c" stroke-width="1.6"/>
+      <rect x="34" y="82" width="62" height="24" rx="99" fill="#ee4c2c"/>
+      <text x="65" y="98.5" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" font-family="JetBrains Mono,monospace">Query</text>
+      <text x="134" y="138" text-anchor="middle" font-size="14" font-weight="700" fill="#1c1917">결제를 취소했는데</text>
+      <text x="134" y="162" text-anchor="middle" font-size="14" font-weight="700" fill="#1c1917">환불은 언제 되나요?</text>
+      <text x="134" y="184" text-anchor="middle" font-size="11.5" fill="#a8a29e">지금 찾고 싶은 것</text>
+      <!-- similarity arrows -->
+      <path d="M252 130 C320 92 380 62 428 50" stroke="#a8a29e" stroke-width="1.4" fill="none" marker-end="url(#mG)"/>
+      <path d="M252 147 L428 143" stroke="#ee4c2c" stroke-width="4.6" fill="none" marker-end="url(#mO)"/>
+      <path d="M252 164 C320 202 380 228 428 238" stroke="#a8a29e" stroke-width="1.4" fill="none" marker-end="url(#mG)"/>
+      <text x="338" y="82" text-anchor="middle" font-size="11.5" fill="#a8a29e" font-family="JetBrains Mono,monospace">0.05</text>
+      <text x="338" y="132" text-anchor="middle" font-size="12.5" font-weight="800" fill="#ee4c2c" font-family="JetBrains Mono,monospace">0.90</text>
+      <text x="338" y="222" text-anchor="middle" font-size="11.5" fill="#a8a29e" font-family="JetBrains Mono,monospace">0.05</text>
+      <text x="338" y="164" text-anchor="middle" font-size="10.5" fill="#78716c">유사도 = 가중치</text>
+      <!-- doc cards -->
+      <g>
+        <rect x="432" y="22" width="308" height="58" rx="11" fill="#fff" stroke="#e7e5e4"/>
+        <rect x="444" y="36" width="120" height="30" rx="7" fill="#e6f5f3"/>
+        <text x="504" y="56" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0b6b62">배송 · 지연</text>
+        <text x="580" y="56" font-size="12.5" fill="#57534e">→ 문서 1의 내용</text>
+      </g>
+      <g>
+        <rect x="432" y="115" width="308" height="58" rx="11" fill="#fef5f2" stroke="#ee4c2c" stroke-width="1.6"/>
+        <rect x="444" y="129" width="120" height="30" rx="7" fill="#e6f5f3"/>
+        <text x="504" y="149" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0b6b62">환불 · 취소</text>
+        <text x="580" y="149" font-size="12.5" font-weight="700" fill="#c93d20">→ 문서 2의 내용</text>
+      </g>
+      <g>
+        <rect x="432" y="208" width="308" height="58" rx="11" fill="#fff" stroke="#e7e5e4"/>
+        <rect x="444" y="222" width="120" height="30" rx="7" fill="#e6f5f3"/>
+        <text x="504" y="242" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0b6b62">제품 불량 · 교환</text>
+        <text x="588" y="242" font-size="12.5" fill="#57534e">→ 문서 3의 내용</text>
+      </g>
+      <text x="504" y="14" text-anchor="middle" font-size="11" font-weight="700" fill="#0d9488" font-family="JetBrains Mono,monospace">Key (색인)</text>
+      <text x="650" y="14" text-anchor="middle" font-size="11" font-weight="700" fill="#57534e" font-family="JetBrains Mono,monospace">Value (내용)</text>
+    </svg>
+    <figcaption><span class="fno">그림 3</span>질문(Q)과 각 문서의 색인(K)을 비교해 유사도를 매기고, 그 비율대로 내용(V)을 섞어 답을 만든다.</figcaption>
+  </figure>
+
+  <div class="tblwrap"><table class="tbl">
+    <tr><th style="width:110px">역할</th><th>정의</th><th>seq2seq에서의 정체</th></tr>
+    <tr><td><b>Q</b>uery</td><td>지금 무엇을 찾고 있는가?</td><td>디코더의 현재 상태 $s_{t-1}$</td></tr>
+    <tr><td><b>K</b>ey</td><td>각 단어가 어떤 정보를 갖고 있다고 <b>알리는 색인</b></td><td>인코더 hidden state $h_i$</td></tr>
+    <tr><td><b>V</b>alue</td><td>각 단어가 실제로 담고 있는 <b>내용</b></td><td>인코더 hidden state $h_i$</td></tr>
+  </table></div>
+  <p style="font-size:14px;color:var(--ink-soft)">※ 초기 attention에서는 K와 V가 같은 $h_i$였다. Transformer에서는 여기에 서로 다른 변환($W_K$, $W_V$)을 걸어 색인과 내용을 분리한다 — §03에서 계속.</p>
+
+  <h3>Attention의 3단계</h3>
+  <p>디코더가 $t$번째 단어를 만들려는 순간, 다음 세 단계가 실행된다.</p>
+  <div class="callout co-def">
+    <span class="ct">Attention 레시피</span>
+    <p><b>① 유사도 계산</b> — Q와 각 K의 유사도 점수 $e_i$를 구한다.<br>
+    <b>② Softmax</b> — 점수를 합이 1인 확률 분포, 즉 가중치 $\alpha_i$로 바꾼다.<br>
+    <b>③ 가중합</b> — $\alpha_i$의 비율대로 V를 섞어 새 <b>context vector</b>를 합성한다.</p>
+  </div>
+
+  <figure class="figure">
+    <svg viewBox="0 0 780 300" role="img" aria-label="love를 예측하는 시점의 attention 가중치">
+      <!-- encoder -->
+      <g>
+        <rect x="60" y="200" width="58" height="58" rx="9" fill="#e6f5f3" stroke="#0d9488" stroke-width="1.4"/>
+        <rect x="172" y="200" width="58" height="58" rx="9" fill="#e6f5f3" stroke="#0d9488" stroke-width="1.4"/>
+        <rect x="284" y="200" width="58" height="58" rx="9" fill="#e6f5f3" stroke="#0d9488" stroke-width="1.4"/>
+      </g>
+      <path d="M118 229 L166 229" stroke="#0d9488" stroke-width="2" marker-end="url(#mT)"/>
+      <path d="M230 229 L278 229" stroke="#0d9488" stroke-width="2" marker-end="url(#mT)"/>
+      <g font-size="13" font-weight="700" fill="#1c1917" text-anchor="middle">
+        <text x="89" y="284">나는</text><text x="201" y="284">사과를</text><text x="313" y="284">좋아해</text>
+      </g>
+      <g font-size="12" fill="#0b6b62" text-anchor="middle" font-family="JetBrains Mono,monospace">
+        <text x="89" y="190">h₁</text><text x="201" y="190">h₂</text><text x="313" y="190">h₃</text>
+      </g>
+      <!-- decoder cell -->
+      <rect x="580" y="110" width="66" height="66" rx="10" fill="#57534e"/>
+      <text x="613" y="90" text-anchor="middle" font-size="15" font-weight="800" fill="#1c1917" font-family="JetBrains Mono,monospace">love ?</text>
+      <path d="M613 106 L613 96" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <text x="613" y="232" text-anchor="middle" font-size="13.5" font-weight="700" fill="#57534e" font-family="JetBrains Mono,monospace">I</text>
+      <path d="M613 218 L613 182" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <text x="524" y="120" text-anchor="middle" font-size="11" fill="#a8a29e" font-family="JetBrains Mono,monospace">s(t−1)</text>
+      <path d="M498 132 L574 138" stroke="#a8a29e" stroke-width="1.5" marker-end="url(#mG)"/>
+      <!-- weighted arcs -->
+      <path d="M96 196 C230 40 440 44 576 122" stroke="#ee4c2c" stroke-width="1.8" fill="none" opacity=".8" marker-end="url(#mO)"/>
+      <path d="M208 196 C320 84 460 76 576 130" stroke="#ee4c2c" stroke-width="1.4" fill="none" opacity=".7" marker-end="url(#mO)"/>
+      <path d="M320 196 C420 116 500 108 576 140" stroke="#ee4c2c" stroke-width="6.2" fill="none" opacity=".92" marker-end="url(#mO)"/>
+      <g font-size="12.5" font-weight="800" fill="#ee4c2c" font-family="JetBrains Mono,monospace" text-anchor="middle">
+        <text x="300" y="58">α₁=0.2</text>
+        <text x="378" y="96">α₂=0.1</text>
+        <text x="446" y="140">α₃=0.7</text>
+      </g>
+    </svg>
+    <figcaption><span class="fno">그림 4</span>"love"를 예측하는 시점 — Q(현재 디코더 상태)와 가장 유사한 "좋아해"의 $h_3$에 가중치 0.7이 실리고, context는 $0.2h_1+0.1h_2+0.7h_3$으로 합성된다. 화살표 굵기 = 가중치.</figcaption>
+  </figure>
+
+  <h3>수식으로 — Bahdanau Attention (2014)</h3>
+  <p>최초의 attention은 유사도 함수 자체를 <b>작은 신경망으로 학습</b>했다. 인코더 상태 $H$와 디코더 직전 상태 $s_{t-1}$를 각각 변환해 더하고, $\tanh$를 거쳐 점수로 요약한다.</p>
+  $$e = W_s \cdot \tanh\!\left(W_{En}H + W_{De}\,s_{t-1}\right)$$
+  $$\alpha = \mathrm{softmax}(e)$$
+  $$a=\sum_{i=1}^{T}\alpha_i h_i = H\cdot\alpha$$
+  <p>세 줄이 정확히 위의 3단계다. 이렇게 만든 context $a$를 디코더의 현재 스텝에 함께 넣어 다음 단어를 예측한다. 병목이 사라졌다 — 디코더는 이제 <b>매 단어마다 입력 문장 전체를 다시 본다.</b></p>
+
+  <!-- ── WIDGET 1 ── -->
+  <div class="widget" id="w-attn">
+    <h4><span class="wtag">위젯 01</span>어텐션 실험실 — 내적이 가중치가 되는 순간</h4>
+    <p class="whint">주황 화살표 <b>q</b>(디코더 상태)를 <b>드래그</b>해 보자. 각 인코더 벡터 $h_i$와의 내적 → softmax → context 합성이 전부 실시간으로 계산된다. 스텝 버튼은 각 디코딩 시점의 q 위치로 이동시킨다. <b>q와 방향이 비슷한(내적이 큰) 벡터에 가중치가 쏠린다.</b></p>
+    <div class="w-flex">
+      <svg id="attnPlane" viewBox="0 0 340 340" style="flex:0 1 320px;min-width:250px;touch-action:none;cursor:crosshair;background:#fcfbfa;border:1px solid var(--line-soft);border-radius:13px"></svg>
+      <div class="w-side">
+        <div class="ctrls" style="margin-bottom:14px">
+          <span class="ctrl-label">디코딩 스텝</span>
+          <div class="seg" id="attnSteps">
+            <button data-s="0" class="on">① I</button><button data-s="1">② love</button><button data-s="2">③ an</button><button data-s="3">④ apple</button>
+          </div>
+        </div>
+        <div id="attnBars"></div>
+        <div class="mono-read" id="attnCtx"></div>
+      </div>
+    </div>
+    <p class="wnote">점선 주황 벡터가 합성된 <b>context</b>다. q를 두 인코더 벡터의 중간 방향으로 끌면 context도 둘을 섞은 방향이 된다 — attention이 "선택"이 아니라 <b>부드러운 혼합(soft selection)</b>인 이유.</p>
+  </div>
+</section>
+
+<!-- ═══════════════ 03 SDPA ═══════════════ -->
+<section id="sec-sdpa">
+  <h2><span class="badge">03</span>Scaled Dot-Product Attention</h2>
+  <p class="sec-src">source · 0702 transformer (전반부)</p>
+
+  <p>Transformer는 Bahdanau의 "학습되는 유사도 함수"를 버리고 더 과감한 선택을 한다 — <b>유사도는 그냥 내적으로 잰다.</b> 대신 내적하기 <em>전에</em> 각 벡터를 학습 가능한 행렬 $W_Q, W_K, W_V$로 투영해서, "무엇이 비슷해야 하는지"를 투영 단계가 배우게 한다.</p>
+
+  $$\mathrm{Attention}(Q,K,V)=\mathrm{softmax}\!\left(\frac{QK^{\top}}{\sqrt{d_k}}\right)V$$
+
+  <p>수식 한 줄이지만 §02의 3단계가 그대로 들어 있다. $QK^{\top}$가 <b>모든 Q-K 쌍의 유사도를 행렬곱 한 번</b>으로 계산하고(①), softmax가 각 행을 가중치 분포로 바꾸고(②), $\times V$가 가중합으로 context를 만든다(③). 반복문이 사라지고 전부 행렬곱이 되었기에 <b>GPU 병렬화에 완벽히 올라탄다.</b></p>
+
+  <figure class="figure">
+    <svg viewBox="0 0 470 480" role="img" aria-label="Scaled dot-product attention 연산 파이프라인">
+      <!-- brackets -->
+      <rect x="86" y="312" width="168" height="136" rx="10" fill="none" stroke="#ee4c2c" stroke-width="1.3" stroke-dasharray="5 4"/>
+      <rect x="86" y="184" width="168" height="116" rx="10" fill="none" stroke="#0d9488" stroke-width="1.3" stroke-dasharray="5 4"/>
+      <rect x="86" y="118" width="168" height="54" rx="10" fill="none" stroke="#a855f7" stroke-width="1.3" stroke-dasharray="5 4"/>
+      <text x="266" y="392" font-size="12.5" font-weight="700" fill="#ee4c2c">① 유사도 점수 계산</text>
+      <text x="266" y="246" font-size="12.5" font-weight="700" fill="#0d9488">② attention distribution</text>
+      <text x="266" y="150" font-size="12.5" font-weight="700" fill="#a855f7">③ context vector 생성</text>
+      <!-- boxes bottom→top -->
+      <rect x="95" y="388" width="150" height="40" rx="9" fill="#f3e8ff" stroke="#a855f7" stroke-width="1.3"/>
+      <text x="170" y="413" text-anchor="middle" font-size="13.5" font-weight="700" fill="#6b21a8">MatMul</text>
+      <rect x="95" y="322" width="150" height="40" rx="9" fill="#fef9c3" stroke="#eab308" stroke-width="1.3"/>
+      <text x="170" y="347" text-anchor="middle" font-size="13.5" font-weight="700" fill="#854d0e">Scale ( ÷√dₖ )</text>
+      <rect x="95" y="258" width="150" height="36" rx="9" fill="#fce7f3" stroke="#ec4899" stroke-width="1.3"/>
+      <text x="170" y="281" text-anchor="middle" font-size="13.5" font-weight="700" fill="#9d174d">Mask (opt.)</text>
+      <rect x="95" y="194" width="150" height="36" rx="9" fill="#dcfce7" stroke="#22c55e" stroke-width="1.3"/>
+      <text x="170" y="217" text-anchor="middle" font-size="13.5" font-weight="700" fill="#166534">SoftMax</text>
+      <rect x="95" y="128" width="150" height="36" rx="9" fill="#f3e8ff" stroke="#a855f7" stroke-width="1.3"/>
+      <text x="170" y="151" text-anchor="middle" font-size="13.5" font-weight="700" fill="#6b21a8">MatMul</text>
+      <!-- flow arrows -->
+      <path d="M135 456 L135 432" stroke="#57534e" stroke-width="1.7" marker-end="url(#mI)"/>
+      <path d="M205 456 L205 432" stroke="#57534e" stroke-width="1.7" marker-end="url(#mI)"/>
+      <path d="M170 388 L170 366" stroke="#57534e" stroke-width="1.7" marker-end="url(#mI)"/>
+      <path d="M170 322 L170 298" stroke="#57534e" stroke-width="1.7" marker-end="url(#mI)"/>
+      <path d="M170 258 L170 234" stroke="#57534e" stroke-width="1.7" marker-end="url(#mI)"/>
+      <path d="M170 194 L170 168" stroke="#57534e" stroke-width="1.7" marker-end="url(#mI)"/>
+      <path d="M170 128 L170 92" stroke="#57534e" stroke-width="1.9" marker-end="url(#mI)"/>
+      <!-- V line -->
+      <path d="M330 456 L330 146 L251 146" stroke="#57534e" stroke-width="1.7" fill="none" marker-end="url(#mI)"/>
+      <!-- labels -->
+      <g font-family="JetBrains Mono,monospace" font-weight="800" font-size="17" text-anchor="middle">
+        <text x="135" y="474" fill="#ee4c2c">Q</text><text x="205" y="474" fill="#0d9488">K</text><text x="330" y="474" fill="#3b82f6">V</text>
+      </g>
+      <text x="170" y="78" text-anchor="middle" font-size="13" font-weight="800" fill="#1c1917">Attention Value</text>
+    </svg>
+    <figcaption><span class="fno">그림 5</span>연산 파이프라인. Mask는 선택 사항으로 §04에서, Scale은 바로 아래에서 다룬다. V는 ②의 분포가 완성될 때까지 대기하다 마지막 가중합에만 참여한다.</figcaption>
+  </figure>
+
+  <h3>Q, K, V는 어디서 오나</h3>
+  <p>같은 소스라도 <b>서로 다른 학습 행렬</b>을 거쳐 세 역할로 갈라진다. 인코더-디코더 attention(→ §04 Cross)의 경우:</p>
+
+  <figure class="figure">
+    <svg viewBox="0 0 640 350" role="img" aria-label="W_Q W_K W_V 투영 구조">
+      <g font-family="JetBrains Mono,monospace" font-size="14.5" font-weight="800" text-anchor="middle">
+        <text x="120" y="336" fill="#57534e">s(t−1)</text>
+        <text x="422" y="336" fill="#57534e">H</text>
+      </g>
+      <path d="M120 320 L120 302" stroke="#57534e" stroke-width="1.7" marker-end="url(#mI)"/>
+      <path d="M410 320 C390 310 356 308 346 302" stroke="#57534e" stroke-width="1.7" fill="none" marker-end="url(#mI)"/>
+      <path d="M434 320 C454 310 490 308 500 302" stroke="#57534e" stroke-width="1.7" fill="none" marker-end="url(#mI)"/>
+      <g font-family="JetBrains Mono,monospace" font-size="14" font-weight="700" text-anchor="middle">
+        <rect x="76" y="256" width="88" height="42" rx="9" fill="#f6f5f3" stroke="#d6d3d1"/>
+        <text x="120" y="283" fill="#1c1917">W_Q</text>
+        <rect x="302" y="256" width="88" height="42" rx="9" fill="#f6f5f3" stroke="#d6d3d1"/>
+        <text x="346" y="283" fill="#1c1917">W_K</text>
+        <rect x="456" y="256" width="88" height="42" rx="9" fill="#f6f5f3" stroke="#d6d3d1"/>
+        <text x="500" y="283" fill="#1c1917">W_V</text>
+      </g>
+      <path d="M120 256 L120 240" stroke="#57534e" stroke-width="1.7" marker-end="url(#mI)"/>
+      <path d="M346 256 L346 240" stroke="#57534e" stroke-width="1.7" marker-end="url(#mI)"/>
+      <path d="M500 256 L500 240" stroke="#57534e" stroke-width="1.7" marker-end="url(#mI)"/>
+      <g font-family="JetBrains Mono,monospace" font-size="17" font-weight="800" text-anchor="middle">
+        <text x="120" y="226" fill="#ee4c2c">Q</text><text x="346" y="226" fill="#0d9488">K</text><text x="500" y="226" fill="#3b82f6">V</text>
+      </g>
+      <rect x="120" y="130" width="230" height="42" rx="9" fill="#f6f5f3" stroke="#d6d3d1"/>
+      <text x="235" y="157" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1c1917">Attention Distribution</text>
+      <path d="M132 210 C150 196 168 186 186 176" stroke="#57534e" stroke-width="1.7" fill="none" marker-end="url(#mI)"/>
+      <path d="M334 210 C316 196 300 186 284 176" stroke="#57534e" stroke-width="1.7" fill="none" marker-end="url(#mI)"/>
+      <rect x="150" y="38" width="200" height="42" rx="9" fill="#fdeae5" stroke="#ee4c2c" stroke-width="1.4"/>
+      <text x="250" y="65" text-anchor="middle" font-size="13.5" font-weight="800" fill="#c93d20">Attention Value</text>
+      <path d="M235 130 C238 112 242 100 246 86" stroke="#57534e" stroke-width="1.7" fill="none" marker-end="url(#mI)"/>
+      <path d="M500 210 C500 130 380 96 356 74" stroke="#57534e" stroke-width="1.7" fill="none" marker-end="url(#mI)"/>
+    </svg>
+    <figcaption><span class="fno">그림 6</span>디코더 상태는 $W_Q$를 거쳐 "질문"이 되고, 인코더 출력 $H$는 $W_K$·$W_V$를 거쳐 "색인"과 "내용"으로 분리된다. 무엇을 비슷하다고 볼지는 이 $W$들이 학습한다.</figcaption>
+  </figure>
+
+  <h3>왜 √dₖ로 나누나</h3>
+  <p>내적은 차원 수만큼 곱셈을 <b>더하는</b> 연산이다. Q, K의 각 성분이 평균 0·분산 1이라면 $q\cdot k = \sum_{i=1}^{d_k} q_i k_i$의 분산은 $d_k$가 되어, 점수의 크기가 $\sqrt{d_k}$ 배로 부풀어 오른다. 점수 격차가 커지면 softmax는 <b>포화</b>된다 — 한 곳에 1, 나머지에 0을 주는 원-핫에 가까워지고, 그 지점에서 <b>gradient가 거의 0</b>이 되어 학습이 멈춘다. $\sqrt{d_k}$로 나누면 점수의 표준편차가 차원과 무관하게 ≈1로 유지된다.</p>
+
+  <!-- ── WIDGET 2 ── -->
+  <div class="widget" id="w-scale">
+    <h4><span class="wtag">위젯 02</span>√dₖ 스케일링 실험 — softmax 포화 관찰</h4>
+    <p class="whint">표준정규분포에서 Q, K를 실제 샘플링해 $QK^{\top}$ → softmax를 계산한다. $d_k$를 키우고 <b>스케일링을 꺼 보면</b> 점수 표준편차 σ가 $\sqrt{d_k}$ 배로 커지며 α가 원-핫으로 붕괴(엔트로피 ↓)하는 것을 볼 수 있다.</p>
+    <div class="ctrls">
+      <span class="ctrl-label">dₖ</span>
+      <div class="seg" id="dkSeg">
+        <button data-dk="4">4</button><button data-dk="16">16</button><button data-dk="64" class="on">64</button><button data-dk="256">256</button>
+      </div>
+      <label class="chk"><input type="checkbox" id="scaleChk" checked> ÷√dₖ 적용</label>
+      <button class="btn" id="resampleBtn">↻ 새 Q·K 샘플</button>
+    </div>
+    <div class="w-flex" style="gap:34px;justify-content:center">
+      <div><div class="mtx-title">점수 e = QKᵀ<span id="scaleTag"> / √dₖ</span></div><table class="mtx" id="scoreMtx"></table></div>
+      <div><div class="mtx-title">α = softmax(e), 행별</div><table class="mtx" id="alphaMtx"></table></div>
+    </div>
+    <div class="metrics" id="scaleMetrics"></div>
+    <p class="wnote">스케일링 없이 dₖ=256이면 평균 max α ≈ 1.0, 엔트로피 ≈ 0 — 사실상 argmax다. softmax가 평평한 영역을 벗어나면 미분값이 소멸해 $W_Q, W_K$가 배울 기회를 잃는다.</p>
+  </div>
+
+  <h3>Bahdanau vs Scaled Dot-Product</h3>
+  <div class="tblwrap"><table class="tbl">
+    <tr><th style="width:120px"></th><th>Bahdanau (additive, 2014)</th><th>Scaled Dot-Product (2017)</th></tr>
+    <tr><td><b>유사도</b></td><td>$W_s\cdot\tanh(W_{En}H+W_{De}s_{t-1})$ — 작은 신경망이 계산</td><td>$QK^{\top}/\sqrt{d_k}$ — 순수 내적</td></tr>
+    <tr><td><b>학습 대상</b></td><td>유사도 함수 자체 ($W_s, W_{En}, W_{De}$)</td><td>유사도는 고정, 투영 $W_Q, W_K, W_V$가 학습</td></tr>
+    <tr><td><b>연산 형태</b></td><td>디코더 스텝마다 반복 계산</td><td>행렬곱 한 번 — <b>완전 병렬화</b></td></tr>
+    <tr><td><b>위치</b></td><td>RNN seq2seq의 보조 장치</td><td>Transformer의 <b>유일한</b> 정보 혼합 수단</td></tr>
+  </table></div>
+
+  <p>이 수식은 이미 코드로 만들어 본 적이 있다. day10–13 노트북의 그 함수다:</p>
+  <pre><code class="language-python">def scaled_dot_product_attention(Q, K, V, mask=None):
+    d_k = Q.shape[-1]
+    scores = Q @ K.transpose(-2, -1) / (d_k ** 0.5)      # ① 유사도 (÷√dk)
+    if mask is not None:
+        scores = scores.masked_fill(mask == 0, float('-inf'))  # (§04에서)
+    weights = softmax(scores, dim=-1)                    # ② attention distribution
+    return weights @ V, weights                          # ③ context, α</code></pre>
+  <p style="font-size:14px;color:var(--ink-soft)">※ 물론 "without magic" 규칙대로 <code>softmax</code>도 우리가 만든 <code>def</code>다 — <code>F.softmax</code> 아님.</p>
+</section>
+
+<!-- ═══════════════ 04 SELF/CROSS/MASKED ═══════════════ -->
+<section id="sec-three">
+  <h2><span class="badge">04</span>Attention의 세 가지 얼굴</h2>
+  <p class="sec-src">source · 0702 transformer (중반부)</p>
+  <p>같은 $\mathrm{softmax}(QK^{\top}/\sqrt{d_k})V$ 하나가, <b>Q·K·V를 어디서 가져오느냐</b>에 따라 세 가지 다른 일을 한다. Transformer 한 층 안에 셋이 모두 들어 있다.</p>
+
+  <h3 id="h-self">Self-Attention — 문맥이 의미를 바꾼다</h3>
+  <p>같은 단어라도 앞뒤 문맥에 따라 뉘앙스가 달라진다.</p>
+  <div class="callout co-warn">
+    <span class="ct">같은 "고래", 다른 의미</span>
+    <p>· 현재도 수많은 <b>고래</b>들이 남획되고 있습니다. — 바다의 <em>생물</em><br>
+    · 백경은 <b>고래</b>와 늙은 어부의 사투를 그린 작품입니다. — 소설 속 <em>상징</em></p>
+  </div>
+  <p>Word2Vec 같은 정적 임베딩은 두 "고래"에 <b>같은 벡터</b>를 준다. 필요한 것은 문장 안의 다른 단어들을 참조해 <b>자기 표현을 문맥에 맞게 유동적으로 조정</b>하는 장치 — 그것이 self-attention이다. 입력 $X$ 하나에서 $Q=XW_Q,\ K=XW_K,\ V=XW_V$를 모두 만들어, <b>모든 토큰이 서로를 참조</b>한다.</p>
+
+  <figure class="figure">
+    <svg viewBox="0 0 760 260" role="img" aria-label="문맥에 따라 고래의 attention이 달라지는 예">
+      <!-- sentence 1 -->
+      <rect x="248" y="66" width="104" height="32" rx="8" fill="#fdeae5" stroke="#ee4c2c" stroke-width="1.3"/>
+      <g font-size="14.5" font-weight="600" fill="#44403c" text-anchor="middle">
+        <text x="80" y="88">현재도</text><text x="180" y="88">수많은</text>
+        <text x="300" y="88" font-weight="800" fill="#c93d20">고래들이</text>
+        <text x="430" y="88">남획되고</text><text x="548" y="88">있습니다</text>
+      </g>
+      <path d="M414 62 C378 26 336 28 306 60" stroke="#0d9488" stroke-width="4.4" fill="none" marker-end="url(#mT)"/>
+      <path d="M186 62 C214 32 250 34 276 58" stroke="#0d9488" stroke-width="2" fill="none" opacity=".75" marker-end="url(#mT)"/>
+      <text x="360" y="28" text-anchor="middle" font-size="11.5" font-weight="700" fill="#0d9488" font-family="JetBrains Mono,monospace">0.6</text>
+      <text x="228" y="34" text-anchor="middle" font-size="11.5" font-weight="700" fill="#0d9488" font-family="JetBrains Mono,monospace">0.3</text>
+      <text x="380" y="122" text-anchor="middle" font-size="12.5" fill="#0b6b62" font-weight="600">"남획" 문맥을 흡수 → 생물로서의 고래</text>
+      <!-- sentence 2 -->
+      <rect x="142" y="186" width="82" height="32" rx="8" fill="#fdeae5" stroke="#ee4c2c" stroke-width="1.3"/>
+      <g font-size="14.5" font-weight="600" fill="#44403c" text-anchor="middle">
+        <text x="70" y="208">백경은</text>
+        <text x="183" y="208" font-weight="800" fill="#c93d20">고래와</text>
+        <text x="280" y="208">늙은</text><text x="368" y="208">어부의</text>
+        <text x="462" y="208">사투를</text><text x="544" y="208">그린</text><text x="648" y="208">작품입니다</text>
+      </g>
+      <path d="M82 182 C100 152 130 152 158 180" stroke="#0d9488" stroke-width="4" fill="none" marker-end="url(#mT)"/>
+      <path d="M620 182 C480 122 300 128 212 178" stroke="#0d9488" stroke-width="3.2" fill="none" opacity=".85" marker-end="url(#mT)"/>
+      <text x="112" y="152" text-anchor="middle" font-size="11.5" font-weight="700" fill="#0d9488" font-family="JetBrains Mono,monospace">0.45</text>
+      <text x="420" y="132" text-anchor="middle" font-size="11.5" font-weight="700" fill="#0d9488" font-family="JetBrains Mono,monospace">0.35</text>
+      <text x="380" y="244" text-anchor="middle" font-size="12.5" fill="#0b6b62" font-weight="600">"백경 · 작품" 문맥을 흡수 → 소설 속 고래</text>
+    </svg>
+    <figcaption><span class="fno">그림 7</span>Self-attention의 효과 — 같은 "고래" 토큰이 문장마다 다른 단어들을 참조하며 서로 다른 문맥 벡터로 갱신된다. (가중치는 예시)</figcaption>
+  </figure>
+
+  <h3 id="h-cross">Cross-Attention — 디코더가 인코더를 본다</h3>
+  <p>디코더가 다음 단어를 추론할 때는 자기 문장만 봐서는 안 되고 <b>인코더의 입력 시퀀스를 참고</b>해야 한다. §02의 seq2seq attention이 Transformer 안에 그대로 이식된 형태다.</p>
+  <div class="callout co-def">
+    <span class="ct">Cross-Attention의 출처</span>
+    <p><b>Q</b> = 디코더의 hidden state (내가 지금 찾는 것)<br><b>K, V</b> = 인코더의 hidden state $H$ (원문이 가진 정보)</p>
+  </div>
+  <p>번역이라면 "영어 단어를 만들려는 지금, 한국어 원문의 어느 단어를 봐야 하는가"를 매 스텝 계산하는 층이다.</p>
+
+  <h3 id="h-mask">Masked Self-Attention — 병렬 학습과 컨닝 방지</h3>
+  <p>디코더 학습에는 딜레마가 있다. RNN처럼 <b>한 토큰씩 늘려가며</b> 학습하면 순서는 지켜지지만 attention의 병렬 연산 장점이 사라진다. 반대로 정답 시퀀스 <b>전체를 한 번에 입력</b>하면 병렬 학습은 되지만 — self-attention은 모든 토큰을 서로 참조시키므로, "love"를 예측하는 위치가 정답 "love", "an", "apple"을 <b>미리 보게 된다.</b> 실제 추론에서는 다음 토큰을 알 수 없으니, 학습과 추론의 조건이 달라져 버린다(컨닝).</p>
+  <p>해결책: 전체를 병렬 입력하되, 점수 행렬에서 <b>미래 위치($j&gt;i$)의 점수를 $-\infty$로 덮는다.</b> softmax를 통과하면 $e^{-\infty}=0$이므로 미래 토큰의 가중치가 정확히 0이 된다. 이것이 <b>Look-ahead Mask (Causal Mask)</b>다.</p>
+  <p style="font-size:14.5px">구현은 하삼각 행렬 하나면 끝난다: <code>mask = torch.tril(torch.ones(T, T))</code> — 0인 자리에 $-\infty$를 채운다.</p>
+
+  <!-- ── WIDGET 3 ── -->
+  <div class="widget" id="w-mask">
+    <h4><span class="wtag">위젯 03</span>Look-ahead Mask 토글</h4>
+    <p class="whint">디코더 입력 <code>&lt;s&gt; I love an</code>의 4×4 self-attention. 각 <b>행</b>이 하나의 시점(Q)이고, <b>열</b>이 참조 대상(K)이다. 마스크를 꺼 보면 첫 행(<code>&lt;s&gt;</code> 시점)이 미래 정답까지 참조하는 것 — 즉 컨닝 — 이 보인다. softmax는 매번 실제로 재계산된다.</p>
+    <div class="ctrls">
+      <label class="chk"><input type="checkbox" id="maskChk" checked> Look-ahead Mask 적용 ( j &gt; i 에 −∞ )</label>
+    </div>
+    <div class="w-flex" style="gap:34px;justify-content:center">
+      <div><div class="mtx-title">점수 e (마스크 반영)</div><table class="mtx" id="maskScoreMtx"></table></div>
+      <div><div class="mtx-title">α = softmax(e), 행별</div><table class="mtx" id="maskAlphaMtx"></table></div>
+    </div>
+    <p class="wnote">마스크가 켜지면 각 행의 가중치가 <b>자기 이전(과거+자신)에만</b> 분배된다. 추론 때 디코더가 처한 조건과 정확히 같아지면서도, 모든 행을 한 번의 행렬 연산으로 병렬 학습할 수 있다.</p>
+  </div>
+
+  <div class="tblwrap"><table class="tbl">
+    <tr><th style="width:150px">종류</th><th>Q의 출처</th><th>K, V의 출처</th><th>하는 일</th></tr>
+    <tr><td><b>Self</b></td><td>$X$ (자기 문장)</td><td>$X$ (자기 문장)</td><td>문맥 반영 표현으로 갱신</td></tr>
+    <tr><td><b>Masked Self</b></td><td>디코더 입력</td><td>디코더 입력 (과거만)</td><td>컨닝 없이 병렬 학습</td></tr>
+    <tr><td><b>Cross</b></td><td>디코더 상태</td><td>인코더 출력 $H$</td><td>원문 참조 (번역의 핵심)</td></tr>
+  </table></div>
+</section>
+
+<!-- ═══════════════ 05 PARTS ═══════════════ -->
+<section id="sec-parts">
+  <h2><span class="badge">05</span>블록의 나머지 부품</h2>
+  <p class="sec-src">source · 0702 transformer (후반부)</p>
+  <p>attention이 심장이라면, Transformer 블록에는 심장을 <b>여러 개 병렬로</b> 돌리고(<b>Multi-head</b>), 결과를 <b>비선형으로 가공</b>하고(<b>FFNN</b>), 깊게 쌓아도 <b>무너지지 않게</b> 받치는(<b>Residual + LayerNorm</b>) 부품이 함께 들어간다.</p>
+
+  <h3 id="h-mha">Multi-head Attention — 관계는 하나가 아니다</h3>
+  <p>attention 연산 하나는 <b>한 번에 한 가지 관계</b>만 잡아낸다. 그런데 문장 안에는 주어-동사, 수식어-명사, 대명사-선행사처럼 서로 다른 관계가 동시에 존재한다. 그래서 벡터를 $h$개로 분할해 <b>head마다 독립된 $W_Q, W_K, W_V$</b>로 각각 attention을 수행한다 — 각 head가 <b>서로 다른 subspace</b>에서 서로 다른 관계를 학습한다. 마지막에 concat 후 Linear($W_O$)로 의미를 통합한다.</p>
+
+  <figure class="figure">
+    <svg viewBox="0 0 560 430" role="img" aria-label="Multi-head attention 구조">
+      <!-- input labels -->
+      <g font-family="JetBrains Mono,monospace" font-size="16" font-weight="800" text-anchor="middle">
+        <text x="140" y="416" fill="#3b82f6">V</text><text x="280" y="416" fill="#0d9488">K</text><text x="420" y="416" fill="#ee4c2c">Q</text>
+      </g>
+      <!-- linear stacks -->
+      <g>
+        <rect x="110" y="322" width="80" height="34" rx="8" fill="#e9e7e4"/><rect x="105" y="327" width="80" height="34" rx="8" fill="#efedeb"/>
+        <rect x="100" y="332" width="80" height="34" rx="8" fill="#f6f5f3" stroke="#d6d3d1"/>
+        <text x="140" y="354" text-anchor="middle" font-size="12.5" font-weight="700" fill="#44403c">Linear</text>
+        <rect x="250" y="322" width="80" height="34" rx="8" fill="#e9e7e4"/><rect x="245" y="327" width="80" height="34" rx="8" fill="#efedeb"/>
+        <rect x="240" y="332" width="80" height="34" rx="8" fill="#f6f5f3" stroke="#d6d3d1"/>
+        <text x="280" y="354" text-anchor="middle" font-size="12.5" font-weight="700" fill="#44403c">Linear</text>
+        <rect x="390" y="322" width="80" height="34" rx="8" fill="#e9e7e4"/><rect x="385" y="327" width="80" height="34" rx="8" fill="#efedeb"/>
+        <rect x="380" y="332" width="80" height="34" rx="8" fill="#f6f5f3" stroke="#d6d3d1"/>
+        <text x="420" y="354" text-anchor="middle" font-size="12.5" font-weight="700" fill="#44403c">Linear</text>
+      </g>
+      <path d="M140 402 L140 372" stroke="#57534e" stroke-width="1.7" marker-end="url(#mI)"/>
+      <path d="M280 402 L280 372" stroke="#57534e" stroke-width="1.7" marker-end="url(#mI)"/>
+      <path d="M420 402 L420 372" stroke="#57534e" stroke-width="1.7" marker-end="url(#mI)"/>
+      <!-- SDPA stack -->
+      <rect x="100" y="212" width="380" height="60" rx="11" fill="#ddd6fe"/>
+      <rect x="93" y="219" width="380" height="60" rx="11" fill="#e9e2fd"/>
+      <rect x="86" y="226" width="380" height="60" rx="11" fill="#f3e8ff" stroke="#a855f7" stroke-width="1.4"/>
+      <text x="276" y="262" text-anchor="middle" font-size="13.5" font-weight="800" fill="#6b21a8">Scaled Dot-Product Attention</text>
+      <path d="M492 226 L474 250" stroke="#6b21a8" stroke-width="2"/>
+      <text x="503" y="252" font-size="12.5" font-weight="800" fill="#6b21a8" font-family="JetBrains Mono,monospace">× h</text>
+      <path d="M140 328 L152 292" stroke="#57534e" stroke-width="1.7" marker-end="url(#mI)"/>
+      <path d="M280 328 L280 292" stroke="#57534e" stroke-width="1.7" marker-end="url(#mI)"/>
+      <path d="M420 328 L408 292" stroke="#57534e" stroke-width="1.7" marker-end="url(#mI)"/>
+      <!-- concat -->
+      <rect x="190" y="130" width="180" height="38" rx="9" fill="#fef9c3" stroke="#eab308" stroke-width="1.3"/>
+      <text x="280" y="154" text-anchor="middle" font-size="13" font-weight="800" fill="#854d0e">Concat</text>
+      <path d="M216 222 L226 174" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <path d="M280 218 L280 174" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <path d="M344 222 L334 174" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <!-- final linear -->
+      <rect x="190" y="58" width="180" height="38" rx="9" fill="#f6f5f3" stroke="#d6d3d1"/>
+      <text x="280" y="82" text-anchor="middle" font-size="13" font-weight="800" fill="#44403c">Linear (W_O)</text>
+      <path d="M280 130 L280 102" stroke="#57534e" stroke-width="1.7" marker-end="url(#mI)"/>
+      <path d="M280 58 L280 26" stroke="#57534e" stroke-width="1.9" marker-end="url(#mI)"/>
+      <!-- annotations -->
+      <text x="60" y="258" text-anchor="middle" font-size="11.5" font-weight="700" fill="#ee4c2c" transform="rotate(-90 60 258)">① 서로 다른 subspace 학습</text>
+      <text x="452" y="115" font-size="11.5" font-weight="700" fill="#ee4c2c">② 의미 통합</text>
+    </svg>
+    <figcaption><span class="fno">그림 8</span>Multi-head attention. head별 Linear가 입력을 서로 다른 subspace로 투영하고(①), 병렬 attention의 결과를 Concat + Linear가 하나의 표현으로 통합한다(②).</figcaption>
+  </figure>
+
+  <p>실제로 head들은 분업한다. 학습된 BERT의 head를 분석한 연구(Clark et al., 2019)에서 확인된 역할 분담:</p>
+  <div class="tblwrap"><table class="tbl">
+    <tr><th style="width:100px">Head</th><th>발견된 패턴</th><th style="width:170px">문법 관계 · 정확도</th></tr>
+    <tr><td>8-10</td><td>직접목적어가 자기 동사를 참조</td><td>dobj · 86.8%</td></tr>
+    <tr><td>8-11</td><td>명사 수식어(관사 등)가 명사를 참조</td><td>det · 94.3%</td></tr>
+    <tr><td>7-6</td><td>소유격이 명사구의 head를 참조</td><td>poss · 80.5%</td></tr>
+    <tr><td>4-10</td><td>수동태 조동사가 본동사를 참조</td><td>auxpass · 82.5%</td></tr>
+    <tr><td>9-6</td><td>전치사가 자기 목적어를 참조</td><td>pobj · 76.3%</td></tr>
+    <tr><td>5-4</td><td>상호참조(대명사 ↔ 선행사) 연결</td><td>coref · 65.1%</td></tr>
+  </table></div>
+
+  <h3 id="h-ffn">Feed-Forward Network — 비선형 가공</h3>
+  <p>"attention 끝에도 Linear($W_O$)가 있는데 왜 또 필요하지?"라는 의문이 들 수 있다. 역할이 다르다. $W_O$의 일은 여러 head가 모은 다양한 문맥 정보를 하나의 표현으로 <b>정리·통합</b>하는 것이고, attention 전체는 결국 V들의 <b>가중 평균(선형 결합)</b>이다. 문맥적으로 중요한 단어를 <em>골라내는</em> 것 이외에, 골라 모은 특징을 <b>비선형으로 조합·변환해 새로운 특징을 만드는</b> 역할이 따로 필요하다 — 그것이 각 토큰 위치에 독립적으로 적용되는 2층 FFNN이다.</p>
+  $$\mathrm{FFN}(x)=W_2\,f(W_1x+b_1)+b_2$$
+  <p style="font-size:14.5px;color:var(--ink-soft)">원 논문에서 은닉 차원은 $4\times d_{model}$ (512 → 2048), $f$는 ReLU. "attention이 모으고, FFN이 생각한다"고 기억하면 좋다.</p>
+
+  <h3 id="h-res">Residual Connection — 지름길을 놓는다</h3>
+  <p>Attention이나 FFNN의 출력에 <b>입력 $x$를 그대로 더해준다</b>: $y = F(x) + x$. 층이 배우는 것은 전체 변환이 아니라 <b>변화량(residual)</b> 뿐이라 부담이 줄고, 두 가지가 방지된다 — ① 층을 지나며 원본 정보가 사라지는 <b>정보 손실</b>, ② 역전파가 $+x$ 지름길로 곧장 흐르므로 깊게 쌓아도 <b>gradient vanishing</b>이 완화된다.</p>
+
+  <figure class="figure">
+    <svg viewBox="0 0 520 270" role="img" aria-label="Residual connection 구조">
+      <text x="160" y="26" text-anchor="middle" font-size="16" font-weight="800" fill="#1c1917" font-family="JetBrains Mono,monospace">x</text>
+      <path d="M160 34 L160 56" stroke="#57534e" stroke-width="1.8" marker-end="url(#mI)"/>
+      <rect x="88" y="60" width="144" height="42" rx="9" fill="#f6f5f3" stroke="#d6d3d1"/>
+      <text x="160" y="87" text-anchor="middle" font-size="13" font-weight="700" fill="#44403c">weight layer</text>
+      <path d="M160 102 L160 126" stroke="#57534e" stroke-width="1.8" marker-end="url(#mI)"/>
+      <text x="197" y="119" font-size="11.5" fill="#78716c" font-family="JetBrains Mono,monospace">ReLU</text>
+      <rect x="88" y="130" width="144" height="42" rx="9" fill="#f6f5f3" stroke="#d6d3d1"/>
+      <text x="160" y="157" text-anchor="middle" font-size="13" font-weight="700" fill="#44403c">weight layer</text>
+      <text x="52" y="122" text-anchor="middle" font-size="14" fill="#78716c" font-family="JetBrains Mono,monospace">F(x)</text>
+      <path d="M160 172 L160 196" stroke="#57534e" stroke-width="1.8" marker-end="url(#mI)"/>
+      <circle cx="160" cy="212" r="15" fill="#fdeae5" stroke="#ee4c2c" stroke-width="1.8"/>
+      <path d="M153 212 L167 212 M160 205 L160 219" stroke="#c93d20" stroke-width="2.2"/>
+      <path d="M160 40 C348 40 348 212 182 212" stroke="#ee4c2c" stroke-width="2.2" fill="none" marker-end="url(#mO)"/>
+      <text x="346" y="128" font-size="12.5" font-weight="700" fill="#ee4c2c" font-family="JetBrains Mono,monospace">x (identity)</text>
+      <path d="M160 227 L160 252" stroke="#57534e" stroke-width="1.8" marker-end="url(#mI)"/>
+      <text x="216" y="248" font-size="14" font-weight="800" fill="#1c1917" font-family="JetBrains Mono,monospace">F(x) + x</text>
+    </svg>
+    <figcaption><span class="fno">그림 9</span>Residual connection. 주황 지름길 덕에 정보와 gradient가 층을 우회해 곧장 흐를 수 있다.</figcaption>
+  </figure>
+
+  <h3 id="h-ln">Layer Normalization — 스케일 단속</h3>
+  <p>residual은 <b>계속 더하는</b> 구조라, 층을 쌓을수록 출력 스케일이 폭주할 수 있다. LayerNorm은 <b>각 토큰 벡터를 개별적으로</b> 평균 0·분산 1로 정규화한 뒤, 학습 가능한 $\gamma, \beta$로 다시 스케일·이동시켜 값의 범위를 일정하게 유지한다. 학습 속도와 안정성이 올라간다.</p>
+  $$\mathrm{LN}(x)=\gamma\odot\frac{x-\mu}{\sqrt{\sigma^2+\epsilon}}+\beta$$
+  <div class="callout co-key">
+    <span class="ct">Add &amp; Norm</span>
+    <p>원 논문의 모든 서브층은 $\mathrm{LayerNorm}(x + \mathrm{Sublayer}(x))$로 감싸진다 — 그림에서 반복되는 <b>"Add &amp; Norm"</b>이 바로 residual(add)과 LayerNorm(norm)의 합작이다. 참고로 배치 단위로 정규화하는 BatchNorm과 달리, LayerNorm은 <b>토큰 하나의 feature 차원</b>에서 정규화하므로 문장 길이·배치 크기에 영향을 받지 않는다.</p>
+  </div>
+</section>
+
+<!-- ═══════════════ 06 ARCHITECTURE ═══════════════ -->
+<section id="sec-arch">
+  <h2><span class="badge">06</span>전체 아키텍처 — 조립</h2>
+  <p class="sec-src">source · 0702 transformer (Figure 1, Attention Is All You Need)</p>
+  <p>이제 부품이 전부 모였다. 원 논문의 Figure 1을 재구성한 아래 그림에서 <b>각 블록을 클릭하면 해당 설명 섹션으로 이동</b>한다. 색은 attention의 세 얼굴을 따른다 — <span style="color:var(--teal);font-weight:700">Self</span>, <span style="color:#9d174d;font-weight:700">Masked Self</span>, <span style="color:var(--orange);font-weight:700">Cross</span>.</p>
+
+  <figure class="figure">
+    <svg viewBox="0 0 780 660" role="img" aria-label="Transformer 전체 아키텍처">
+      <!-- ===== encoder container ===== -->
+      <rect x="84" y="276" width="232" height="230" rx="13" fill="#fbfaf9" stroke="#e7e5e4"/>
+      <text x="64" y="294" font-size="13" font-weight="800" fill="#78716c" font-family="JetBrains Mono,monospace">N×</text>
+      <!-- ===== decoder container ===== -->
+      <rect x="444" y="162" width="232" height="344" rx="13" fill="#fbfaf9" stroke="#e7e5e4"/>
+      <text x="700" y="182" font-size="13" font-weight="800" fill="#78716c" font-family="JetBrains Mono,monospace">N×</text>
+
+      <!-- encoder stack -->
+      <a href="#h-self"><rect x="100" y="440" width="200" height="44" rx="9" fill="#ccfbf1" stroke="#0d9488" stroke-width="1.5"/>
+      <text x="200" y="459" text-anchor="middle" font-size="12.5" font-weight="800" fill="#0b6b62">Multi-Head Attention</text>
+      <text x="200" y="475" text-anchor="middle" font-size="10.5" font-weight="700" fill="#0d9488">Self</text></a>
+      <a href="#h-res"><rect x="100" y="394" width="200" height="30" rx="8" fill="#fef9c3" stroke="#eab308" stroke-width="1.2"/>
+      <text x="200" y="414" text-anchor="middle" font-size="12" font-weight="700" fill="#854d0e">Add &amp; Norm</text></a>
+      <a href="#h-ffn"><rect x="100" y="336" width="200" height="44" rx="9" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.4"/>
+      <text x="200" y="363" text-anchor="middle" font-size="12.5" font-weight="800" fill="#1d4ed8">Feed Forward</text></a>
+      <a href="#h-res"><rect x="100" y="290" width="200" height="30" rx="8" fill="#fef9c3" stroke="#eab308" stroke-width="1.2"/>
+      <text x="200" y="310" text-anchor="middle" font-size="12" font-weight="700" fill="#854d0e">Add &amp; Norm</text></a>
+      <path d="M200 440 L200 428" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <path d="M200 394 L200 384" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <path d="M200 336 L200 324" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+
+      <!-- decoder stack -->
+      <a href="#h-mask"><rect x="460" y="440" width="200" height="44" rx="9" fill="#fce7f3" stroke="#ec4899" stroke-width="1.5"/>
+      <text x="560" y="459" text-anchor="middle" font-size="12.5" font-weight="800" fill="#9d174d">Masked Multi-Head Attn</text>
+      <text x="560" y="475" text-anchor="middle" font-size="10.5" font-weight="700" fill="#ec4899">Masked Self</text></a>
+      <a href="#h-res"><rect x="460" y="394" width="200" height="30" rx="8" fill="#fef9c3" stroke="#eab308" stroke-width="1.2"/>
+      <text x="560" y="414" text-anchor="middle" font-size="12" font-weight="700" fill="#854d0e">Add &amp; Norm</text></a>
+      <a href="#h-cross"><rect x="460" y="332" width="200" height="44" rx="9" fill="#ffedd5" stroke="#ee4c2c" stroke-width="1.5"/>
+      <text x="560" y="351" text-anchor="middle" font-size="12.5" font-weight="800" fill="#c93d20">Multi-Head Attention</text>
+      <text x="560" y="367" text-anchor="middle" font-size="10.5" font-weight="700" fill="#ee4c2c">Cross · K,V ← Encoder</text></a>
+      <a href="#h-res"><rect x="460" y="286" width="200" height="30" rx="8" fill="#fef9c3" stroke="#eab308" stroke-width="1.2"/>
+      <text x="560" y="306" text-anchor="middle" font-size="12" font-weight="700" fill="#854d0e">Add &amp; Norm</text></a>
+      <a href="#h-ffn"><rect x="460" y="228" width="200" height="44" rx="9" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.4"/>
+      <text x="560" y="255" text-anchor="middle" font-size="12.5" font-weight="800" fill="#1d4ed8">Feed Forward</text></a>
+      <a href="#h-res"><rect x="460" y="182" width="200" height="30" rx="8" fill="#fef9c3" stroke="#eab308" stroke-width="1.2"/>
+      <text x="560" y="202" text-anchor="middle" font-size="12" font-weight="700" fill="#854d0e">Add &amp; Norm</text></a>
+      <path d="M560 440 L560 428" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <path d="M560 394 L560 380" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <path d="M560 332 L560 320" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <path d="M560 286 L560 276" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <path d="M560 228 L560 216" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+
+      <!-- encoder output → cross attention -->
+      <path d="M200 290 L200 246 L380 246 L380 354 L456 354" stroke="#ee4c2c" stroke-width="2.4" fill="none" marker-end="url(#mO)"/>
+      <text x="290" y="238" text-anchor="middle" font-size="12" font-weight="800" fill="#ee4c2c" font-family="JetBrains Mono,monospace">H → K, V</text>
+
+      <!-- embeddings + PE -->
+      <rect x="100" y="576" width="200" height="36" rx="9" fill="#f6f5f3" stroke="#d6d3d1"/>
+      <text x="200" y="599" text-anchor="middle" font-size="12.5" font-weight="700" fill="#44403c">Input Embedding</text>
+      <rect x="460" y="576" width="200" height="36" rx="9" fill="#f6f5f3" stroke="#d6d3d1"/>
+      <text x="560" y="599" text-anchor="middle" font-size="12.5" font-weight="700" fill="#44403c">Output Embedding</text>
+      <circle cx="200" cy="540" r="13" fill="#fff" stroke="#78716c" stroke-width="1.5"/>
+      <path d="M194 540 L206 540 M200 534 L200 546" stroke="#78716c" stroke-width="1.7"/>
+      <circle cx="560" cy="540" r="13" fill="#fff" stroke="#78716c" stroke-width="1.5"/>
+      <path d="M554 540 L566 540 M560 534 L560 546" stroke="#78716c" stroke-width="1.7"/>
+      <path d="M148 540 C158 532 172 546 182 539" stroke="#78716c" stroke-width="1.5" fill="none"/>
+      <path d="M612 540 C602 532 588 546 578 539" stroke="#78716c" stroke-width="1.5" fill="none"/>
+      <text x="86" y="536" text-anchor="middle" font-size="10.5" font-weight="700" fill="#78716c">Positional</text>
+      <text x="86" y="550" text-anchor="middle" font-size="10.5" font-weight="700" fill="#78716c">Encoding</text>
+      <text x="676" y="536" text-anchor="middle" font-size="10.5" font-weight="700" fill="#78716c">Positional</text>
+      <text x="676" y="550" text-anchor="middle" font-size="10.5" font-weight="700" fill="#78716c">Encoding</text>
+      <path d="M200 576 L200 558" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <path d="M560 576 L560 558" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <path d="M200 527 L200 490" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <path d="M560 527 L560 490" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <text x="200" y="640" text-anchor="middle" font-size="13" font-weight="700" fill="#1c1917">Inputs — 나는 사과를 좋아해</text>
+      <text x="560" y="640" text-anchor="middle" font-size="13" font-weight="700" fill="#1c1917">Outputs (shifted right) — &lt;s&gt; I love an</text>
+      <path d="M200 626 L200 616" stroke="#57534e" stroke-width="1.5" marker-end="url(#mI)"/>
+      <path d="M560 626 L560 616" stroke="#57534e" stroke-width="1.5" marker-end="url(#mI)"/>
+
+      <!-- head -->
+      <rect x="460" y="112" width="200" height="34" rx="9" fill="#f6f5f3" stroke="#d6d3d1"/>
+      <text x="560" y="134" text-anchor="middle" font-size="12.5" font-weight="700" fill="#44403c">Linear</text>
+      <rect x="460" y="62" width="200" height="34" rx="9" fill="#dcfce7" stroke="#22c55e" stroke-width="1.3"/>
+      <text x="560" y="84" text-anchor="middle" font-size="12.5" font-weight="700" fill="#166534">Softmax</text>
+      <path d="M560 182 L560 150" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <path d="M560 112 L560 100" stroke="#57534e" stroke-width="1.6" marker-end="url(#mI)"/>
+      <path d="M560 62 L560 36" stroke="#57534e" stroke-width="1.8" marker-end="url(#mI)"/>
+      <text x="560" y="24" text-anchor="middle" font-size="13" font-weight="800" fill="#1c1917">Output Probabilities — "love"</text>
+    </svg>
+    <figcaption><span class="fno">그림 10</span>Transformer 전체 구조 (블록 클릭 → 해당 섹션 이동). 각 Add &amp; Norm 은 아래 서브층을 감싸는 residual + LayerNorm이며, 지름길 화살표는 생략했다.</figcaption>
+  </figure>
+
+  <h3>"love"가 만들어지기까지 — 흐름 따라가기</h3>
+  <p>번역 학습 한 스텝에서 데이터가 지나는 길을 순서대로 밟아 보면:</p>
+  <ol class="recap">
+    <li><b>인코더 입력</b> — "나는 사과를 좋아해"가 임베딩되고 Positional Encoding이 더해져 위치 정보를 얻는다.</li>
+    <li><b>인코더 블록 ×N</b> — Self-attention으로 토큰들이 서로 문맥을 교환하고(§04), FFN이 비선형 가공(§05). 매 서브층은 Add &amp; Norm으로 보호된다. 결과가 원문 표현 $H$.</li>
+    <li><b>디코더 입력</b> — 정답을 오른쪽으로 한 칸 민 <code>&lt;s&gt; I love an</code>이 병렬로 들어간다 (shifted right).</li>
+    <li><b>Masked Self-Attention</b> — 각 위치가 <em>과거의 자기 출력들만</em> 참조해 상태를 다듬는다. 미래는 $-\infty$ 마스크로 차단(§04).</li>
+    <li><b>Cross-Attention</b> — 디코더 상태가 Q가 되어 인코더의 $H$(K, V)를 검색한다. "love" 자리라면 "좋아해" 쪽에 가중치가 쏠린다(§02·§04).</li>
+    <li><b>FFN → Linear → Softmax</b> — 최종 표현이 어휘 크기의 logit으로 투영되고, softmax가 다음 단어의 확률 분포를 내놓는다.</li>
+  </ol>
+
+  <div class="callout co-warn">
+    <span class="ct">Positional Encoding?</span>
+    <p>attention은 집합 연산이라 <b>순서를 모른다</b> — "나는 사과를 좋아해"와 "사과를 나는 좋아해"가 같아져 버린다. 그래서 임베딩에 위치별 고유 패턴(sin·cos)을 더해 순서 정보를 주입한다. 유도와 구현은 <code>day10-13</code> 노트북의 <code>positional_encoding()</code>에서 이미 끝냈으니 여기서는 존재 이유만 기억하면 된다.</p>
+  </div>
+
+  <div class="callout co-key">
+    <span class="ct">한 문장 요약</span>
+    <p>Transformer는 <b>RNN을 완전히 제거</b>하고, seq2seq의 보조 장치였던 attention을 <b>표현 갱신(self) · 원문 참조(cross) · 병렬 학습(masked)</b> 세 방향으로 확장해 시퀀스 변환의 주역으로 승격시킨 구조다. 그래서 논문 제목이 "Attention Is All You Need"다.</p>
+  </div>
+</section>
+
+<!-- ═══════════════ 07 WRAP ═══════════════ -->
+<section id="sec-wrap">
+  <h2><span class="badge">07</span>정리 &amp; 셀프 체크</h2>
+  <p class="sec-src">recap · 0701 + 0702</p>
+
+  <ol class="recap">
+    <li><b>병목</b> — RNN seq2seq는 문장 전체를 고정 벡터 하나에 압축한다. 셀이 아니라 인터페이스가 문제였다.</li>
+    <li><b>Attention</b> — 매 디코딩 스텝마다 유사도 → softmax → 가중합으로 <b>동적 context</b>를 합성해 병목을 제거했다.</li>
+    <li><b>QKV + 내적</b> — 유사도를 내적으로 재고 학습은 투영 $W_Q,W_K,W_V$에 맡기면, 전 과정이 행렬곱이 되어 병렬화된다. $\sqrt{d_k}$는 softmax 포화를 막는 안전핀.</li>
+    <li><b>세 가지 얼굴</b> — 출처만 바꾸면 같은 수식이 self(문맥 반영) · cross(원문 참조) · masked(컨닝 방지 병렬 학습)로 일한다.</li>
+    <li><b>지지 구조</b> — Multi-head가 관계를 분업하고, FFN이 비선형 가공하며, Residual + LayerNorm이 깊은 스택을 지탱한다.</li>
+  </ol>
+
+  <!-- ── WIDGET 4 ── -->
+  <div class="widget" id="w-quiz">
+    <h4><span class="wtag">위젯 04</span>셀프 체크 퀴즈 — 8문항</h4>
+    <p class="whint">보기를 고르면 즉시 채점되고 해설이 열린다. 틀려도 정답이 표시된다.</p>
+    <div id="quizBox"></div>
+    <div id="quizScore"><span id="quizScoreTxt">0 / 8</span><button class="btn" id="quizReset">전체 초기화</button></div>
+  </div>
+
+  <div class="callout co-link">
+    <span class="ct">다음 단계</span>
+    <p>이 구조 위에서 인코더만 떼어 키운 것이 <b>BERT</b>, 디코더만 떼어 키운 것이 <b>GPT</b>다. 사전학습 언어모델로 넘어가기 전에, <code>FUNDAMENTAL_day10-13_TransformerWithoutMagic.ipynb</code>의 각 <code>def</code>가 이 가이드의 어느 그림에 해당하는지 한 번 매핑해 보면 완벽한 복습이 된다.</p>
+  </div>
+
+  <footer>
+    <p><b>FUNDAMENTAL</b> 시리즈 · LikeLion 26기 AI/NLP · 0701 seq2seq_with_attention + 0702 transformer 강의 기반<br>
+    참고: Bahdanau et al. (2014) "Neural Machine Translation by Jointly Learning to Align and Translate" · Vaswani et al. (2017) "Attention Is All You Need" · Clark et al. (2019) "What Does BERT Look At?"</p>
+  </footer>
+</section>
+
+</div><!-- /wrap -->
+</main>
+
+<script>
+/* ═══════════ 공용 유틸 ═══════════ */
+function softmax(a){
+  const finite=a.filter(Number.isFinite);
+  const m=Math.max.apply(null,finite);
+  const ex=a.map(v=>Number.isFinite(v)?Math.exp(v-m):0);
+  const s=ex.reduce((p,c)=>p+c,0);
+  return ex.map(v=>v/s);
+}
+function elS(tag,attrs){
+  const e=document.createElementNS('http://www.w3.org/2000/svg',tag);
+  for(const k in attrs)e.setAttribute(k,attrs[k]);
+  return e;
+}
+function mkArrow(g,x1,y1,x2,y2,color,w,dash){
+  const dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
+  const line=elS('line',{x1:x1,y1:y1,x2:x2-ux*8,y2:y2-uy*8,stroke:color,'stroke-width':w,'stroke-linecap':'round'});
+  if(dash)line.setAttribute('stroke-dasharray',dash);
+  g.appendChild(line);
+  const px=-uy,py=ux;
+  g.appendChild(elS('polygon',{points:
+    x2+','+y2+' '+(x2-ux*11+px*4.6)+','+(y2-uy*11+py*4.6)+' '+(x2-ux*11-px*4.6)+','+(y2-uy*11-py*4.6),
+    fill:color}));
+}
+
+/* ═══════════ 위젯 01 · 어텐션 실험실 ═══════════ */
+(function(){
+  const svg=document.getElementById('attnPlane');
+  if(!svg)return;
+  const CX=170,CY=170,S=55;
+  const H=[
+    {t:'나는',  v:[2.3, 0.5], c:'#0d9488'},
+    {t:'사과를',v:[1.1, 2.1], c:'#3b82f6'},
+    {t:'좋아해',v:[-1.6,1.8], c:'#a855f7'}
+  ];
+  const PRESETS=[[2.2,0.7],[-1.3,1.6],[1.0,2.0],[0.6,2.3]];
+  let q=PRESETS[0].slice(), dragging=false;
+  const X=x=>CX+x*S, Y=y=>CY-y*S;
+
+  // 정적 레이어: 그리드 + 인코더 벡터
+  const gStatic=elS('g',{}), gDyn=elS('g',{});
+  svg.appendChild(gStatic); svg.appendChild(gDyn);
+  [55,110,165].forEach(r=>gStatic.appendChild(elS('circle',{cx:CX,cy:CY,r:r,fill:'none',stroke:'#eeece9'})));
+  gStatic.appendChild(elS('line',{x1:5,y1:CY,x2:335,y2:CY,stroke:'#e4e1de'}));
+  gStatic.appendChild(elS('line',{x1:CX,y1:5,x2:CX,y2:335,stroke:'#e4e1de'}));
+  H.forEach((h,i)=>{
+    mkArrow(gStatic,CX,CY,X(h.v[0]),Y(h.v[1]),h.c,3);
+    const lx=X(h.v[0]*1.16),ly=Y(h.v[1]*1.16);
+    const t=elS('text',{x:lx,y:ly,'text-anchor':'middle','font-size':'12.5','font-weight':'800',fill:h.c});
+    t.textContent='h'+(i+1)+' '+h.t;
+    gStatic.appendChild(t);
+  });
+
+  const bars=document.getElementById('attnBars');
+  const ctxRead=document.getElementById('attnCtx');
+  const stepBtns=Array.from(document.querySelectorAll('#attnSteps button'));
+
+  function update(){
+    const e=H.map(h=>q[0]*h.v[0]+q[1]*h.v[1]);
+    const al=softmax(e);
+    const ctx=[0,1].map(d=>H.reduce((s,h,i)=>s+al[i]*h.v[d],0));
+    // 동적 레이어
+    gDyn.innerHTML='';
+    mkArrow(gDyn,CX,CY,X(ctx[0]),Y(ctx[1]),'#f59e0b',2.6,'6 5');
+    const ct=elS('text',{x:X(ctx[0]*1.2),y:Y(ctx[1]*1.2)-4,'text-anchor':'middle','font-size':'11.5','font-weight':'800',fill:'#d97706'});
+    ct.textContent='context'; gDyn.appendChild(ct);
+    mkArrow(gDyn,CX,CY,X(q[0]),Y(q[1]),'#ee4c2c',3.6);
+    const qh=elS('circle',{cx:X(q[0]),cy:Y(q[1]),r:9,fill:'#ee4c2c','fill-opacity':'0.16'});
+    gDyn.appendChild(qh);
+    const qt=elS('text',{x:X(q[0])+13,y:Y(q[1])+4,'font-size':'14','font-weight':'800',fill:'#ee4c2c'});
+    qt.textContent='q'; gDyn.appendChild(qt);
+    // 막대
+    bars.innerHTML=H.map((h,i)=>
+      '<div class="abar">'+
+      '<span class="tk"><i style="background:'+h.c+'"></i>'+h.t+'</span>'+
+      '<span class="sc">e='+e[i].toFixed(2)+'</span>'+
+      '<span class="track"><span class="fill" style="width:'+(al[i]*100).toFixed(1)+'%;background:'+h.c+'"></span></span>'+
+      '<span class="av">'+al[i].toFixed(3)+'</span></div>'
+    ).join('');
+    ctxRead.innerHTML='q = ( '+q[0].toFixed(2)+', '+q[1].toFixed(2)+' ),  e&#7522; = q·h&#7522;<br>'+
+      'context = <b>'+al[0].toFixed(2)+'</b>·h₁ + <b>'+al[1].toFixed(2)+'</b>·h₂ + <b>'+al[2].toFixed(2)+'</b>·h₃ = ( '+ctx[0].toFixed(2)+', '+ctx[1].toFixed(2)+' )';
+  }
+  function ptToUnit(ev){
+    const r=svg.getBoundingClientRect();
+    const vx=(ev.clientX-r.left)*(340/r.width), vy=(ev.clientY-r.top)*(340/r.height);
+    let x=(vx-CX)/S, y=(CY-vy)/S;
+    const n=Math.hypot(x,y);
+    if(n>2.75){x*=2.75/n;y*=2.75/n}
+    if(n<0.2){x=0.2;y=0}
+    return [x,y];
+  }
+  svg.addEventListener('pointerdown',ev=>{ev.preventDefault();svg.setPointerCapture(ev.pointerId);dragging=true;
+    q=ptToUnit(ev);stepBtns.forEach(b=>b.classList.remove('on'));update();});
+  svg.addEventListener('pointermove',ev=>{if(!dragging)return;q=ptToUnit(ev);update();});
+  svg.addEventListener('pointerup',()=>{dragging=false;});
+  svg.addEventListener('pointercancel',()=>{dragging=false;});
+  stepBtns.forEach(b=>b.addEventListener('click',()=>{
+    q=PRESETS[+b.dataset.s].slice();
+    stepBtns.forEach(x=>x.classList.remove('on'));b.classList.add('on');update();
+  }));
+  update();
+})();
+
+/* ═══════════ 위젯 02 · √dk 스케일링 실험 ═══════════ */
+(function(){
+  const scoreEl=document.getElementById('scoreMtx');
+  if(!scoreEl)return;
+  const alphaEl=document.getElementById('alphaMtx');
+  const metrics=document.getElementById('scaleMetrics');
+  const scaleTag=document.getElementById('scaleTag');
+  const T=['나는','사과를','좋아해'];
+  let dk=64, scaled=true, seed=7;
+
+  function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+  function gaussArr(n,rng){const out=[];for(let i=0;i<n;i+=2){const u1=Math.max(rng(),1e-12),u2=rng();const r=Math.sqrt(-2*Math.log(u1));out.push(r*Math.cos(2*Math.PI*u2),r*Math.sin(2*Math.PI*u2));}return out.slice(0,n)}
+  function fmtScore(v){const a=Math.abs(v);return a>=100?v.toFixed(0):a>=10?v.toFixed(1):v.toFixed(2)}
+
+  function fillMtx(tbl,M,kind,labels){
+    let mx=1;
+    if(kind==='score'){const f=M.flat().filter(Number.isFinite).map(Math.abs);mx=Math.max.apply(null,f.concat([1e-9]));}
+    let html='<tr><th>Q＼K</th>'+labels.map(t=>'<th>'+t+'</th>').join('')+'</tr>';
+    for(let i=0;i<M.length;i++){
+      html+='<tr><th>'+labels[i]+'</th>';
+      for(let j=0;j<M[i].length;j++){
+        const v=M[i][j];
+        if(!Number.isFinite(v)){html+='<td class="minf">−∞</td>';continue}
+        if(kind==='alpha'){
+          const a=v;
+          html+='<td style="background:rgba(238,76,44,'+(a*0.92).toFixed(3)+');'+(a>0.55?'color:#fff;font-weight:700;':'')+'">'+a.toFixed(2)+'</td>';
+        }else{
+          const t=Math.abs(v)/mx;
+          html+='<td style="background:rgba(13,148,136,'+(t*0.42).toFixed(3)+');">'+fmtScore(v)+'</td>';
+        }
+      }
+      html+='</tr>';
+    }
+    tbl.innerHTML=html;
+  }
+  window.__fillMtx=fillMtx; window.__softmax=softmax; // 위젯 03에서 재사용
+
+  function render(){
+    const rng=mulberry32(seed*7919+dk);
+    const Q=[],K=[];
+    for(let i=0;i<3;i++){Q.push(gaussArr(dk,rng));K.push(gaussArr(dk,rng));}
+    const e=Q.map(qr=>K.map(kr=>{
+      let s=0;for(let i=0;i<dk;i++)s+=qr[i]*kr[i];
+      return scaled? s/Math.sqrt(dk) : s;
+    }));
+    const A=e.map(softmax);
+    const flat=e.flat(), mu=flat.reduce((a,b)=>a+b,0)/flat.length;
+    const sig=Math.sqrt(flat.reduce((a,b)=>a+(b-mu)*(b-mu),0)/flat.length);
+    const maxbar=A.reduce((a,r)=>a+Math.max.apply(null,r),0)/3;
+    const ent=A.reduce((a,r)=>a+r.reduce((s,p)=>s-(p>1e-12?p*Math.log2(p):0),0),0)/3;
+    fillMtx(scoreEl,e,'score',T);
+    fillMtx(alphaEl,A,'alpha',T);
+    scaleTag.style.display=scaled?'inline':'none';
+    metrics.innerHTML='점수 σ = <b>'+sig.toFixed(2)+'</b> <span style="opacity:.72">(스케일 OFF 시 이론값 ≈ √dₖ = '+Math.sqrt(dk).toFixed(1)+')</span><br>'+
+      '평균 max α = <b>'+maxbar.toFixed(2)+'</b> · 평균 엔트로피 = <b>'+ent.toFixed(2)+'</b> bit <span style="opacity:.72">(균등 분포 = log₂3 ≈ 1.58)</span>';
+  }
+  document.querySelectorAll('#dkSeg button').forEach(b=>b.addEventListener('click',()=>{
+    dk=+b.dataset.dk;
+    document.querySelectorAll('#dkSeg button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');render();
+  }));
+  document.getElementById('scaleChk').addEventListener('change',ev=>{scaled=ev.target.checked;render();});
+  document.getElementById('resampleBtn').addEventListener('click',()=>{seed++;render();});
+  render();
+})();
+
+/* ═══════════ 위젯 03 · Look-ahead Mask ═══════════ */
+(function(){
+  const sEl=document.getElementById('maskScoreMtx');
+  if(!sEl)return;
+  const aEl=document.getElementById('maskAlphaMtx');
+  const chk=document.getElementById('maskChk');
+  const T=['&lt;s&gt;','I','love','an'];
+  const S=[
+    [2.1, 0.4,-0.3, 0.1],
+    [1.5, 2.2, 0.2,-0.4],
+    [0.4, 1.8, 2.0, 0.3],
+    [0.2, 0.9, 1.6, 2.3]
+  ];
+  function render(){
+    const masked=chk.checked;
+    const e=S.map((row,i)=>row.map((v,j)=> (masked&&j>i)? -Infinity : v));
+    const A=e.map(window.__softmax);
+    window.__fillMtx(sEl,e,'score',T);
+    window.__fillMtx(aEl,A,'alpha',T);
+  }
+  chk.addEventListener('change',render);
+  render();
+})();
+
+/* ═══════════ 위젯 04 · 셀프 체크 퀴즈 ═══════════ */
+(function(){
+  const box=document.getElementById('quizBox');
+  if(!box)return;
+  const scoreTxt=document.getElementById('quizScoreTxt');
+  const QUIZ=[
+    {q:"RNN seq2seq에서 디코더에게 전달되는 것은?",
+     o:["인코더의 모든 hidden state","인코더의 마지막 hidden state 하나","각 시점 hidden state의 평균","입력 임베딩 전체"],a:1,
+     x:"마지막 h_T 하나만 Context로 넘어간다. 문장이 길수록 앞쪽 정보가 흐려지는 정보 병목(Information Vanishing)의 원인. (§01)"},
+    {q:"Attention 3단계의 올바른 순서는?",
+     o:["softmax → 유사도 → 가중합","유사도 → 가중합 → softmax","유사도 → softmax → 가중합","가중합 → softmax → 유사도"],a:2,
+     x:"Q·K 유사도 점수를 구하고, softmax로 합이 1인 가중치로 바꾼 뒤, 그 비율대로 V를 가중합해 context를 만든다. (§02)"},
+    {q:"Q · K · V 중 \u201c각 단어가 실제로 담고 있는 내용\u201d에 해당하는 것은?",
+     o:["Q — 질문","K — 색인","V — 내용","셋 다 아님"],a:2,
+     x:"Q는 지금 찾는 것, K는 각 단어가 내미는 색인, V가 실제 내용. 최종 context는 V들의 가중합이다. (§02)"},
+    {q:"점수를 √dₖ로 나누는 직접적인 이유는?",
+     o:["계산량을 줄이기 위해","내적의 분산이 dₖ에 비례해 커져 softmax가 포화되는 것을 막기 위해","가중치 합을 1로 만들기 위해","마스크를 적용하기 위해"],a:1,
+     x:"성분이 N(0,1)이면 내적의 분산은 dₖ, 표준편차는 √dₖ. 점수 격차가 커지면 softmax가 원-핫으로 포화되어 gradient가 소실된다. (§03 · 위젯 02)"},
+    {q:"Cross-attention에서 Q의 출처는?",
+     o:["인코더 hidden state","디코더 hidden state","입력 임베딩","Positional Encoding"],a:1,
+     x:"Q는 디코더(지금 만들 단어가 찾는 것), K·V는 인코더 출력 H(원문의 색인과 내용). (§04)"},
+    {q:"Look-ahead(Causal) Mask가 필요한 이유는?",
+     o:["과적합 방지를 위한 정규화","패딩 토큰을 무시하기 위해","학습 시 미래 토큰 정보를 차단하면서도 병렬 학습을 유지하기 위해","gradient vanishing을 막기 위해"],a:2,
+     x:"전체 시퀀스를 병렬 입력하되 j>i 점수를 −∞로 덮어, \u201c미래를 모른다\u201d는 추론 조건을 학습에서도 재현한다. (§04 · 위젯 03)"},
+    {q:"Multi-head attention을 쓰는 이유는?",
+     o:["연산량을 줄이기 위해","head마다 다른 subspace에서 서로 다른 관계를 병렬로 학습하기 위해","시퀀스 길이를 늘리기 위해","softmax를 여러 번 적용해 정확도를 높이기 위해"],a:1,
+     x:"attention 하나는 한 번에 한 가지 관계만 잡는다. head별 독립 가중치가 목적어-동사, 수식어-명사 같은 서로 다른 관계를 분업 학습한다. (§05)"},
+    {q:"Residual connection의 효과로 옳은 것은?",
+     o:["출력 스케일을 평균 0 · 분산 1로 정규화한다","어휘 확률 분포를 만든다","정보 손실과 gradient vanishing을 완화한다","미래 토큰을 차단한다"],a:2,
+     x:"F(x)+x의 지름길로 정보와 gradient가 층을 우회해 흐른다. 스케일 정규화는 LayerNorm의 몫. (§05)"}
+  ];
+  let score=0, answered=[];
+  function render(){
+    box.innerHTML=''; score=0; answered=QUIZ.map(()=>false);
+    QUIZ.forEach((item,qi)=>{
+      const card=document.createElement('div'); card.className='qcard';
+      const qq=document.createElement('p'); qq.className='qq';
+      qq.innerHTML='<span class="qn">Q'+(qi+1)+'</span>'+item.q;
+      card.appendChild(qq);
+      item.o.forEach((op,oi)=>{
+        const b=document.createElement('button'); b.className='opt'; b.textContent=op;
+        b.addEventListener('click',()=>{
+          if(answered[qi])return;
+          answered[qi]=true;
+          const opts=card.querySelectorAll('.opt');
+          opts.forEach(o=>o.disabled=true);
+          opts[item.a].classList.add('ok');
+          if(oi===item.a){score++;}else{b.classList.add('no');}
+          card.querySelector('.qexp').classList.add('show');
+          scoreTxt.textContent=score+' / '+QUIZ.length;
+        });
+        card.appendChild(b);
+      });
+      const ex=document.createElement('div'); ex.className='qexp';
+      ex.innerHTML='<b>해설</b> · '+item.x;
+      card.appendChild(ex);
+      box.appendChild(card);
+    });
+    scoreTxt.textContent='0 / '+QUIZ.length;
+  }
+  document.getElementById('quizReset').addEventListener('click',render);
+  render();
+})();
+
+/* ═══════════ 인프라: 진행바 · 스크롤스파이 · 모바일 내비 ═══════════ */
+(function(){
+  const prog=document.getElementById('progress');
+  addEventListener('scroll',()=>{
+    const h=document.documentElement;
+    const p=h.scrollTop/Math.max(1,(h.scrollHeight-h.clientHeight));
+    prog.style.width=(p*100)+'%';
+  },{passive:true});
+
+  const links=Array.from(document.querySelectorAll('#toc a'));
+  const map={}; links.forEach(a=>map[a.getAttribute('href').slice(1)]=a);
+  const obs=new IntersectionObserver(es=>{
+    es.forEach(e=>{
+      if(e.isIntersecting){
+        links.forEach(l=>l.classList.remove('active'));
+        const l=map[e.target.id]; if(l)l.classList.add('active');
+      }
+    });
+  },{rootMargin:'-20% 0px -65% 0px'});
+  document.querySelectorAll('#intro, main section').forEach(s=>obs.observe(s));
+
+  const sb=document.getElementById('sidebar'), bd=document.getElementById('backdrop');
+  function closeNav(){sb.classList.remove('open');bd.classList.remove('show');}
+  document.getElementById('navToggle').addEventListener('click',()=>{
+    sb.classList.toggle('open');
+    bd.classList.toggle('show',sb.classList.contains('open'));
+  });
+  bd.addEventListener('click',closeNav);
+  links.forEach(a=>a.addEventListener('click',closeNav));
+})();
+
+/* ═══════════ KaTeX · highlight.js 부트 ═══════════ */
+(function(){
+  function boot(){
+    if(window.renderMathInElement){
+      renderMathInElement(document.body,{
+        delimiters:[
+          {left:'$$',right:'$$',display:true},
+          {left:'$',right:'$',display:false}
+        ],
+        throwOnError:false
+      });
+    }
+    if(window.hljs){hljs.highlightAll();}
+  }
+  if(document.readyState==='complete'){boot();}
+  else{addEventListener('load',boot);}
+})();
+</script>
+</body>
+</html>
