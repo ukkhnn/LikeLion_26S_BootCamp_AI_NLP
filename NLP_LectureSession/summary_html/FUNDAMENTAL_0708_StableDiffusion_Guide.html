@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FUNDAMENTAL 0708 · Stable Diffusion — 노이즈에서 이미지로</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.0.20/index.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css">
+<style>
+:root{
+  --bg:#fbfaf8; --surface:#ffffff; --ink:#1c1917; --sub:#57534e; --muted:#8b8680;
+  --accent:#ee4c2c; --accent-deep:#c93a1e; --accent-soft:#fdece7; --accent-line:#f7c9bc;
+  --teal:#0d9488; --teal-soft:#e6f5f3; --teal-line:#b5e0da;
+  --border:#e7e3dd; --code-bg:#22222c;
+  --sidebar-w:268px;
+  --font-sans:'Pretendard Variable',Pretendard,-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  --font-mono:'JetBrains Mono','SF Mono',Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-sans);font-size:16.5px;line-height:1.78;-webkit-font-smoothing:antialiased}
+::selection{background:var(--accent-soft)}
+
+/* ── progress bar ─────────────────────────── */
+#progress{position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,var(--accent),#ff8a5c);z-index:120}
+
+/* ── sidebar ──────────────────────────────── */
+#sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);padding:28px 20px 32px;overflow-y:auto;z-index:100;transition:transform .28s ease}
+#sidebar .brand{display:block;text-decoration:none;color:var(--ink);margin-bottom:6px}
+#sidebar .brand .kicker{font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;color:var(--accent);font-weight:700}
+#sidebar .brand .title{font-size:18px;font-weight:800;line-height:1.35;margin-top:2px}
+#sidebar .brand .date{font-family:var(--font-mono);font-size:11.5px;color:var(--muted);margin-top:4px}
+#sidebar hr{border:0;border-top:1px solid var(--border);margin:18px 0 14px}
+#toc a{display:flex;gap:10px;align-items:baseline;padding:7px 10px;margin:1px 0;border-radius:8px;text-decoration:none;color:var(--sub);font-size:13.8px;line-height:1.4;transition:background .15s,color .15s}
+#toc a .no{font-family:var(--font-mono);font-size:11px;color:var(--muted);min-width:20px}
+#toc a:hover{background:#f6f4f1;color:var(--ink)}
+#toc a.active{background:var(--accent-soft);color:var(--accent-deep);font-weight:700}
+#toc a.active .no{color:var(--accent)}
+#sidebar .foot{margin-top:22px;font-size:11.5px;color:var(--muted);line-height:1.6}
+#sidebar .foot code{font-family:var(--font-mono);font-size:10.5px}
+
+#hamburger{display:none;position:fixed;top:14px;left:14px;z-index:130;width:42px;height:42px;border-radius:10px;border:1px solid var(--border);background:var(--surface);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+#hamburger span{display:block;width:18px;height:2px;background:var(--ink);margin:4px auto;border-radius:2px;transition:.2s}
+#overlay{display:none;position:fixed;inset:0;background:rgba(28,25,23,.35);z-index:90}
+
+/* ── layout ───────────────────────────────── */
+#main{margin-left:var(--sidebar-w)}
+.wrap{max-width:860px;margin:0 auto;padding:0 44px}
+section{padding:56px 0 8px}
+footer{padding:48px 0 64px;color:var(--muted);font-size:13px}
+
+/* ── hero ─────────────────────────────────── */
+#hero{background:linear-gradient(180deg,#fff 0%,var(--bg) 100%);border-bottom:1px solid var(--border);padding:64px 0 48px}
+#hero .wrap{display:grid;grid-template-columns:1fr 300px;gap:36px;align-items:center}
+#hero .kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.16em;color:var(--accent);font-weight:700}
+#hero h1{font-size:44px;font-weight:900;letter-spacing:-.02em;line-height:1.15;margin:10px 0 14px}
+#hero h1 .thin{font-weight:300;color:var(--sub)}
+#hero .lead{color:var(--sub);font-size:17px;max-width:52ch}
+#hero .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--sub)}
+.chip.hot{border-color:var(--accent-line);background:var(--accent-soft);color:var(--accent-deep);font-weight:700}
+#hero-canvas-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:0 8px 28px rgba(238,76,44,.07)}
+#hero-canvas-card canvas{display:block;width:100%;border-radius:10px;background:#fdfcfb}
+#hero-canvas-card .cap{font-family:var(--font-mono);font-size:11px;color:var(--muted);text-align:center;margin-top:8px}
+
+/* ── typography & blocks ──────────────────── */
+.eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.15em;color:var(--accent);font-weight:700;text-transform:uppercase}
+h2{font-size:29px;font-weight:850;letter-spacing:-.015em;margin:6px 0 18px}
+h3{font-size:19.5px;font-weight:800;margin:34px 0 10px}
+p{margin:0 0 14px;color:#2c2926}
+p strong,li strong{font-weight:750;color:var(--ink)}
+em{font-style:normal;color:var(--accent-deep);font-weight:600}
+ul,ol{margin:0 0 16px 22px}
+li{margin:5px 0;color:#2c2926}
+a.inline{color:var(--teal);text-decoration:underline;text-underline-offset:3px}
+
+.callout{border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 12px 12px 0;padding:14px 18px;margin:20px 0}
+.callout.teal{border-left-color:var(--teal);background:var(--teal-soft)}
+.callout p{margin:0}
+.callout p+p{margin-top:8px}
+.callout .ct{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--accent-deep);display:block;margin-bottom:4px}
+.callout.teal .ct{color:var(--teal)}
+
+.formula-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 22px 12px;margin:18px 0;overflow-x:auto}
+.formula-card .fc-cap{font-size:13px;color:var(--muted);text-align:center;margin-top:6px}
+.formula-card .katex-display{margin:8px 0}
+.katex-display{overflow-x:auto;overflow-y:hidden;padding:2px 0}
+.callout .katex-display{margin:10px 0 4px}
+
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+table{display:table}
+th{background:#f6f4f1;font-weight:750;text-align:left;padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid #f0ede8;vertical-align:top}
+tr:last-child td{border-bottom:0}
+td code,p code,li code{font-family:var(--font-mono);font-size:.86em;background:#f3f1ed;border:1px solid #e9e5df;border-radius:5px;padding:1px 6px;color:var(--accent-deep)}
+
+pre{background:var(--code-bg);border-radius:12px;margin:18px 0;overflow-x:auto}
+pre code.hljs{background:transparent;padding:18px 20px;font-family:var(--font-mono);font-size:13.2px;line-height:1.7}
+.code-label{font-family:var(--font-mono);font-size:11px;color:var(--muted);letter-spacing:.1em;margin:-8px 0 6px;text-align:right}
+
+.svgbox{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin:20px 0;overflow-x:auto}
+.svgbox svg{display:block;margin:0 auto;max-width:100%;height:auto}
+.svgbox .cap{font-size:13px;color:var(--muted);text-align:center;margin-top:12px}
+.svgbox .cap b{color:var(--sub)}
+
+/* ── widgets ──────────────────────────────── */
+.widget{background:var(--surface);border:1.5px solid var(--teal-line);border-radius:16px;margin:24px 0;overflow:hidden}
+.widget-head{display:flex;align-items:center;gap:10px;background:var(--teal-soft);padding:11px 18px;border-bottom:1px solid var(--teal-line)}
+.widget-head .dot{width:9px;height:9px;border-radius:50%;background:var(--teal);flex:none}
+.widget-head .wt{font-weight:800;font-size:14.5px;color:#0b6e66}
+.widget-head .wsub{font-family:var(--font-mono);font-size:11px;color:var(--teal);margin-left:auto}
+.widget-body{padding:18px 20px}
+.wrow{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:10px 0}
+.wlabel{font-size:13.5px;font-weight:700;color:var(--sub);min-width:110px}
+.wval{font-family:var(--font-mono);font-size:12.5px;color:var(--accent-deep);font-weight:700;min-width:88px}
+input[type=range]{flex:1;min-width:140px;accent-color:var(--accent);height:22px}
+.btn{font-family:var(--font-sans);font-size:13px;font-weight:700;padding:7px 14px;border-radius:9px;border:1px solid var(--border);background:var(--surface);color:var(--sub);cursor:pointer;transition:.15s}
+.btn:hover{border-color:var(--accent);color:var(--accent-deep)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent-deep)}
+.btn.on{background:var(--teal-soft);border-color:var(--teal);color:var(--teal)}
+.wnote{font-size:13px;color:var(--muted);margin-top:10px;line-height:1.65}
+.wcanvas{display:block;width:100%;border:1px solid var(--border);border-radius:10px;background:#fdfcfb}
+.wgrid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.wstat{font-family:var(--font-mono);font-size:12.5px;background:#f6f4f1;border:1px solid var(--border);border-radius:9px;padding:8px 12px;color:var(--sub)}
+.wstat b{color:var(--accent-deep)}
+
+/* CLIP matrix */
+#clip-matrix{display:grid;grid-template-columns:70px repeat(4,1fr);gap:4px;max-width:460px;margin:6px auto}
+#clip-matrix .hd{font-family:var(--font-mono);font-size:11px;color:var(--sub);display:flex;align-items:center;justify-content:center;text-align:center;padding:4px 2px;font-weight:700}
+#clip-matrix .cell{position:relative;border-radius:7px;aspect-ratio:1.55;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:11.5px;color:#fff;cursor:default;transition:transform .1s}
+#clip-matrix .cell:hover{transform:scale(1.06)}
+#clip-matrix .cell .p{font-size:12.5px;font-weight:800}
+#clip-matrix .cell .s{font-size:9.5px;opacity:.85}
+#clip-matrix .cell.diag{outline:2px solid var(--accent);outline-offset:-2px}
+
+.check{list-style:none;margin-left:0}
+.check li{padding-left:30px;position:relative;margin:9px 0}
+.check li::before{content:"✓";position:absolute;left:0;top:0;width:21px;height:21px;border-radius:6px;background:var(--teal-soft);color:var(--teal);font-weight:800;font-size:12.5px;display:flex;align-items:center;justify-content:center}
+
+.next-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0}
+.ncard{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:16px 18px}
+.ncard .nt{font-weight:800;font-size:15px;margin-bottom:5px}
+.ncard .nd{font-size:13.5px;color:var(--sub);line-height:1.6}
+.ncard .nt .nn{font-family:var(--font-mono);font-size:11px;color:var(--accent);margin-right:7px}
+
+/* ── responsive ───────────────────────────── */
+@media (max-width:1024px){
+  #sidebar{transform:translateX(-100%);box-shadow:6px 0 24px rgba(0,0,0,.1)}
+  #sidebar.open{transform:translateX(0)}
+  #hamburger{display:block}
+  #overlay.show{display:block}
+  #main{margin-left:0}
+  .wrap{padding:0 22px}
+  #hero{padding-top:76px}
+  #hero .wrap{grid-template-columns:1fr;gap:24px}
+  #hero h1{font-size:34px}
+  .wgrid2{grid-template-columns:1fr}
+  table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .next-cards{grid-template-columns:1fr}
+  h2{font-size:25px}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *{transition:none!important;animation:none!important}
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<button id="hamburger" aria-label="목차 열기"><span></span><span></span><span></span></button>
+<div id="overlay"></div>
+<nav id="sidebar">
+  <a class="brand" href="#hero">
+    <span class="kicker">FUNDAMENTAL SERIES</span>
+    <div class="title">Stable Diffusion<br>학습 가이드</div>
+    <div class="date">2026-07-08 · LikeLion NLP</div>
+  </a>
+  <hr>
+  <div id="toc">
+    <a href="#sec00"><span class="no">00</span>큰 그림 — 세 모델의 결합</a>
+    <a href="#sec01"><span class="no">01</span>Autoencoder — 압축과 병목</a>
+    <a href="#sec02"><span class="no">02</span>VAE — 확률적 잠재 공간</a>
+    <a href="#sec03"><span class="no">03</span>CLIP — 텍스트·이미지 연결</a>
+    <a href="#sec04"><span class="no">04</span>Diffusion — noising ↔ denoising</a>
+    <a href="#sec05"><span class="no">05</span>U-Net — 노이즈 예측기</a>
+    <a href="#sec06"><span class="no">06</span>Latent Diffusion 아키텍처</a>
+    <a href="#sec07"><span class="no">07</span>생성 파이프라인 & CFG</a>
+    <a href="#sec08"><span class="no">08</span>정리 — 한 장 요약</a>
+  </div>
+  <hr>
+  <div class="foot">
+    강의 PDF <code>_0708_diffusion</code> 기반<br>
+    보충: DDPM 수식 · CFG · 파이프라인<br>
+    <code>github.com/ukkhns</code>
+  </div>
+</nav>
+
+<div id="main">
+
+<header id="hero">
+  <div class="wrap">
+    <div>
+      <span class="kicker">FUNDAMENTAL · 0708 · GENERATIVE MODELS</span>
+      <h1>Stable Diffusion<br><span class="thin">노이즈에서 이미지로</span></h1>
+      <p class="lead">Stable Diffusion은 하나의 거대한 모델이 아니라 <strong>U-Net · VAE · CLIP</strong> 세 모델의 결합이다. 각 부품이 어떤 문제를 풀고, 어떻게 맞물려 텍스트 한 줄을 이미지로 바꾸는지 수식과 인터랙티브 데모로 해부한다.</p>
+      <div class="chips">
+        <span class="chip hot">U-Net</span>
+        <span class="chip hot">VAE</span>
+        <span class="chip hot">CLIP</span>
+        <span class="chip">DDPM</span>
+        <span class="chip">InfoNCE</span>
+        <span class="chip">Cross-Attention</span>
+        <span class="chip">CFG</span>
+      </div>
+    </div>
+    <div id="hero-canvas-card">
+      <canvas id="hero-canvas" width="272" height="272"></canvas>
+      <div class="cap" id="hero-cap">forward ↔ reverse diffusion</div>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════ 00 ══════════════ -->
+<section id="sec00">
+  <div class="wrap">
+    <span class="eyebrow">§00 · Overview</span>
+    <h2>큰 그림 — 세 모델의 결합</h2>
+    <p>강의 첫 슬라이드의 문장이 이 가이드 전체의 목차다. <strong>Stable Diffusion은 다음 모델들의 결합이다</strong> — U-Net, VAE, 그리고 CLIP(Text Encoder / Image Encoder). 각 모델은 원래 서로 다른 문제를 풀기 위해 태어났지만, Stable Diffusion 안에서 정확히 하나씩의 역할을 맡는다.</p>
+
+    <div class="svgbox">
+      <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg" font-family="Pretendard Variable,sans-serif">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8b8680"/></marker>
+        </defs>
+        <!-- component cards -->
+        <g>
+          <rect x="20" y="20" width="200" height="72" rx="12" fill="#e6f5f3" stroke="#0d9488" stroke-width="1.5"/>
+          <text x="120" y="50" text-anchor="middle" font-size="16" font-weight="800" fill="#0b6e66">CLIP Text Encoder</text>
+          <text x="120" y="72" text-anchor="middle" font-size="12" fill="#57534e">프롬프트 → 조건 벡터 c</text>
+
+          <rect x="20" y="114" width="200" height="72" rx="12" fill="#fdece7" stroke="#ee4c2c" stroke-width="1.5"/>
+          <text x="120" y="144" text-anchor="middle" font-size="16" font-weight="800" fill="#c93a1e">U-Net εθ</text>
+          <text x="120" y="166" text-anchor="middle" font-size="12" fill="#57534e">잠재 공간에서 노이즈 예측</text>
+
+          <rect x="20" y="208" width="200" height="72" rx="12" fill="#f3f1ed" stroke="#8b8680" stroke-width="1.5"/>
+          <text x="120" y="238" text-anchor="middle" font-size="16" font-weight="800" fill="#44403c">VAE (E / D)</text>
+          <text x="120" y="260" text-anchor="middle" font-size="12" fill="#57534e">픽셀 ↔ 잠재 압축·복원</text>
+        </g>
+        <path d="M224 56 H300" stroke="#8b8680" stroke-width="1.6" marker-end="url(#ar)"/>
+        <path d="M224 150 H300" stroke="#8b8680" stroke-width="1.6" marker-end="url(#ar)"/>
+        <path d="M224 244 H300" stroke="#8b8680" stroke-width="1.6" marker-end="url(#ar)"/>
+        <!-- SD box -->
+        <rect x="306" y="20" width="240" height="260" rx="16" fill="#ffffff" stroke="#ee4c2c" stroke-width="2.2"/>
+        <text x="426" y="60" text-anchor="middle" font-size="19" font-weight="900" fill="#1c1917">Stable Diffusion</text>
+        <text x="426" y="90" text-anchor="middle" font-size="12.5" fill="#57534e">z_T ~ N(0, I) 에서 출발해</text>
+        <text x="426" y="110" text-anchor="middle" font-size="12.5" fill="#57534e">텍스트 조건으로 T번 denoising</text>
+        <rect x="336" y="136" width="180" height="110" rx="10" fill="#fbfaf8" stroke="#e7e3dd"/>
+        <text x="426" y="162" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11.5" fill="#44403c">z_T → z_T-1 → …</text>
+        <text x="426" y="184" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11.5" fill="#44403c">… → z_1 → z_0</text>
+        <text x="426" y="212" text-anchor="middle" font-size="11.5" fill="#8b8680">U-Net을 T번 반복 호출</text>
+        <text x="426" y="230" text-anchor="middle" font-size="11.5" fill="#8b8680">(cross-attention으로 c 주입)</text>
+        <path d="M550 150 H626" stroke="#8b8680" stroke-width="1.6" marker-end="url(#ar)"/>
+        <!-- output -->
+        <rect x="632" y="110" width="108" height="80" rx="12" fill="#e6f5f3" stroke="#0d9488" stroke-width="1.5"/>
+        <text x="686" y="145" text-anchor="middle" font-size="14" font-weight="800" fill="#0b6e66">이미지</text>
+        <text x="686" y="166" text-anchor="middle" font-size="11.5" fill="#57534e">D(z₀) 디코딩</text>
+      </svg>
+      <div class="cap"><b>그림 0.</b> 세 모델의 결합으로서의 Stable Diffusion — 텍스트 이해(CLIP), 생성 엔진(U-Net), 해상도 담당(VAE)</div>
+    </div>
+
+    <table>
+      <thead><tr><th>구성 요소</th><th>원래 태생</th><th>SD 안에서의 역할</th><th>입력 → 출력</th></tr></thead>
+      <tbody>
+        <tr><td><strong>VAE</strong></td><td>생성용 오토인코더 (2013)</td><td>이미지를 잠재 공간으로 <em>압축</em>하고, 완성된 잠재를 이미지로 <em>복원</em></td><td><code>512×512×3</code> ↔ <code>64×64×4</code></td></tr>
+        <tr><td><strong>U-Net</strong></td><td>의료영상 세그멘테이션 (2015)</td><td>노이즈 낀 잠재에서 <em>노이즈를 예측</em>하는 denoising 엔진</td><td><code>z_t, t, c</code> → <code>ε̂</code></td></tr>
+        <tr><td><strong>CLIP</strong></td><td>텍스트-이미지 대조학습 (2021)</td><td>프롬프트를 U-Net이 이해하는 <em>조건 벡터</em>로 인코딩</td><td>텍스트 → <code>77×768</code></td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <span class="ct">KEY INSIGHT</span>
+      <p>세 모델은 <strong>따로 학습된 뒤 조립</strong>된다. VAE와 CLIP은 먼저 각자 학습을 끝내고 얼려두고(frozen), U-Net만 잠재 공간 위에서 diffusion 목적함수로 학습한다. "결합"이라는 단어는 아키텍처의 결합이자 <strong>학습 파이프라인의 분리</strong>를 뜻한다.</p>
+    </div>
+
+    <p>따라서 이해 순서도 부품 → 조립 순서를 따른다. §01–02에서 VAE(잠재 공간), §03에서 CLIP(조건), §04–05에서 diffusion과 U-Net(엔진)을 각각 이해한 뒤, §06에서 전체 아키텍처로 조립한다.</p>
+  </div>
+</section>
+
+<!-- ══════════════ 01 ══════════════ -->
+<section id="sec01">
+  <div class="wrap">
+    <span class="eyebrow">§01 · Representation</span>
+    <h2>Autoencoder — 압축과 병목</h2>
+    <p><strong>Autoencoder</strong>는 입력을 저차원으로 눌렀다가 다시 펴는 신경망이다. 인코더 $g_\phi$가 입력 $\mathbf{x}$를 <strong>병목(bottleneck)</strong> 벡터 $\mathbf{z}$로 압축하고, 디코더 $f_\theta$가 $\mathbf{z}$에서 $\mathbf{x}'$를 복원한다. 목표는 단순하다 — 복원본이 원본과 같아지도록($\mathbf{x} \approx \mathbf{x}'$) 학습한다.</p>
+
+    <div class="svgbox">
+      <svg viewBox="0 0 720 210" xmlns="http://www.w3.org/2000/svg" font-family="Pretendard Variable,sans-serif">
+        <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8b8680"/></marker></defs>
+        <rect x="30" y="45" width="46" height="120" rx="8" fill="#e6f5f3" stroke="#0d9488" stroke-width="1.5"/>
+        <text x="53" y="112" text-anchor="middle" font-size="17" font-weight="800" fill="#0b6e66">x</text>
+        <path d="M80 105 H126" stroke="#8b8680" stroke-width="1.6" marker-end="url(#ar2)"/>
+        <polygon points="132,45 232,80 232,130 132,165" fill="#e6f5f3" stroke="#0d9488" stroke-width="1.5"/>
+        <text x="180" y="100" text-anchor="middle" font-size="14.5" font-weight="800" fill="#0b6e66">Encoder</text>
+        <text x="180" y="120" text-anchor="middle" font-size="13" fill="#0b6e66">g_φ</text>
+        <path d="M236 105 H282" stroke="#8b8680" stroke-width="1.6" marker-end="url(#ar2)"/>
+        <rect x="288" y="80" width="52" height="52" rx="9" fill="#fdece7" stroke="#ee4c2c" stroke-width="2"/>
+        <text x="314" y="112" text-anchor="middle" font-size="17" font-weight="900" fill="#c93a1e">z</text>
+        <text x="314" y="60" text-anchor="middle" font-size="12" font-weight="700" fill="#c93a1e">Bottleneck!</text>
+        <path d="M344 105 H390" stroke="#8b8680" stroke-width="1.6" marker-end="url(#ar2)"/>
+        <polygon points="396,80 496,45 496,165 396,130" fill="#f3f1ed" stroke="#8b8680" stroke-width="1.5"/>
+        <text x="446" y="100" text-anchor="middle" font-size="14.5" font-weight="800" fill="#44403c">Decoder</text>
+        <text x="446" y="120" text-anchor="middle" font-size="13" fill="#44403c">f_θ</text>
+        <path d="M500 105 H546" stroke="#8b8680" stroke-width="1.6" marker-end="url(#ar2)"/>
+        <rect x="552" y="45" width="46" height="120" rx="8" fill="#f3f1ed" stroke="#8b8680" stroke-width="1.5"/>
+        <text x="575" y="112" text-anchor="middle" font-size="17" font-weight="800" fill="#44403c">x′</text>
+        <path d="M53 34 C 200 -8, 430 -8, 575 34" stroke="#c9c4bd" stroke-width="1.3" stroke-dasharray="5 5" fill="none"/>
+        <text x="314" y="16" text-anchor="middle" font-size="12" fill="#8b8680">이상적으로 둘은 같다: x ≈ x′</text>
+        <text x="640" y="112" font-size="12.5" fill="#57534e">복원 손실</text>
+        <text x="640" y="132" font-family="JetBrains Mono,monospace" font-size="12" fill="#c93a1e">‖x − x′‖²</text>
+      </svg>
+      <div class="cap"><b>그림 1.</b> Autoencoder — 병목 z는 입력의 압축된 저차원 표현이다</div>
+    </div>
+
+    <p>병목이 핵심이다. $\mathbf{z}$의 차원이 입력보다 훨씬 작기 때문에, 복원에 성공하려면 인코더는 입력의 <strong>본질적인 구조만 골라 담아야</strong> 한다. MNIST의 "4" 이미지(784차원)가 수십 차원의 $\mathbf{z}$로 눌려도 복원되는 이유는, $\mathbf{z}$가 픽셀이 아니라 "4다움"을 저장하기 때문이다.</p>
+
+    <h3>왜 Autoencoder만으로는 생성이 안 되는가</h3>
+    <p>학습이 끝난 디코더에 임의의 $\mathbf{z}$를 넣으면 새 이미지가 나올 것 같지만, 실제로는 대부분 깨진 이미지가 나온다. 순수 Autoencoder의 잠재 공간은 <strong>훈련 샘플이 놓인 지점들 사이가 비어 있는</strong>, 정돈되지 않은 공간이기 때문이다. 복원만 잘하면 손실이 0이므로, 잠재 공간이 연속적이거나 매끄러울 이유가 전혀 없다.</p>
+
+    <div class="callout teal">
+      <span class="ct">BRIDGE → §02</span>
+      <p>생성을 하려면 잠재 공간에서 <strong>아무 점이나 찍어도 그럴듯한 이미지가 나와야</strong> 한다. 그러려면 잠재 공간 자체를 우리가 아는 분포(예: 표준정규분포)로 정리해 둘 필요가 있다. 이 요구가 VAE를 낳는다.</p>
+    </div>
+  </div>
+</section>
+<!-- ══════════════ 02 ══════════════ -->
+<section id="sec02">
+  <div class="wrap">
+    <span class="eyebrow">§02 · Latent Space</span>
+    <h2>VAE — 확률적 잠재 공간</h2>
+    <p><strong>VAE(Variational Autoencoder)</strong>는 Autoencoder의 인코더를 확률적으로 바꾼 모델이다. 인코더 $\mathbf{e}$는 하나의 점 $\mathbf{z}$ 대신 <strong>분포의 파라미터</strong> — 평균 $\boldsymbol{\mu}$와 표준편차 $\boldsymbol{\sigma}$ — 를 출력하고, $\mathbf{z}$는 그 분포에서 <strong>샘플링</strong>된다.</p>
+
+    <div class="svgbox">
+      <svg viewBox="0 0 740 250" xmlns="http://www.w3.org/2000/svg" font-family="Pretendard Variable,sans-serif">
+        <defs><marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8b8680"/></marker></defs>
+        <rect x="20" y="65" width="42" height="110" rx="8" fill="#e6f5f3" stroke="#0d9488" stroke-width="1.5"/>
+        <text x="41" y="127" text-anchor="middle" font-size="16" font-weight="800" fill="#0b6e66">x</text>
+        <path d="M66 120 H104" stroke="#8b8680" stroke-width="1.6" marker-end="url(#ar3)"/>
+        <polygon points="110,60 210,90 210,150 110,180" fill="#e6f5f3" stroke="#0d9488" stroke-width="1.5"/>
+        <text x="158" y="115" text-anchor="middle" font-size="14" font-weight="800" fill="#0b6e66">Encoder</text>
+        <text x="158" y="135" text-anchor="middle" font-size="13" fill="#0b6e66">e</text>
+        <path d="M214 100 L258 62" stroke="#8b8680" stroke-width="1.6" marker-end="url(#ar3)"/>
+        <path d="M214 130 L258 130" stroke="#8b8680" stroke-width="1.6" marker-end="url(#ar3)"/>
+        <rect x="264" y="40" width="66" height="40" rx="8" fill="#fdece7" stroke="#ee4c2c" stroke-width="1.5"/>
+        <text x="297" y="66" text-anchor="middle" font-size="16" font-weight="800" fill="#c93a1e">μ</text>
+        <rect x="264" y="110" width="66" height="40" rx="8" fill="#fdece7" stroke="#ee4c2c" stroke-width="1.5"/>
+        <text x="297" y="136" text-anchor="middle" font-size="16" font-weight="800" fill="#c93a1e">σ</text>
+        <rect x="264" y="180" width="66" height="40" rx="8" fill="#f3f1ed" stroke="#8b8680" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <text x="297" y="206" text-anchor="middle" font-size="16" font-weight="800" fill="#44403c">ε</text>
+        <text x="170" y="207" text-anchor="middle" font-size="12.5" fill="#57534e">N(0, I) 에서 sample</text>
+        <path d="M226 202 H258" stroke="#8b8680" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#ar3)"/>
+        <path d="M334 60 C 380 60, 390 105, 416 116" stroke="#8b8680" stroke-width="1.6" fill="none" marker-end="url(#ar3)"/>
+        <path d="M334 130 C 366 130, 380 124, 414 121" stroke="#8b8680" stroke-width="1.6" fill="none" marker-end="url(#ar3)"/>
+        <path d="M334 200 C 380 200, 390 140, 416 126" stroke="#8b8680" stroke-width="1.6" stroke-dasharray="4 3" fill="none" marker-end="url(#ar3)"/>
+        <text x="373" y="150" text-anchor="middle" font-size="13" fill="#8b8680">⊙</text>
+        <rect x="422" y="90" width="58" height="62" rx="9" fill="#ffb020" fill-opacity=".25" stroke="#d97706" stroke-width="2"/>
+        <text x="451" y="127" text-anchor="middle" font-size="17" font-weight="900" fill="#92400e">z</text>
+        <text x="451" y="74" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="12" fill="#92400e">z = μ + σ ⊙ ε</text>
+        <path d="M484 120 H522" stroke="#8b8680" stroke-width="1.6" marker-end="url(#ar3)"/>
+        <polygon points="528,90 628,60 628,180 528,150" fill="#f3f1ed" stroke="#8b8680" stroke-width="1.5"/>
+        <text x="578" y="115" text-anchor="middle" font-size="14" font-weight="800" fill="#44403c">Decoder</text>
+        <text x="578" y="135" text-anchor="middle" font-size="13" fill="#44403c">d</text>
+        <path d="M632 120 H670" stroke="#8b8680" stroke-width="1.6" marker-end="url(#ar3)"/>
+        <rect x="676" y="65" width="42" height="110" rx="8" fill="#f3f1ed" stroke="#8b8680" stroke-width="1.5"/>
+        <text x="697" y="127" text-anchor="middle" font-size="16" font-weight="800" fill="#44403c">x̂</text>
+        <path d="M41 52 C 200 6, 550 6, 697 52" stroke="#c9c4bd" stroke-width="1.3" stroke-dasharray="5 5" fill="none"/>
+        <text x="370" y="20" text-anchor="middle" font-size="12" fill="#8b8680">Minimize 1: (x − x̂)² — 복원 손실</text>
+      </svg>
+      <div class="cap"><b>그림 2.</b> VAE — 인코더는 μ, σ를 출력하고 z는 reparameterization으로 샘플링된다</div>
+    </div>
+
+    <h3>Reparameterization Trick</h3>
+    <p>"분포에서 샘플링"은 그 자체로는 미분이 불가능해서 역전파가 막힌다. 트릭은 무작위성을 <strong>학습 파라미터 바깥으로 빼내는 것</strong>이다. $\boldsymbol{\epsilon}$을 고정 분포 $\mathcal{N}(\mathbf{0}, \mathbf{I})$에서 뽑고, $\mathbf{z}$는 결정적 연산으로 만든다.</p>
+
+    <div class="formula-card">
+      $$\mathbf{z} = \boldsymbol{\mu} + \boldsymbol{\sigma} \odot \boldsymbol{\epsilon}, \qquad \boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$$
+      <div class="fc-cap">무작위성은 ε에 격리되고, μ와 σ로는 그래디언트가 그대로 흐른다</div>
+    </div>
+
+    <h3>두 개의 손실 — 복원과 정규화의 줄다리기</h3>
+    <p>슬라이드의 <strong>Minimize 1</strong>은 복원 손실 $(x - \hat{x})^2$, <strong>Minimize 2</strong>는 잠재 분포를 $\mathcal{N}(0, I)$ 쪽으로 당기는 <strong>KL 발산</strong>이다.</p>
+
+    <div class="formula-card">
+      $$\text{Minimize 2:}\;\; \frac{1}{2}\sum_{i=1}^{N}\Big(\exp(\sigma_i) - (1 + \sigma_i) + \mu_i^2\Big)$$
+      <div class="fc-cap">슬라이드의 KL 항 — 여기서 σᵢ는 표준편차가 아니라 <b>로그 분산 log σ²</b>임에 주의</div>
+    </div>
+
+    <div class="callout">
+      <span class="ct">주의 — 슬라이드 수식의 σ 표기</span>
+      <p>가우시안 사이의 KL 발산 원형은 다음과 같다.</p>
+      <p>$$D_{\mathrm{KL}}\big(\mathcal{N}(\mu,\sigma^2)\,\|\,\mathcal{N}(0,1)\big) = \tfrac{1}{2}\left(\sigma^2 + \mu^2 - 1 - \ln \sigma^2\right)$$</p>
+      <p>실제 구현에서는 수치 안정성 때문에 인코더가 $\sigma$ 대신 $s = \ln \sigma^2$(log-variance)를 출력하며, 이를 대입하면 $\tfrac{1}{2}(\exp(s) - (1+s) + \mu^2)$ — 정확히 슬라이드의 식이 된다. 즉 슬라이드의 $\sigma_i$는 관례상 <strong>log-variance</strong>를 가리킨다.</p>
+    </div>
+
+    <p>두 손실은 서로 반대 방향으로 당긴다. 복원 손실은 샘플마다 잠재를 멀리 흩어 놓으려 하고(구분이 잘 되어야 복원이 쉬움), KL 손실은 모든 잠재를 원점 근처의 표준정규분포로 모으려 한다. 이 긴장의 균형점에서 <strong>연속적이고 빈틈없는 잠재 공간</strong>이 만들어지고, 비로소 "아무 점이나 찍어서 디코딩"하는 생성이 가능해진다.</p>
+
+    <div class="widget">
+      <div class="widget-head"><span class="dot"></span><span class="wt">위젯 1 · Reparameterization 놀이터</span><span class="wsub">z = μ + σ⊙ε</span></div>
+      <div class="widget-body">
+        <div class="wgrid2">
+          <div>
+            <div class="wrow"><span class="wlabel">μ_x</span><input type="range" id="vae-mx" min="-2" max="2" step="0.05" value="0.8"><span class="wval" id="vae-mx-v">0.80</span></div>
+            <div class="wrow"><span class="wlabel">μ_y</span><input type="range" id="vae-my" min="-2" max="2" step="0.05" value="-0.5"><span class="wval" id="vae-my-v">-0.50</span></div>
+            <div class="wrow"><span class="wlabel">σ (공통)</span><input type="range" id="vae-s" min="0.1" max="2" step="0.05" value="0.5"><span class="wval" id="vae-s-v">0.50</span></div>
+            <div class="wrow"><button class="btn" id="vae-resample">ε 다시 샘플링</button></div>
+            <div class="wstat" id="vae-kl">KL = —</div>
+            <p class="wnote">회색 원은 목표 분포 $\mathcal{N}(0,I)$의 1σ·2σ 등고선, 주황 점은 $z = \mu + \sigma\odot\epsilon$으로 만든 샘플 300개다. μ를 원점에서 멀리 보내거나 σ를 1에서 멀어지게 하면 KL 값이 커진다 — KL 손실이 "당기는 힘"을 숫자로 확인해 보자. σ를 아주 작게 만들면 점이 한 점으로 붕괴하는데, 이때도 KL이 커진다는 점이 중요하다(log σ² 항의 페널티).</p>
+          </div>
+          <div>
+            <canvas id="vae-canvas" class="wcanvas" width="360" height="360"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Stable Diffusion에서 VAE의 자리</h3>
+    <p>SD의 VAE는 512×512×3 픽셀 이미지를 <strong>64×64×4 잠재 텐서</strong>로 압축한다(공간 8배 축소). diffusion의 비싼 반복 계산은 전부 이 작은 잠재 공간에서 일어나고, VAE는 시작(인코딩, img2img일 때)과 끝(디코딩)에만 관여한다. 왜 이것이 결정적인 설계인지는 §06에서 계산량으로 확인한다.</p>
+  </div>
+</section>
+
+<!-- ══════════════ 03 ══════════════ -->
+<section id="sec03">
+  <div class="wrap">
+    <span class="eyebrow">§03 · Condition</span>
+    <h2>CLIP — 텍스트와 이미지를 같은 공간에</h2>
+    <p><strong>CLIP(Contrastive Language-Image Pre-training)</strong>은 4억 쌍의 (이미지, 캡션) 데이터로 <strong>Text Encoder와 Image Encoder를 동시에</strong> 학습한 모델이다. 목표는 짝이 맞는 텍스트와 이미지가 <strong>같은 임베딩 공간에서 가까워지도록</strong> 만드는 것이다.</p>
+
+    <h3>Contrastive Pre-training</h3>
+    <p>배치에 $N$개의 쌍이 있으면, 텍스트 임베딩 $T_1 \dots T_N$과 이미지 임베딩 $I_1 \dots I_N$ 사이의 모든 내적을 계산해 $N \times N$ <strong>유사도 행렬</strong>을 만든다. 대각선($I_i \cdot T_i$)이 정답 쌍(positive), 나머지 $N^2 - N$개는 전부 오답(negative)이다. 학습은 대각선의 유사도는 키우고 나머지는 줄이는 방향으로 진행된다.</p>
+
+    <div class="formula-card">
+      $$\mathcal{L}_{\text{contrastive}} = -\frac{1}{N}\sum_{i=1}^{N}\left[\log \frac{\exp\big(\mathrm{sim}(t_i, v_i)/\tau\big)}{\sum_{j=1}^{N}\exp\big(\mathrm{sim}(t_i, v_j)/\tau\big)}\right]$$
+      <div class="fc-cap"><b>InfoNCE Loss</b> — "N개의 후보 중 진짜 짝을 맞히는 N-way 분류"의 cross-entropy와 동형이다</div>
+    </div>
+
+    <p>구조를 뜯어 보면 익숙한 모양이 나온다. 분자는 정답 쌍의 유사도, 분모는 모든 후보의 유사도 합 — 즉 유사도를 로짓으로 쓰는 <strong>softmax + cross-entropy</strong>다. $\mathrm{sim}(\cdot,\cdot)$은 보통 정규화된 임베딩의 코사인 유사도이고, <strong>온도 $\tau$</strong>는 softmax의 뾰족함을 조절한다. 실제 CLIP은 텍스트→이미지 방향과 이미지→텍스트 방향의 손실을 대칭으로 평균한다.</p>
+
+    <div class="widget">
+      <div class="widget-head"><span class="dot"></span><span class="wt">위젯 2 · InfoNCE 유사도 행렬</span><span class="wsub">τ와 정렬의 효과</span></div>
+      <div class="widget-body">
+        <div class="wrow"><span class="wlabel">온도 τ</span><input type="range" id="clip-tau" min="0.05" max="1" step="0.01" value="0.30"><span class="wval" id="clip-tau-v">0.30</span></div>
+        <div class="wrow">
+          <button class="btn primary" id="clip-step">정렬 1스텝 학습 ▸</button>
+          <button class="btn" id="clip-reset">초기화</button>
+          <span class="wstat">InfoNCE loss = <b id="clip-loss">—</b></span>
+        </div>
+        <div id="clip-matrix"></div>
+        <p class="wnote">셀 색이 진할수록 해당 행(텍스트)의 softmax 확률이 높다. 큰 숫자는 확률 $p$, 작은 숫자는 코사인 유사도다. 초기 상태는 임베딩이 덜 정렬된 상태 — <strong>"정렬 1스텝"</strong>을 누르면 이미지 임베딩이 짝 텍스트 쪽으로 회전하며 대각선이 진해지고 loss가 떨어진다. τ를 낮추면 같은 유사도에서도 분포가 훨씬 뾰족해져서, 정렬이 잘 된 상태에서는 loss가 급격히 작아진다.</p>
+      </div>
+    </div>
+
+    <h3>Stable Diffusion에서 CLIP의 자리</h3>
+    <p>SD가 실제로 갖다 쓰는 부분은 <strong>Text Encoder뿐</strong>이다(Image Encoder는 학습 파트너 역할로 소임을 다한 셈). 프롬프트는 최대 77개 토큰으로 잘리고, 각 토큰이 768차원 벡터가 되어 <code>77×768</code> 행렬 $c$가 된다. 이 행렬이 §06에서 볼 <strong>cross-attention의 K, V</strong>로 U-Net 곳곳에 주입된다.</p>
+
+    <div class="callout teal">
+      <span class="ct">WHY CLIP?</span>
+      <p>아무 언어모델의 임베딩이 아니라 CLIP을 쓰는 이유: CLIP의 텍스트 임베딩은 애초에 <strong>이미지와 같은 공간에 살도록</strong> 학습되었기 때문에, "무엇을 그릴지"에 대한 시각적 의미가 이미 벡터에 녹아 있다. 텍스트 조건 생성에 이보다 적합한 출발점이 없다.</p>
+    </div>
+  </div>
+</section>
+<!-- ══════════════ 04 ══════════════ -->
+<section id="sec04">
+  <div class="wrap">
+    <span class="eyebrow">§04 · Engine Theory</span>
+    <h2>Diffusion — noising의 반대, denoising</h2>
+    <p>Diffusion의 기본 컨셉은 슬라이드의 한 줄로 요약된다. <strong>noising의 반대, denoising.</strong> 이미지에 노이즈를 조금씩 끼얹어 완전한 노이즈로 만드는 과정(forward)은 누구나 할 수 있다. 생성 모델이 배우는 것은 그 <strong>역방향</strong> — 노이즈에서 조금씩 이미지를 복원하는 과정(reverse)이다.</p>
+
+    <div class="formula-card">
+      $$\underbrace{q(x_t \mid x_{t-1})}_{\text{Forward: noising}} = \mathcal{N}\big(x_t;\; \sqrt{1-\beta_t}\, x_{t-1},\; \beta_t \mathbf{I}\big) \qquad\qquad \underbrace{p_\theta(x_{t-1} \mid x_t)}_{\text{Reverse: denoising}}$$
+      <div class="fc-cap">forward는 고정된 규칙(학습 없음), reverse만 신경망 θ가 학습한다 — 슬라이드 그림의 두 화살표</div>
+    </div>
+
+    <p>$x_0$은 원본, $x_T$는 완전한 가우시안 노이즈다. 각 스텝에서 섞는 노이즈의 양은 <strong>스케줄 $\beta_t$</strong>가 정한다($\beta_1 \approx 10^{-4}$에서 $\beta_T \approx 0.02$까지 서서히 증가, $T$는 보통 1000). 여기서 diffusion을 실용적으로 만든 결정적 성질이 나온다 — 가우시안을 반복해 섞으면 결과도 가우시안이므로, $t$번 반복하지 않고 <strong>한 번에 임의의 $x_t$로 점프</strong>할 수 있다.</p>
+
+    <div class="formula-card">
+      $$x_t = \sqrt{\bar{\alpha}_t}\, x_0 + \sqrt{1-\bar{\alpha}_t}\;\boldsymbol{\epsilon}, \qquad \alpha_t = 1 - \beta_t,\quad \bar{\alpha}_t = \prod_{s=1}^{t}\alpha_s,\quad \boldsymbol{\epsilon} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$$
+      <div class="fc-cap">closed form — $\bar{\alpha}_t$는 "원본이 얼마나 남았는지"의 비율. VAE의 reparameterization과 같은 꼴임에 주목</div>
+    </div>
+
+    <div class="widget">
+      <div class="widget-head"><span class="dot"></span><span class="wt">위젯 3 · Forward Diffusion 실험실</span><span class="wsub">x_t = √ᾱ_t·x₀ + √(1−ᾱ_t)·ε</span></div>
+      <div class="widget-body">
+        <div class="wgrid2">
+          <div>
+            <canvas id="dif-canvas" class="wcanvas" width="360" height="360"></canvas>
+          </div>
+          <div>
+            <div class="wrow"><span class="wlabel">timestep t</span><input type="range" id="dif-t" min="0" max="1000" step="1" value="0"><span class="wval" id="dif-t-v">t = 0</span></div>
+            <div class="wrow">
+              <button class="btn" id="dif-lin">linear β</button>
+              <button class="btn on" id="dif-cos">cosine</button>
+              <button class="btn" id="dif-eps">ε 재샘플</button>
+              <button class="btn primary" id="dif-play">▶ 재생</button>
+            </div>
+            <div class="wstat" id="dif-stat">ᾱ_t = 1.0000 · 원본 100% / 노이즈 0%</div>
+            <canvas id="dif-curve" class="wcanvas" width="360" height="150" style="margin-top:12px"></canvas>
+            <p class="wnote">슬라이드의 초록 "S" 그림을 그대로 재현한 실험이다. 점 600개가 원본 $x_0$이고, 슬라이더가 $t$를 움직이면 위의 closed form으로 $x_t$를 <strong>실제 계산</strong>해 그린다. 아래 곡선은 $\bar{\alpha}_t$ — linear 스케줄은 초반에 급락해 정보가 일찍 파괴되고, cosine 스케줄은 완만하게 떨어져 중간 timestep의 학습 신호가 풍부하다.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>학습 — 결국 "노이즈 맞히기" 회귀 문제</h3>
+    <p>DDPM의 핵심 발견은 reverse 과정의 복잡한 변분 하한(ELBO)이, 놀랍도록 단순한 목적함수로 정리된다는 것이다. 신경망 $\epsilon_\theta$에게 노이즈 낀 $x_t$와 시점 $t$를 주고, <strong>방금 섞은 노이즈 $\epsilon$이 무엇이었는지</strong> 맞히게 한다.</p>
+
+    <div class="formula-card">
+      $$\mathcal{L}_{\text{simple}} = \mathbb{E}_{t,\,x_0,\,\boldsymbol{\epsilon}}\Big[\big\|\boldsymbol{\epsilon} - \boldsymbol{\epsilon}_\theta\big(x_t,\, t\big)\big\|^2\Big]$$
+      <div class="fc-cap">생성 모델 학습이 MSE 회귀로 — GAN의 불안정한 적대 학습과 대비되는 지점</div>
+    </div>
+
+    <div class="code-label">DDPM 학습 루프 (의사코드)</div>
+<pre><code class="language-python"># 매 스텝: 아무 이미지나, 아무 시점이나, 아무 노이즈나 뽑아서
+for x0 in dataloader:
+    t   = torch.randint(1, T + 1, (batch,))          # 임의 시점
+    eps = torch.randn_like(x0)                       # 진짜 노이즈
+    xt  = alpha_bar[t].sqrt() * x0 + (1 - alpha_bar[t]).sqrt() * eps
+    loss = F.mse_loss(eps, model(xt, t))             # 노이즈 맞히기
+    loss.backward(); opt.step(); opt.zero_grad()</code></pre>
+
+    <h3>샘플링 — T번의 되감기</h3>
+    <p>학습이 끝나면 순수 노이즈 $x_T \sim \mathcal{N}(0, I)$에서 출발해, 예측된 노이즈를 조금씩 빼며 $T$번 되감는다.</p>
+
+    <div class="formula-card">
+      $$x_{t-1} = \frac{1}{\sqrt{\alpha_t}}\left(x_t - \frac{1-\alpha_t}{\sqrt{1-\bar{\alpha}_t}}\,\boldsymbol{\epsilon}_\theta(x_t, t)\right) + \sigma_t \mathbf{z}, \qquad \mathbf{z} \sim \mathcal{N}(\mathbf{0},\mathbf{I})$$
+      <div class="fc-cap">마지막 σ_t z는 스텝마다 다시 넣는 소량의 노이즈 (t=1에서는 생략)</div>
+    </div>
+
+    <div class="code-label">DDPM 샘플링 루프 (의사코드)</div>
+<pre><code class="language-python">x = torch.randn(shape)                               # x_T ~ N(0, I)
+for t in reversed(range(1, T + 1)):
+    eps_hat = model(x, t)
+    x = (x - (1 - alpha[t]) / (1 - alpha_bar[t]).sqrt() * eps_hat) \
+        / alpha[t].sqrt()
+    if t > 1:
+        x += sigma[t] * torch.randn_like(x)          # 소량의 노이즈 재주입</code></pre>
+
+    <div class="callout">
+      <span class="ct">KEY INSIGHT</span>
+      <p>왜 한 번에 안 지우고 1000번에 나눠 지우는가? "노이즈 → 이미지"의 한 방 매핑은 극도로 복잡한 분포 변환이지만, "노이즈를 아주 조금 덜어내기"는 <strong>매 스텝이 거의 가우시안인 쉬운 문제</strong>다. Diffusion은 어려운 문제 하나를 쉬운 문제 1000개로 쪼갠 것이고, 그 대가가 느린 샘플링 속도다(이후 DDIM 등 가속 샘플러가 이 비용을 20~50스텝으로 줄인다).</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ 05 ══════════════ -->
+<section id="sec05">
+  <div class="wrap">
+    <span class="eyebrow">§05 · Engine Architecture</span>
+    <h2>U-Net — 노이즈 예측기의 몸체</h2>
+    <p>§04의 $\epsilon_\theta$는 아무 신경망이나 될 수 있지만, 입출력 조건이 까다롭다 — <strong>입력($x_t$)과 정확히 같은 해상도의 출력($\hat\epsilon$)</strong>을 내야 하고, 전역 구조(무엇이 그려져 있나)와 국소 디테일(픽셀 단위 노이즈)을 동시에 봐야 한다. 이 조건에 정확히 들어맞는 아키텍처가 2015년 의료영상 세그멘테이션용으로 나온 <strong>U-Net</strong>이다.</p>
+
+    <div class="svgbox">
+      <svg viewBox="0 0 760 330" xmlns="http://www.w3.org/2000/svg" font-family="Pretendard Variable,sans-serif">
+        <defs><marker id="ar5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#a8a29e"/></marker>
+        <marker id="ar5o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#ee4c2c"/></marker></defs>
+        <!-- encoder bars -->
+        <rect x="60"  y="30"  width="34" height="90"  rx="5" fill="#e6f5f3" stroke="#0d9488" stroke-width="1.4"/>
+        <rect x="120" y="95"  width="34" height="70"  rx="5" fill="#cdeeea" stroke="#0d9488" stroke-width="1.4"/>
+        <rect x="180" y="150" width="34" height="52"  rx="5" fill="#b0e4dd" stroke="#0d9488" stroke-width="1.4"/>
+        <rect x="240" y="196" width="34" height="38"  rx="5" fill="#8fd8cf" stroke="#0d9488" stroke-width="1.4"/>
+        <!-- bottleneck -->
+        <rect x="330" y="238" width="100" height="30" rx="6" fill="#fdece7" stroke="#ee4c2c" stroke-width="1.8"/>
+        <text x="380" y="258" text-anchor="middle" font-size="12" font-weight="700" fill="#c93a1e">bottleneck</text>
+        <!-- decoder bars -->
+        <rect x="486" y="196" width="34" height="38"  rx="5" fill="#ffd8cc" stroke="#ee4c2c" stroke-width="1.4"/>
+        <rect x="546" y="150" width="34" height="52"  rx="5" fill="#fdc4b3" stroke="#ee4c2c" stroke-width="1.4"/>
+        <rect x="606" y="95"  width="34" height="70"  rx="5" fill="#fbb09a" stroke="#ee4c2c" stroke-width="1.4"/>
+        <rect x="666" y="30"  width="34" height="90"  rx="5" fill="#f99b81" stroke="#ee4c2c" stroke-width="1.4"/>
+        <!-- down arrows -->
+        <path d="M96 120 L118 130" stroke="#a8a29e" stroke-width="1.5" marker-end="url(#ar5)"/>
+        <path d="M156 165 L178 172" stroke="#a8a29e" stroke-width="1.5" marker-end="url(#ar5)"/>
+        <path d="M216 202 L238 210" stroke="#a8a29e" stroke-width="1.5" marker-end="url(#ar5)"/>
+        <path d="M276 230 L326 248" stroke="#a8a29e" stroke-width="1.5" marker-end="url(#ar5)"/>
+        <!-- up arrows -->
+        <path d="M434 250 L484 226" stroke="#ee4c2c" stroke-width="1.5" marker-end="url(#ar5o)"/>
+        <path d="M522 208 L544 190" stroke="#ee4c2c" stroke-width="1.5" marker-end="url(#ar5o)"/>
+        <path d="M582 160 L604 145" stroke="#ee4c2c" stroke-width="1.5" marker-end="url(#ar5o)"/>
+        <path d="M642 110 L664 95" stroke="#ee4c2c" stroke-width="1.5" marker-end="url(#ar5o)"/>
+        <!-- skip connections -->
+        <path d="M96 55 H664" stroke="#c9c4bd" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#ar5)"/>
+        <path d="M156 118 H604" stroke="#c9c4bd" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#ar5)"/>
+        <path d="M216 168 H544" stroke="#c9c4bd" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#ar5)"/>
+        <path d="M276 210 H484" stroke="#c9c4bd" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#ar5)"/>
+        <text x="380" y="44" text-anchor="middle" font-size="11.5" fill="#8b8680">skip connection (copy)</text>
+        <!-- labels -->
+        <text x="77" y="22" text-anchor="middle" font-size="12" font-weight="700" fill="#0b6e66">입력 x_t</text>
+        <text x="683" y="22" text-anchor="middle" font-size="12" font-weight="700" fill="#c93a1e">출력 ε̂</text>
+        <text x="150" y="300" font-size="12" fill="#57534e">◀ Encoder: 다운샘플링 (max pool 2×2), 채널 ↑</text>
+        <text x="430" y="300" font-size="12" fill="#57534e">Decoder: 업샘플링 (up-conv 2×2), 채널 ↓ ▶</text>
+      </svg>
+      <div class="cap"><b>그림 3.</b> U-Net — 인코더에서 잃는 공간 정보를 skip connection이 디코더로 직송한다</div>
+    </div>
+
+    <ul>
+      <li><strong>수축 경로(Encoder)</strong> — <code>conv 3×3 + ReLU</code>를 반복하며 <code>max pool 2×2</code>로 해상도를 절반씩 줄이고 채널을 2배씩 늘린다(64→128→256→512→1024). 깊어질수록 "무엇이 있는지"의 의미 정보가 응축된다.</li>
+      <li><strong>확장 경로(Decoder)</strong> — <code>up-conv 2×2</code>로 해상도를 되살리며 채널을 줄인다. 그런데 업샘플링만으로는 인코딩 때 버린 위치 정보가 복원되지 않는다.</li>
+      <li><strong>Skip connection</strong> — 같은 해상도의 인코더 특징맵을 디코더에 이어붙여(copy and crop) <strong>고해상도 위치 정보를 우회 전달</strong>한다. U자의 양팔을 잇는 회색 화살표가 이것이다.</li>
+    </ul>
+
+    <div class="callout teal">
+      <span class="ct">WHY U-NET FOR DIFFUSION?</span>
+      <p>노이즈 예측은 픽셀(잠재) 단위의 <strong>밀집 예측(dense prediction)</strong> 문제 — 세그멘테이션과 문제의 골격이 같다. 전역 의미는 병목에서, 위치 정밀도는 skip에서 얻는 구조가 그대로 이식된다. Diffusion용 U-Net은 여기에 <strong>① timestep $t$의 임베딩</strong>(지금 노이즈가 얼마나 심한 단계인지)을 각 블록에 더하고, <strong>② cross-attention 레이어</strong>(§06)를 끼워 넣어 텍스트 조건을 받는다.</p>
+    </div>
+  </div>
+</section>
+<!-- ══════════════ 06 ══════════════ -->
+<section id="sec06">
+  <div class="wrap">
+    <span class="eyebrow">§06 · Assembly</span>
+    <h2>Latent Diffusion — 전체 아키텍처 조립</h2>
+    <p>이제 부품이 다 모였다. 마지막 슬라이드의 그림(Rombach et al., 2022의 Latent Diffusion 아키텍처)은 세 구역으로 나뉜다 — <strong>Pixel Space</strong>, <strong>Latent Space</strong>, <strong>Conditioning</strong>. Stable Diffusion은 이 Latent Diffusion Model(LDM)을 대규모로 학습한 구현체다.</p>
+
+    <div class="svgbox">
+      <svg viewBox="0 0 780 380" xmlns="http://www.w3.org/2000/svg" font-family="Pretendard Variable,sans-serif">
+        <defs><marker id="ar6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#57534e"/></marker></defs>
+        <!-- pixel space -->
+        <rect x="14" y="20" width="170" height="340" rx="14" fill="#fdece7" fill-opacity=".55" stroke="#ee4c2c" stroke-width="1.5"/>
+        <text x="99" y="48" text-anchor="middle" font-size="14.5" font-weight="800" fill="#c93a1e">Pixel Space</text>
+        <rect x="34" y="70" width="44" height="44" rx="8" fill="#fff" stroke="#8b8680"/>
+        <text x="56" y="98" text-anchor="middle" font-size="15" font-weight="700" fill="#1c1917">x</text>
+        <polygon points="92,70 148,84 148,100 92,114" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.4"/>
+        <text x="119" y="97" text-anchor="middle" font-size="13" font-weight="700" fill="#1d4ed8">ℰ</text>
+        <polygon points="148,262 92,276 92,292 148,306" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.4"/>
+        <text x="121" y="289" text-anchor="middle" font-size="13" font-weight="700" fill="#1d4ed8">𝒟</text>
+        <rect x="34" y="266" width="44" height="44" rx="8" fill="#fff" stroke="#8b8680"/>
+        <text x="56" y="294" text-anchor="middle" font-size="15" font-weight="700" fill="#1c1917">x̃</text>
+        <!-- latent space -->
+        <rect x="196" y="20" width="380" height="340" rx="14" fill="#e6f5f3" fill-opacity=".6" stroke="#0d9488" stroke-width="1.5"/>
+        <text x="386" y="48" text-anchor="middle" font-size="14.5" font-weight="800" fill="#0b6e66">Latent Space</text>
+        <rect x="216" y="70" width="28" height="52" rx="6" fill="#0d9488" fill-opacity=".8"/>
+        <text x="230" y="140" text-anchor="middle" font-size="13" font-weight="700" fill="#0b6e66">z</text>
+        <rect x="256" y="76" width="216" height="30" rx="8" fill="#fff" stroke="#0d9488" stroke-width="1.2"/>
+        <text x="364" y="96" text-anchor="middle" font-size="12" fill="#0b6e66">Diffusion Process (forward)</text>
+        <path d="M476 91 H520" stroke="#57534e" stroke-width="1.5" marker-end="url(#ar6)"/>
+        <rect x="526" y="70" width="28" height="52" rx="6" fill="#0d9488" fill-opacity=".8"/>
+        <text x="540" y="140" text-anchor="middle" font-size="13" font-weight="700" fill="#0b6e66">z_T</text>
+        <!-- U-Net -->
+        <rect x="246" y="170" width="308" height="150" rx="12" fill="#fff" stroke="#0d9488" stroke-width="1.4"/>
+        <text x="400" y="192" text-anchor="middle" font-size="13" font-weight="800" fill="#0b6e66">Denoising U-Net ε_θ  ×(T−1)회 반복</text>
+        <polygon points="266,210 316,222 316,286 266,298" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.2"/>
+        <polygon points="534,210 484,222 484,286 534,298" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.2"/>
+        <rect x="328" y="228" width="44" height="44" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="1.4"/>
+        <text x="350" y="248" text-anchor="middle" font-size="10.5" font-weight="800" fill="#92400e">Q</text>
+        <text x="350" y="262" text-anchor="middle" font-size="10.5" font-weight="800" fill="#92400e">K V</text>
+        <rect x="428" y="228" width="44" height="44" rx="8" fill="#fef3c7" stroke="#d97706" stroke-width="1.4"/>
+        <text x="450" y="248" text-anchor="middle" font-size="10.5" font-weight="800" fill="#92400e">Q</text>
+        <text x="450" y="262" text-anchor="middle" font-size="10.5" font-weight="800" fill="#92400e">K V</text>
+        <text x="400" y="256" text-anchor="middle" font-size="12" fill="#8b8680">···</text>
+        <text x="400" y="338" text-anchor="middle" font-size="11.5" fill="#57534e">노란 블록 = cross-attention (Q는 이미지 특징, K·V는 조건 τ_θ(y))</text>
+        <!-- z_T into unet / z out -->
+        <path d="M540 128 L540 160 L554 178" stroke="#57534e" stroke-width="1.4" fill="none" marker-end="url(#ar6)"/>
+        <path d="M246 245 L230 245 L230 130" stroke="#57534e" stroke-width="1.4" fill="none" marker-end="url(#ar6)"/>
+        <!-- conditioning -->
+        <rect x="588" y="20" width="178" height="340" rx="14" fill="#f3f1ed" stroke="#8b8680" stroke-width="1.5"/>
+        <text x="677" y="48" text-anchor="middle" font-size="14.5" font-weight="800" fill="#44403c">Conditioning</text>
+        <rect x="606" y="66" width="140" height="30" rx="7" fill="#fdece7" stroke="#ee4c2c"/>
+        <text x="676" y="86" text-anchor="middle" font-size="12" fill="#c93a1e">Text (프롬프트)</text>
+        <rect x="606" y="104" width="140" height="30" rx="7" fill="#fff" stroke="#c9c4bd"/>
+        <text x="676" y="124" text-anchor="middle" font-size="12" fill="#57534e">Semantic Map</text>
+        <rect x="606" y="142" width="140" height="30" rx="7" fill="#fff" stroke="#c9c4bd"/>
+        <text x="676" y="162" text-anchor="middle" font-size="12" fill="#57534e">Representations</text>
+        <rect x="606" y="180" width="140" height="30" rx="7" fill="#fff" stroke="#c9c4bd"/>
+        <text x="676" y="200" text-anchor="middle" font-size="12" fill="#57534e">Images</text>
+        <polygon points="640,232 712,232 700,282 652,282" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.4"/>
+        <text x="676" y="262" text-anchor="middle" font-size="13" font-weight="700" fill="#1d4ed8">τ_θ</text>
+        <text x="676" y="302" text-anchor="middle" font-size="11.5" fill="#57534e">(SD: CLIP Text Encoder)</text>
+        <path d="M650 275 C 560 320, 480 300, 456 276" stroke="#d97706" stroke-width="1.6" fill="none" marker-end="url(#ar6)"/>
+        <path d="M56 114 L56 130 C 56 150, 180 96, 214 92" stroke="#57534e" stroke-width="1.4" fill="none" marker-end="url(#ar6)"/>
+        <path d="M92 288 L88 288" stroke="#57534e" stroke-width="1.4"/>
+        <path d="M216 110 L216 110" stroke="none"/>
+        <path d="M246 288 L152 286" stroke="#57534e" stroke-width="1.4" marker-end="url(#ar6)"/>
+      </svg>
+      <div class="cap"><b>그림 4.</b> Latent Diffusion 아키텍처 (마지막 슬라이드의 재구성) — diffusion은 전부 초록 구역(잠재 공간) 안에서만 일어난다</div>
+    </div>
+
+    <h3>왜 "Latent" Diffusion인가 — 계산량의 산수</h3>
+    <p>DDPM을 픽셀에서 그대로 돌리면 U-Net이 매 스텝 <code>512×512×3 = 786,432</code>개의 값을 처리해야 하고, 이걸 수십~수백 번 반복한다. LDM은 diffusion을 VAE의 잠재 공간으로 옮겨서 매 스텝 <code>64×64×4 = 16,384</code>개만 처리한다 — 원소 수 기준 <strong>48배 축소</strong>이고, attention의 비용은 공간 크기에 제곱으로 붙으므로 체감 절감은 그 이상이다. 지각적으로 무의미한 고주파 디테일의 복원은 VAE 디코더에 맡기고, diffusion은 <strong>의미 구조의 생성에만 집중</strong>한다는 역할 분담이다.</p>
+
+    <h3>Conditioning — cross-attention으로 조건 주입</h3>
+    <p>U-Net 중간중간의 노란 블록이 <strong>cross-attention</strong>이다. self-attention과 식은 같지만 Q와 K·V의 출처가 다르다.</p>
+
+    <div class="formula-card">
+      $$\mathrm{Attention}(Q, K, V) = \mathrm{softmax}\!\left(\frac{QK^{\top}}{\sqrt{d}}\right)V, \qquad Q = W_Q\,\varphi_i(z_t),\;\; K = W_K\,\tau_\theta(y),\;\; V = W_V\,\tau_\theta(y)$$
+      <div class="fc-cap">Q = 지금 그리는 이미지의 특징(φᵢ(z_t)), K·V = 조건 인코딩(τ_θ(y)) — "이미지의 각 위치가 프롬프트의 어느 토큰을 참조할지"</div>
+    </div>
+
+    <p>직관적으로, 잠재의 각 공간 위치가 "나는 지금 프롬프트의 어떤 단어를 그리는 중인가?"를 질의(Q)하고, 프롬프트 토큰들(K, V)에서 답을 가져온다. 그림의 스위치(switch)는 조건의 종류에 따라 주입 방식을 고르는 장치다 — 텍스트·표현은 cross-attention으로, semantic map 같은 공간 정렬 조건은 <strong>concat</strong>으로 입력에 이어붙인다. 조건 인코더 $\tau_\theta$ 자리에 CLIP Text Encoder를 꽂은 것이 Stable Diffusion이다.</p>
+
+    <div class="callout">
+      <span class="ct">세 모델의 재회</span>
+      <p>그림 4를 §00의 표와 겹쳐 보자. 왼쪽 빨간 구역의 $\mathcal{E}, \mathcal{D}$가 <strong>VAE</strong>, 가운데 초록 구역의 $\epsilon_\theta$가 <strong>U-Net</strong>, 오른쪽 회색 구역의 $\tau_\theta$가 <strong>CLIP Text Encoder</strong>다. "Stable Diffusion은 세 모델의 결합"이라는 첫 슬라이드의 문장이 이 그림 한 장에 들어 있다.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ 07 ══════════════ -->
+<section id="sec07">
+  <div class="wrap">
+    <span class="eyebrow">§07 · Inference</span>
+    <h2>생성 파이프라인 — 프롬프트에서 이미지까지</h2>
+    <p>추론(txt2img) 시점의 실행 순서를 처음부터 끝까지 따라가 보자.</p>
+
+    <div class="svgbox">
+      <svg viewBox="0 0 760 250" xmlns="http://www.w3.org/2000/svg" font-family="Pretendard Variable,sans-serif">
+        <defs><marker id="ar7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#57534e"/></marker></defs>
+        <rect x="16" y="30" width="150" height="54" rx="10" fill="#fff" stroke="#c9c4bd"/>
+        <text x="91" y="53" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1c1917">"an astronaut</text>
+        <text x="91" y="71" text-anchor="middle" font-size="12.5" font-weight="700" fill="#1c1917">riding a horse"</text>
+        <path d="M170 57 H206" stroke="#57534e" stroke-width="1.5" marker-end="url(#ar7)"/>
+        <rect x="212" y="30" width="130" height="54" rx="10" fill="#e6f5f3" stroke="#0d9488" stroke-width="1.5"/>
+        <text x="277" y="53" text-anchor="middle" font-size="13" font-weight="800" fill="#0b6e66">① CLIP</text>
+        <text x="277" y="71" text-anchor="middle" font-size="11.5" fill="#0b6e66">토큰화 → c (77×768)</text>
+        <path d="M277 88 L277 122" stroke="#57534e" stroke-width="1.5" marker-end="url(#ar7)"/>
+        <rect x="16" y="128" width="150" height="54" rx="10" fill="#f3f1ed" stroke="#8b8680"/>
+        <text x="91" y="151" text-anchor="middle" font-size="13" font-weight="800" fill="#44403c">② z_T ~ N(0, I)</text>
+        <text x="91" y="169" text-anchor="middle" font-size="11.5" fill="#57534e">랜덤 잠재 (seed)</text>
+        <path d="M170 155 H206" stroke="#57534e" stroke-width="1.5" marker-end="url(#ar7)"/>
+        <rect x="212" y="128" width="240" height="84" rx="12" fill="#fdece7" stroke="#ee4c2c" stroke-width="2"/>
+        <text x="332" y="152" text-anchor="middle" font-size="13" font-weight="800" fill="#c93a1e">③ U-Net 반복 (T = 20~50)</text>
+        <text x="332" y="172" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10.5" fill="#57534e">ε̂ = ε_∅ + s·(ε_c − ε_∅)  (CFG)</text>
+        <text x="332" y="192" text-anchor="middle" font-size="11.5" fill="#57534e">스케줄러가 z_t → z_{t−1} 갱신</text>
+        <path d="M332 116 L332 124" stroke="#0d9488" stroke-width="1.5" marker-end="url(#ar7)"/>
+        <path d="M456 170 H492" stroke="#57534e" stroke-width="1.5" marker-end="url(#ar7)"/>
+        <rect x="498" y="143" width="120" height="54" rx="10" fill="#e6f5f3" stroke="#0d9488" stroke-width="1.5"/>
+        <text x="558" y="166" text-anchor="middle" font-size="13" font-weight="800" fill="#0b6e66">④ VAE 𝒟</text>
+        <text x="558" y="184" text-anchor="middle" font-size="11.5" fill="#0b6e66">z₀ → 512×512×3</text>
+        <path d="M622 170 H658" stroke="#57534e" stroke-width="1.5" marker-end="url(#ar7)"/>
+        <rect x="664" y="143" width="80" height="54" rx="10" fill="#fff" stroke="#ee4c2c" stroke-width="1.6"/>
+        <text x="704" y="175" text-anchor="middle" font-size="13" font-weight="800" fill="#c93a1e">🖼 이미지</text>
+      </svg>
+      <div class="cap"><b>그림 5.</b> txt2img 실행 흐름 — CLIP은 처음 1회, U-Net은 T회, VAE 디코더는 마지막 1회 호출된다</div>
+    </div>
+
+    <ol>
+      <li><strong>텍스트 인코딩</strong> — 프롬프트를 토큰화하고 CLIP Text Encoder로 조건 행렬 $c$를 만든다. 빈 프롬프트 ""도 함께 인코딩해 무조건(unconditional) 임베딩 $\varnothing$을 준비한다.</li>
+      <li><strong>잠재 초기화</strong> — $z_T \sim \mathcal{N}(0, I)$, 크기 <code>64×64×4</code>. 시드를 고정하면 같은 그림이 재현된다.</li>
+      <li><strong>반복 denoising</strong> — 매 스텝 U-Net을 <em>두 번</em>(조건부/무조건부) 호출해 CFG로 결합하고, 스케줄러(DDIM 등)가 $z_{t-1}$을 계산한다.</li>
+      <li><strong>디코딩</strong> — 최종 $z_0$를 VAE 디코더에 통과시켜 픽셀 이미지를 얻는다.</li>
+    </ol>
+
+    <h3>Classifier-Free Guidance (CFG)</h3>
+    <p>③에서 그냥 조건부 예측 $\epsilon_\theta(z_t, c)$만 쓰면 프롬프트 반영이 약하다. <strong>CFG</strong>는 "조건이 만든 차이"를 과장하는 기법이다.</p>
+
+    <div class="formula-card">
+      $$\hat{\boldsymbol{\epsilon}} = \boldsymbol{\epsilon}_\theta(z_t, \varnothing) + s \cdot \big(\boldsymbol{\epsilon}_\theta(z_t, c) - \boldsymbol{\epsilon}_\theta(z_t, \varnothing)\big)$$
+      <div class="fc-cap">s = guidance scale (보통 7~8). s=1이면 순수 조건부 예측, s가 클수록 프롬프트를 강하게 따르는 대신 다양성이 준다</div>
+    </div>
+
+    <div class="widget">
+      <div class="widget-head"><span class="dot"></span><span class="wt">위젯 4 · CFG 벡터 시각화</span><span class="wsub">ε̂ = ε_∅ + s(ε_c − ε_∅)</span></div>
+      <div class="widget-body">
+        <div class="wgrid2">
+          <div>
+            <canvas id="cfg-canvas" class="wcanvas" width="360" height="300"></canvas>
+          </div>
+          <div>
+            <div class="wrow"><span class="wlabel">guidance s</span><input type="range" id="cfg-s" min="0" max="15" step="0.1" value="7.5"><span class="wval" id="cfg-s-v">s = 7.5</span></div>
+            <div class="wrow"><span class="wlabel">조건 방향 θ</span><input type="range" id="cfg-ang" min="-60" max="60" step="1" value="24"><span class="wval" id="cfg-ang-v">24°</span></div>
+            <div class="wstat" id="cfg-stat">‖ε̂‖ = —</div>
+            <p class="wnote">회색 화살표가 무조건부 예측 $\epsilon_\varnothing$, 청록이 조건부 예측 $\epsilon_c$다. 주황 화살표 $\hat\epsilon$은 두 벡터의 차이를 $s$배 외삽한 결과 — $s=0$이면 회색과, $s=1$이면 청록과 정확히 겹치고, $s$가 커질수록 "조건이 가리키는 방향"으로 과장되어 뻗는다. 벡터 노름이 함께 커지는 것이 고 $s$에서 이미지가 과포화·왜곡되는 이유의 기하학적 직관이다.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="code-label">diffusers로 파이프라인 실행</div>
+<pre><code class="language-python">from diffusers import StableDiffusionPipeline
+import torch
+
+pipe = StableDiffusionPipeline.from_pretrained(
+    "runwayml/stable-diffusion-v1-5", torch_dtype=torch.float16
+).to("cuda")
+
+image = pipe(
+    "an astronaut riding a horse, photorealistic",
+    num_inference_steps=50,      # T: denoising 반복 횟수
+    guidance_scale=7.5,          # CFG의 s
+).images[0]</code></pre>
+
+    <p>같은 골격에서 시작점만 바꾸면 파생 태스크가 된다 — 실제 이미지를 $\mathcal{E}$로 인코딩해 노이즈를 일부만 섞고 출발하면 <strong>img2img</strong>, 마스크 영역만 갱신하면 <strong>inpainting</strong>이다.</p>
+  </div>
+</section>
+
+<!-- ══════════════ 08 ══════════════ -->
+<section id="sec08">
+  <div class="wrap">
+    <span class="eyebrow">§08 · Summary</span>
+    <h2>정리 — 한 장 요약</h2>
+
+    <table>
+      <thead><tr><th>질문</th><th>답</th><th>핵심 수식</th></tr></thead>
+      <tbody>
+        <tr><td>어디서 생성하나</td><td>VAE가 만든 <strong>잠재 공간</strong> (64×64×4, 픽셀 대비 48배 작음)</td><td>$z = \mu + \sigma \odot \epsilon$</td></tr>
+        <tr><td>무엇을 배우나</td><td>forward noising의 역방향, 즉 <strong>노이즈 예측</strong></td><td>$\|\epsilon - \epsilon_\theta(x_t, t)\|^2$</td></tr>
+        <tr><td>몸체는 무엇인가</td><td>skip connection으로 해상도를 지키는 <strong>U-Net</strong></td><td>—</td></tr>
+        <tr><td>텍스트는 어떻게</td><td>CLIP 임베딩을 <strong>cross-attention의 K·V</strong>로 주입</td><td>$\mathrm{softmax}(QK^\top/\sqrt{d})V$</td></tr>
+        <tr><td>CLIP은 어떻게 배웠나</td><td>N×N 유사도 행렬의 대각선을 맞히는 <strong>대조 학습</strong></td><td>InfoNCE</td></tr>
+        <tr><td>프롬프트 반영 강도</td><td><strong>CFG</strong>로 조건의 효과를 외삽</td><td>$\epsilon_\varnothing + s(\epsilon_c - \epsilon_\varnothing)$</td></tr>
+      </tbody>
+    </table>
+
+    <h3>자가 점검</h3>
+    <ul class="check">
+      <li>Autoencoder만으로 생성이 어려운 이유와, VAE의 KL 항이 이를 어떻게 해결하는지 설명할 수 있다.</li>
+      <li>슬라이드의 KL 수식($\exp/\log$ 형태)에서 $\sigma_i$가 log-variance인 이유를 유도할 수 있다.</li>
+      <li>reparameterization trick이 VAE의 샘플링과 diffusion의 closed form에 <strong>같은 꼴</strong>로 등장함을 지적할 수 있다.</li>
+      <li>InfoNCE가 "N-way 분류의 cross-entropy"임을 분자·분모 구조로 설명할 수 있다.</li>
+      <li>forward는 학습이 없고 reverse만 학습한다는 것, 그리고 $\bar\alpha_t$로 임의 시점 점프가 가능한 이유를 안다.</li>
+      <li>U-Net의 skip connection이 diffusion의 노이즈 예측에 왜 필수적인지 설명할 수 있다.</li>
+      <li>그림 4에서 VAE·U-Net·CLIP이 각각 어느 구역의 어떤 기호($\mathcal{E}/\mathcal{D}$, $\epsilon_\theta$, $\tau_\theta$)인지 짚을 수 있다.</li>
+      <li>추론 1회에 CLIP·U-Net·VAE 디코더가 각각 몇 번 호출되는지 안다 (1회 / T×2회(CFG) / 1회).</li>
+    </ul>
+
+    <h3>다음 학습으로</h3>
+    <div class="next-cards">
+      <div class="ncard"><div class="nt"><span class="nn">▸</span>DDIM & 가속 샘플러</div><div class="nd">1000스텝을 20~50스텝으로 줄이는 결정론적 샘플링. 스케줄러 교체만으로 적용된다.</div></div>
+      <div class="ncard"><div class="nt"><span class="nn">▸</span>ControlNet / LoRA</div><div class="nd">공간 조건(포즈·엣지) 추가와 저비용 미세조정 — U-Net 구조를 알면 바로 읽힌다.</div></div>
+      <div class="ncard"><div class="nt"><span class="nn">▸</span>DDPM 논문 수식 유도</div><div class="nd">ELBO에서 $\mathcal{L}_{\text{simple}}$까지의 전개 (Ho et al., 2020, §3).</div></div>
+      <div class="ncard"><div class="nt"><span class="nn">▸</span>SDXL / DiT 계열</div><div class="nd">U-Net을 Transformer로 대체하는 최신 흐름 (Diffusion Transformer).</div></div>
+    </div>
+
+    <div class="callout">
+      <span class="ct">ONE-LINER</span>
+      <p><strong>Stable Diffusion = VAE의 잠재 공간에서, CLIP이 번역한 텍스트를 cross-attention으로 들으며, U-Net이 노이즈를 T번 걷어내는 기계.</strong></p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    FUNDAMENTAL 시리즈 · 2026-07-08 강의 「Stable Diffusion」 기반 학습 가이드 · 수식(DDPM·CFG·cross-attention)과 위젯은 이해를 위해 보충한 내용이다.
+  </div>
+</footer>
+
+</div><!-- /#main -->
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+<script>
+(function(){
+'use strict';
+var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ── KaTeX & highlight ─────────────────────── */
+document.addEventListener('DOMContentLoaded', function(){
+  if (window.renderMathInElement) {
+    renderMathInElement(document.body, {
+      delimiters: [
+        {left:'$$', right:'$$', display:true},
+        {left:'$', right:'$', display:false}
+      ],
+      throwOnError: false
+    });
+  }
+  if (window.hljs) hljs.highlightAll();
+});
+
+/* ── progress bar ──────────────────────────── */
+var prog = document.getElementById('progress');
+function onScroll(){
+  var h = document.documentElement;
+  var max = h.scrollHeight - h.clientHeight;
+  prog.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + '%';
+}
+window.addEventListener('scroll', onScroll, {passive:true});
+onScroll();
+
+/* ── sidebar: hamburger + scroll-spy ───────── */
+var sidebar = document.getElementById('sidebar'),
+    burger  = document.getElementById('hamburger'),
+    overlay = document.getElementById('overlay');
+function closeNav(){ sidebar.classList.remove('open'); overlay.classList.remove('show'); }
+burger.addEventListener('click', function(){
+  sidebar.classList.toggle('open'); overlay.classList.toggle('show');
+});
+overlay.addEventListener('click', closeNav);
+sidebar.querySelectorAll('#toc a').forEach(function(a){ a.addEventListener('click', closeNav); });
+
+var tocLinks = Array.prototype.slice.call(document.querySelectorAll('#toc a'));
+var sections = tocLinks.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+var spy = new IntersectionObserver(function(entries){
+  entries.forEach(function(en){
+    if (en.isIntersecting) {
+      var id = '#' + en.target.id;
+      tocLinks.forEach(function(a){ a.classList.toggle('active', a.getAttribute('href') === id); });
+    }
+  });
+}, {rootMargin:'-25% 0px -65% 0px'});
+sections.forEach(function(s){ if (s) spy.observe(s); });
+
+/* ── shared math helpers ───────────────────── */
+function randn(){ // Box-Muller
+  var u = 1 - Math.random(), v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+function makeS(n){ // "S" 모양 점군 (두 개의 호)
+  var pts = [];
+  for (var i = 0; i < n; i++) {
+    var upper = i % 2 === 0, th, cx, cy;
+    if (upper) { th = (-30 + 240 * Math.random()) * Math.PI / 180; cx = 0; cy = 0.52; }
+    else       { th = (150 + 240 * Math.random()) * Math.PI / 180; cx = 0; cy = -0.52; }
+    pts.push([cx + 0.46 * Math.cos(th) + 0.035 * randn(),
+              cy + 0.46 * Math.sin(th) + 0.035 * randn()]);
+  }
+  return pts;
+}
+// 스케줄 사전 계산 (T=1000)
+var T = 1000;
+function linearAbar(){
+  var ab = new Float64Array(T + 1); ab[0] = 1;
+  for (var t = 1; t <= T; t++) {
+    var beta = 1e-4 + (0.02 - 1e-4) * (t - 1) / (T - 1);
+    ab[t] = ab[t - 1] * (1 - beta);
+  }
+  return ab;
+}
+function cosineAbar(){
+  var s = 0.008, ab = new Float64Array(T + 1);
+  var f0 = Math.pow(Math.cos((s / (1 + s)) * Math.PI / 2), 2);
+  for (var t = 0; t <= T; t++) {
+    var f = Math.pow(Math.cos(((t / T + s) / (1 + s)) * Math.PI / 2), 2);
+    ab[t] = Math.min(1, f / f0);
+  }
+  return ab;
+}
+var AB_LIN = linearAbar(), AB_COS = cosineAbar();
+
+/* ── hero: ambient forward↔reverse ─────────── */
+(function(){
+  var cv = document.getElementById('hero-canvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
+  var x0 = makeS(320), eps = x0.map(function(){ return [randn(), randn()]; });
+  function draw(abar){
+    ctx.clearRect(0, 0, W, H);
+    var sa = Math.sqrt(abar), sn = Math.sqrt(1 - abar);
+    for (var i = 0; i < x0.length; i++) {
+      var x = sa * x0[i][0] + sn * eps[i][0] * 0.55,
+          y = sa * x0[i][1] + sn * eps[i][1] * 0.55;
+      var px = W / 2 + x * W * 0.36, py = H / 2 - y * H * 0.36;
+      ctx.fillStyle = 'rgba(238,76,44,' + (0.25 + 0.6 * abar) + ')';
+      ctx.beginPath(); ctx.arc(px, py, 2.1, 0, 6.284); ctx.fill();
+    }
+  }
+  if (reduceMotion) { draw(0.65); return; }
+  var t0 = performance.now();
+  (function loop(now){
+    var ph = ((now - t0) / 9000) % 1;                 // 9초 주기
+    var abar = 0.5 + 0.5 * Math.cos(ph * 2 * Math.PI); // 1→0→1
+    draw(abar);
+    document.getElementById('hero-cap').textContent =
+      (ph < 0.5 ? 'forward (noising)' : 'reverse (denoising)') + ' · ᾱ = ' + abar.toFixed(2);
+    requestAnimationFrame(loop);
+  })(t0);
+})();
+
+/* ── 위젯 1: VAE reparameterization ────────── */
+(function(){
+  var cv = document.getElementById('vae-canvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d'), W = cv.width, H = cv.height, SC = 58; // px per unit
+  var N = 300, eps = [];
+  function resample(){ eps = []; for (var i = 0; i < N; i++) eps.push([randn(), randn()]); }
+  resample();
+  var mx = document.getElementById('vae-mx'), my = document.getElementById('vae-my'), ss = document.getElementById('vae-s');
+  function draw(){
+    var m1 = +mx.value, m2 = +my.value, sg = +ss.value;
+    document.getElementById('vae-mx-v').textContent = m1.toFixed(2);
+    document.getElementById('vae-my-v').textContent = m2.toFixed(2);
+    document.getElementById('vae-s-v').textContent = sg.toFixed(2);
+    ctx.clearRect(0, 0, W, H);
+    // axes
+    ctx.strokeStyle = '#eceae6'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, H/2); ctx.lineTo(W, H/2); ctx.moveTo(W/2, 0); ctx.lineTo(W/2, H); ctx.stroke();
+    // N(0,I) contours (1σ, 2σ)
+    ctx.strokeStyle = '#c9c4bd'; ctx.setLineDash([5,4]);
+    [1, 2].forEach(function(r){
+      ctx.beginPath(); ctx.arc(W/2, H/2, r * SC, 0, 6.284); ctx.stroke();
+    });
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#8b8680'; ctx.font = '11px JetBrains Mono, monospace';
+    ctx.fillText('N(0,I)', W/2 + 2*SC - 30, H/2 - 2*SC + 16);
+    // samples z = mu + sigma*eps
+    for (var i = 0; i < N; i++) {
+      var zx = m1 + sg * eps[i][0], zy = m2 + sg * eps[i][1];
+      var px = W/2 + zx * SC, py = H/2 - zy * SC;
+      ctx.fillStyle = 'rgba(238,76,44,.55)';
+      ctx.beginPath(); ctx.arc(px, py, 2.4, 0, 6.284); ctx.fill();
+    }
+    // mu marker
+    ctx.fillStyle = '#0d9488';
+    ctx.beginPath(); ctx.arc(W/2 + m1*SC, H/2 - m2*SC, 4.5, 0, 6.284); ctx.fill();
+    // KL (2 dims, isotropic): sum over dims of 0.5(sigma^2 + mu^2 - 1 - ln sigma^2)
+    var kl = 0.5 * ((sg*sg + m1*m1 - 1 - Math.log(sg*sg)) + (sg*sg + m2*m2 - 1 - Math.log(sg*sg)));
+    document.getElementById('vae-kl').innerHTML =
+      'KL( N(μ,σ²I) ‖ N(0,I) ) = <b>' + kl.toFixed(3) + '</b>' +
+      ' &nbsp;·&nbsp; log σ² = ' + Math.log(sg*sg).toFixed(2);
+  }
+  [mx, my, ss].forEach(function(el){ el.addEventListener('input', draw); });
+  document.getElementById('vae-resample').addEventListener('click', function(){ resample(); draw(); });
+  draw();
+})();
+
+/* ── 위젯 2: CLIP InfoNCE 행렬 ─────────────── */
+(function(){
+  var host = document.getElementById('clip-matrix');
+  if (!host) return;
+  var labels = ['강아지', '고양이', '자동차', '커피'];
+  // 단위원 위 각도로 임베딩 정의 (텍스트 고정, 이미지가 학습으로 회전)
+  var tAng = [0, 90, 180, 270].map(function(d){ return d * Math.PI / 180; });
+  var initI = [38, 118, 225, 295].map(function(d){ return d * Math.PI / 180; });
+  var iAng = initI.slice();
+  var tau = document.getElementById('clip-tau');
+  function sim(a, b){ return Math.cos(a - b); } // 단위벡터 코사인
+  function softmaxRow(r, tv){
+    var logits = iAng.map(function(_, j){ return sim(tAng[r], iAng[j]) / tv; });
+    var mx = Math.max.apply(null, logits);
+    var ex = logits.map(function(l){ return Math.exp(l - mx); });
+    var s = ex.reduce(function(a, b){ return a + b; }, 0);
+    return ex.map(function(e){ return e / s; });
+  }
+  function render(){
+    var tv = +tau.value;
+    document.getElementById('clip-tau-v').textContent = tv.toFixed(2);
+    var html = '<div class="hd"></div>';
+    labels.forEach(function(l){ html += '<div class="hd">🖼 ' + l + '</div>'; });
+    var loss = 0;
+    for (var r = 0; r < 4; r++) {
+      html += '<div class="hd">📝 ' + labels[r] + '</div>';
+      var p = softmaxRow(r, tv);
+      loss += -Math.log(Math.max(p[r], 1e-12));
+      for (var c = 0; c < 4; c++) {
+        var s = sim(tAng[r], iAng[c]);
+        // teal scale by probability
+        var alpha = 0.12 + 0.88 * p[c];
+        var bg = 'rgba(13,148,136,' + alpha.toFixed(3) + ')';
+        html += '<div class="cell' + (r === c ? ' diag' : '') + '" style="background:' + bg + '" ' +
+                'title="sim=' + s.toFixed(2) + ', p=' + p[c].toFixed(2) + '">' +
+                '<span class="p">' + p[c].toFixed(2) + '</span>' +
+                '<span class="s">sim ' + s.toFixed(2) + '</span></div>';
+      }
+    }
+    host.innerHTML = html;
+    document.getElementById('clip-loss').textContent = (loss / 4).toFixed(3);
+  }
+  document.getElementById('clip-step').addEventListener('click', function(){
+    // 이미지 임베딩을 짝 텍스트 방향으로 회전 (정렬 스텝)
+    for (var j = 0; j < 4; j++) {
+      var d = tAng[j] - iAng[j];
+      while (d >  Math.PI) d -= 2 * Math.PI;
+      while (d < -Math.PI) d += 2 * Math.PI;
+      iAng[j] += 0.35 * d;
+    }
+    render();
+  });
+  document.getElementById('clip-reset').addEventListener('click', function(){ iAng = initI.slice(); render(); });
+  tau.addEventListener('input', render);
+  render();
+})();
+
+/* ── 위젯 3: forward diffusion 실험실 ──────── */
+(function(){
+  var cv = document.getElementById('dif-canvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
+  var cc = document.getElementById('dif-curve'), cx2 = cc.getContext('2d');
+  var x0 = makeS(600), eps = x0.map(function(){ return [randn(), randn()]; });
+  var slider = document.getElementById('dif-t');
+  var abar = AB_COS, mode = 'cos', playing = false, raf = null;
+  var btnLin = document.getElementById('dif-lin'), btnCos = document.getElementById('dif-cos'),
+      btnPlay = document.getElementById('dif-play');
+  function draw(){
+    var t = Math.round(+slider.value);
+    var a = abar[t], sa = Math.sqrt(a), sn = Math.sqrt(1 - a);
+    ctx.clearRect(0, 0, W, H);
+    for (var i = 0; i < x0.length; i++) {
+      var x = sa * x0[i][0] + sn * eps[i][0] * 0.55,
+          y = sa * x0[i][1] + sn * eps[i][1] * 0.55;
+      ctx.fillStyle = 'rgba(11,110,102,.65)';
+      ctx.beginPath(); ctx.arc(W/2 + x*W*0.36, H/2 - y*H*0.36, 2, 0, 6.284); ctx.fill();
+    }
+    ctx.fillStyle = '#8b8680'; ctx.font = '12px JetBrains Mono, monospace';
+    ctx.fillText(t === 0 ? 'x₀ (원본)' : (t === T ? 'x_T (순수 노이즈)' : 'x_' + t), 12, 22);
+    document.getElementById('dif-t-v').textContent = 't = ' + t;
+    document.getElementById('dif-stat').innerHTML =
+      'ᾱ_t = <b>' + a.toFixed(4) + '</b> · 원본 ' + (100*sa).toFixed(1) + '% / 노이즈 ' + (100*sn).toFixed(1) + '% (진폭 기준)';
+    drawCurve(t);
+  }
+  function drawCurve(tCur){
+    var w = cc.width, h = cc.height, padL = 34, padB = 24, padT = 12, padR = 10;
+    cx2.clearRect(0, 0, w, h);
+    cx2.strokeStyle = '#eceae6';
+    cx2.strokeRect(padL, padT, w - padL - padR, h - padT - padB);
+    function plot(ab, color){
+      cx2.strokeStyle = color; cx2.lineWidth = 1.8; cx2.beginPath();
+      for (var t = 0; t <= T; t += 5) {
+        var px = padL + (t / T) * (w - padL - padR),
+            py = padT + (1 - ab[t]) * (h - padT - padB);
+        t === 0 ? cx2.moveTo(px, py) : cx2.lineTo(px, py);
+      }
+      cx2.stroke();
+    }
+    plot(AB_LIN, mode === 'lin' ? '#ee4c2c' : '#e0ddd8');
+    plot(AB_COS, mode === 'cos' ? '#ee4c2c' : '#e0ddd8');
+    // marker
+    var a = abar[tCur];
+    var mxp = padL + (tCur / T) * (w - padL - padR),
+        myp = padT + (1 - a) * (h - padT - padB);
+    cx2.fillStyle = '#ee4c2c';
+    cx2.beginPath(); cx2.arc(mxp, myp, 4, 0, 6.284); cx2.fill();
+    cx2.fillStyle = '#8b8680'; cx2.font = '10.5px JetBrains Mono, monospace';
+    cx2.fillText('1', padL - 12, padT + 8);
+    cx2.fillText('0', padL - 12, h - padB + 4);
+    cx2.fillText('ᾱ_t', padL + 6, padT + 14);
+    cx2.fillText('t →', w - padR - 28, h - 8);
+    cx2.fillText(mode === 'cos' ? 'cosine' : 'linear', mxp > w - 90 ? mxp - 62 : mxp + 8, myp - 8);
+  }
+  function setMode(m){
+    mode = m; abar = m === 'cos' ? AB_COS : AB_LIN;
+    btnLin.classList.toggle('on', m === 'lin');
+    btnCos.classList.toggle('on', m === 'cos');
+    draw();
+  }
+  btnLin.addEventListener('click', function(){ setMode('lin'); });
+  btnCos.addEventListener('click', function(){ setMode('cos'); });
+  document.getElementById('dif-eps').addEventListener('click', function(){
+    eps = x0.map(function(){ return [randn(), randn()]; }); draw();
+  });
+  btnPlay.addEventListener('click', function(){
+    playing = !playing;
+    btnPlay.textContent = playing ? '❚❚ 정지' : '▶ 재생';
+    if (playing) {
+      var dir = 1;
+      (function step(){
+        if (!playing) return;
+        var t = +slider.value + dir * 6;
+        if (t >= T) { t = T; dir = -1; }
+        if (t <= 0) { t = 0; dir = 1; }
+        slider.value = t; draw();
+        raf = requestAnimationFrame(step);
+      })();
+    } else if (raf) cancelAnimationFrame(raf);
+  });
+  slider.addEventListener('input', function(){
+    if (playing) { playing = false; btnPlay.textContent = '▶ 재생'; if (raf) cancelAnimationFrame(raf); }
+    draw();
+  });
+  draw();
+})();
+
+/* ── 위젯 4: CFG 벡터 ──────────────────────── */
+(function(){
+  var cv = document.getElementById('cfg-canvas');
+  if (!cv) return;
+  var ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
+  var sS = document.getElementById('cfg-s'), sA = document.getElementById('cfg-ang');
+  var ox = 40, oy = H - 40, SC = 26;
+  function arrow(x1, y1, x2, y2, color, lw, label){
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = lw;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    var ang = Math.atan2(y2 - y1, x2 - x1);
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - 10*Math.cos(ang - 0.42), y2 - 10*Math.sin(ang - 0.42));
+    ctx.lineTo(x2 - 10*Math.cos(ang + 0.42), y2 - 10*Math.sin(ang + 0.42));
+    ctx.closePath(); ctx.fill();
+    if (label) { ctx.font = 'bold 12.5px JetBrains Mono, monospace'; ctx.fillText(label, x2 + 6, y2 - 4); }
+  }
+  function draw(){
+    var s = +sS.value, deg = +sA.value, th = deg * Math.PI / 180;
+    document.getElementById('cfg-s-v').textContent = 's = ' + s.toFixed(1);
+    document.getElementById('cfg-ang-v').textContent = deg + '°';
+    ctx.clearRect(0, 0, W, H);
+    ctx.strokeStyle = '#eceae6';
+    ctx.beginPath(); ctx.moveTo(0, oy); ctx.lineTo(W, oy); ctx.moveTo(ox, 0); ctx.lineTo(ox, H); ctx.stroke();
+    // eps_uncond: 고정 벡터, eps_cond: 같은 크기로 각도만 회전
+    var eu = [3.0, 1.1];
+    var m = Math.hypot(eu[0], eu[1]);
+    var base = Math.atan2(eu[1], eu[0]);
+    var ec = [m * Math.cos(base + th), m * Math.sin(base + th)];
+    var eh = [eu[0] + s * (ec[0] - eu[0]), eu[1] + s * (ec[1] - eu[1])];
+    function P(v){ return [ox + v[0]*SC, oy - v[1]*SC]; }
+    var pu = P(eu), pc = P(ec), ph = P(eh);
+    // 차이 벡터 (점선): eu 끝 → ec 끝
+    ctx.strokeStyle = '#c9c4bd'; ctx.setLineDash([5,4]); ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(pu[0], pu[1]); ctx.lineTo(pc[0], pc[1]); ctx.stroke();
+    ctx.setLineDash([]);
+    arrow(ox, oy, ph[0], ph[1], '#ee4c2c', 3, 'ε̂ (CFG)');
+    arrow(ox, oy, pu[0], pu[1], '#a8a29e', 2.2, 'ε_∅');
+    arrow(ox, oy, pc[0], pc[1], '#0d9488', 2.2, 'ε_c');
+    var nh = Math.hypot(eh[0], eh[1]);
+    document.getElementById('cfg-stat').innerHTML =
+      '‖ε̂‖ = <b>' + nh.toFixed(2) + '</b> (‖ε_∅‖ = ‖ε_c‖ = ' + m.toFixed(2) + ') · s(ε_c − ε_∅) 외삽';
+  }
+  sS.addEventListener('input', draw);
+  sA.addEventListener('input', draw);
+  draw();
+})();
+})();
+</script>
+</body>
+</html>
